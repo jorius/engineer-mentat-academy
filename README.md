@@ -1,17 +1,24 @@
 # Engineer Mentat Academy
 
 An interactive technical-interview trainer. Junior, mid and senior questions across
-languages, libraries, frameworks, runtimes, APIs, architecture, databases, cloud and
-engineering practices, with a code scratchpad that runs JavaScript/TypeScript in a Web
-Worker and a SQL scratchpad backed by SQLite in WebAssembly.
+languages (JavaScript, TypeScript, C#, Java), libraries, frameworks (Express, NestJS,
+Next.js, .NET, ASP.NET Core, Spring Boot), runtimes, APIs, architecture, databases, cloud
+and engineering practices, with a code scratchpad that runs JavaScript/TypeScript in a Web
+Worker and a SQL scratchpad backed by SQLite in WebAssembly. The interface and every
+question are available in English and Spanish.
 
 Live: https://jorius.github.io/engineer-mentat-academy/
 
 ## Modes
 
-- **Browse**: domain → subject → topic, with mastery per subject.
-- **Drill**: filtered stream with instant grading and explanations.
-- **Mock**: timed, random, mixed-level session with a results page.
+- **Browse**: domain → subject → topic, with mastery per subject. Level and kind chips
+  show only what exists in the current scope, with live counts, and every topic has its own
+  Drill button.
+- **Drill**: filtered stream with instant grading and explanations. Opening Drill without
+  a filter shows a setup card: pick domain, subject and topic, levels, kinds and whether to
+  include only unseen, marked or missed questions.
+- **Mock**: random, mixed-level session with a results page. Choose the number of
+  questions, timed or untimed, and the domains, levels and kinds to draw from.
 - **Review**: everything you missed or marked for review.
 
 Every question gives you retries up to the max attempts set in Settings (or unlimited), with
@@ -19,6 +26,15 @@ a Show answer fallback that reveals the key without grading once you're done try
 header's Mark for review star puts a question in Review even if you got it right, and a
 question solved only after a wrong attempt is marked for you. Keyboard: `Ctrl+Enter` submits,
 `N` moves to the next question once it is resolved, and `M` toggles Mark for review.
+Choice options are shown in a stable shuffled order per question, so the position of the
+correct answer never gives it away.
+
+## Settings
+
+Accent colour, editor font and size, tab size and tabs vs spaces, max attempts per
+question, and the editor colour theme (follow the app theme, Dracula, Monokai, GitHub,
+Solarized, Nord, Tokyo Night or VS Code Dark). The Danger zone at the bottom clears
+progress or resets everything after you type `RESET`.
 
 ## Question kinds
 
@@ -45,7 +61,10 @@ Questions live in `src/content/<domain>/<subject>.ts` and export a `questions` a
 typed as `Question[]`. Domain, subject and topic ids must exist in
 `src/content/taxonomy.ts`. Ids are kebab-case and start with the subject id. The
 content test validates the schema and runs every `code`, `fix`, `sql` and `predict`
-reference, so a wrong answer key fails `npm test`.
+reference, so a wrong answer key fails `npm test`. Spanish text lives next to each file in
+`<subject>.es.ts`, keyed by question id; the runner only executes JavaScript, TypeScript
+and SQL, so subjects in other languages use the choice and open kinds. Every subject and
+domain has a glyph in `src/content/glyphs.ts`.
 
 ## Grading and AI hand-off
 
