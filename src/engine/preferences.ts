@@ -27,7 +27,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   editorFontSize: 14,
   tabSize: 2,
   indentWithTabs: false,
-  maxAttempts: 'unlimited',
+  maxAttempts: 3,
 };
 
 const ACCENTS: readonly string[] = ['spice', 'sky', 'emerald', 'violet', 'rose'];
