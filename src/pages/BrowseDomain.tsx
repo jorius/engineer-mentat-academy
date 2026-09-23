@@ -16,6 +16,7 @@ import { useLocale } from '../hooks/useLocale';
 
 // components
 import { Card } from '../components/primitives/Card';
+import { Glyph } from '../components/primitives/Glyph';
 import { ProgressBar } from '../components/primitives/ProgressBar';
 
 export function BrowseDomain(): JSX.Element {
@@ -39,7 +40,10 @@ export function BrowseDomain(): JSX.Element {
           return (
             <Link key={subject.id} to={`/browse/${domain.id}/${subject.id}`} aria-label={t('common.questionCount', { name, count: summary.total })}>
               <Card className="h-full space-y-2 hover:border-accent-500">
-                <p className="font-medium">{name}</p>
+                <p className="font-medium">
+                  <Glyph kind="subject" id={subject.id} className="mr-1 inline-block shrink-0 align-[-0.125em]" />
+                  {name}
+                </p>
                 <p className="text-xs text-zinc-500">{t('browse.subjectStats', { total: summary.total, unseen: summary.unattempted, flagged: summary.flagged })}</p>
                 <p className="text-xs text-zinc-500">
                   {t('common.attempted', { attempted: summary.attempted, total: summary.total })}

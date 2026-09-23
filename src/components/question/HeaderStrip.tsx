@@ -16,6 +16,7 @@ import { useLocale } from '../../hooks/useLocale';
 
 // components
 import { Badge } from '../primitives/Badge';
+import { Glyph } from '../primitives/Glyph';
 
 const TOAST_MS = 2000;
 
@@ -81,12 +82,14 @@ export function HeaderStrip({ question, position, marked, onToggleMark, notesOpe
       {position !== undefined && <span>{t('question.position', { index: position.index + 1, total: position.total })}</span>}
       <Badge tone={question.level} title={level.hint}>{level.label}</Badge>
       <Badge title={kind.hint}>{kind.label}</Badge>
-      <nav aria-label={t('question.breadcrumb')} className="flex items-center gap-1.5 text-sm">
+      <nav aria-label={t('question.breadcrumb')} className="flex items-center gap-1.5 text-base">
         <Link to={`/browse/${question.domain}`} className="hover:underline">
+          <Glyph kind="domain" id={question.domain} className="mr-1 inline-block shrink-0 align-[-0.125em]" />
           {domain === undefined ? question.domain : domainName(domain, locale)}
         </Link>
         <span aria-hidden="true">›</span>
         <Link to={`/browse/${question.domain}/${question.subject}`} className="font-semibold text-zinc-800 hover:underline dark:text-zinc-100">
+          <Glyph kind="subject" id={question.subject} className="mr-1 inline-block shrink-0 align-[-0.125em]" />
           {subject === undefined ? question.subject : subjectName(subject, locale)}
         </Link>
         <span aria-hidden="true">›</span>
