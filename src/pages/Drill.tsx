@@ -62,7 +62,7 @@ function DrillSetup(): JSX.Element {
   const start = (): void => {
     const query = drillQuery({ domain: domain?.id, subject: subject?.id, topic: topic?.id, levels: levelFilter, kinds: kindFilter, only });
     // An empty query would bring this setup card back, so "everything" is spelled out as every level.
-    if (query.size === 0) {
+    if (query.toString() === '') {
       query.set('level', LEVELS.join(','));
     }
     void navigate(`/drill?${query.toString()}`);
@@ -193,7 +193,7 @@ export function Drill(): JSX.Element {
   const { list: bank } = useQuestionBank();
   const filter = useMemo(() => parseDrillFilter(params), [params]);
   const matched = useMemo(() => filterQuestions(bank, filter), [bank, filter]);
-  if (params.size === 0) {
+  if (params.toString() === '') {
     return <DrillSetup />;
   }
   return <DrillQueue key={params.toString()} questions={matched} filter={filter} />;
