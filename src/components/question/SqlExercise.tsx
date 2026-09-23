@@ -35,7 +35,7 @@ export function SqlExercise({ question, disabled, onSubmit, value, onChange, rea
   return (
     <div className="space-y-3">
       {!hideSchema && <SchemaDrawer schema={question.schema} />}
-      <CodeEditor value={query} onChange={setQuery} language="sql" ariaLabel={t('question.query')} readOnly={readOnly} />
+      <CodeEditor value={query} onChange={setQuery} language="sql" ariaLabel={t('question.query')} readOnly={readOnly} minLines={12} />
       {!submitLabelHidden && (
         <Button disabled={disabled || query.trim().length === 0} onClick={(): void => onSubmit({ kind: 'sql', query })}>{t('question.submit')}</Button>
       )}

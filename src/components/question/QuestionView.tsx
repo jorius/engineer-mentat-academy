@@ -396,7 +396,7 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
         onToggleNotes={(): void => setNotesOpen((open) => !open)}
         notesButtonRef={notesButtonRef}
       />
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className={`grid gap-6 ${hasResettableInput(question) ? 'md:grid-cols-[2fr_3fr]' : 'md:grid-cols-2'}`}>
         <div className="min-w-0 space-y-4">
           <Markdown text={question.prompt} />
           {question.kind === 'predict' && (

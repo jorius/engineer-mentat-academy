@@ -1,5 +1,5 @@
 // packages
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { JSX } from 'react';
 
@@ -8,6 +8,9 @@ import { useTheme } from '../../contexts/ThemeContext';
 
 // i18n
 import { SUPPORTED_LANGUAGES } from '../../i18n';
+
+// utils
+import { containerWidth } from '../../utils/containerWidth';
 
 const links = [
   { to: '/', key: 'nav.home' },
@@ -23,11 +26,13 @@ const LANGUAGE_NAMES = { en: 'common.english', es: 'common.spanish' } as const;
 export function Layout(): JSX.Element {
   const { theme, toggle } = useTheme();
   const { t, i18n } = useTranslation();
+  const { pathname } = useLocation();
+  const width = containerWidth(pathname);
   const active = i18n.resolvedLanguage ?? 'en';
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
-        <nav className="mx-auto flex max-w-5xl items-center gap-1 overflow-x-auto px-4 py-2 text-sm">
+        <nav className={`mx-auto flex ${width} items-center gap-1 overflow-x-auto px-4 py-2 text-sm`}>
           <span className="mr-3 whitespace-nowrap font-semibold text-accent-500">{t('nav.brand')}</span>
           {links.map((link) => (
             <NavLink
@@ -61,7 +66,7 @@ export function Layout(): JSX.Element {
           </button>
         </nav>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-6">
+      <main className={`mx-auto ${width} px-4 py-6`}>
         <Outlet />
       </main>
     </div>

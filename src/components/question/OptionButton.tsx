@@ -54,14 +54,18 @@ export function OptionButton({
       aria-disabled={inactive}
       aria-label={text}
       onClick={handleClick}
-      className={`flex w-full items-start gap-2 rounded-md border p-2 text-left transition ${stateClasses} ${
+      className={`flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left leading-snug transition ${stateClasses} ${
         locked ? 'line-through opacity-50' : ''
       } ${disabled && !locked ? 'opacity-60 cursor-not-allowed' : ''} ${inactive ? 'cursor-not-allowed' : 'cursor-pointer'}`}
     >
-      <span className="mr-2 inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded border border-zinc-300 px-1 font-mono text-xs text-zinc-500 dark:border-zinc-700">
-        {id})
+      <span
+        className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md font-mono text-sm font-semibold uppercase ${
+          correct ? 'bg-emerald-600 text-white' : selected ? 'bg-accent-500 text-white' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
+        }`}
+      >
+        {id}
       </span>
-      <span className="flex-1">
+      <span className="min-w-0 flex-1 [&_.md>p]:my-0">
         <Markdown text={text} />
       </span>
       {correct && (

@@ -9,7 +9,7 @@ import { OptionButton } from './OptionButton';
 describe('OptionButton', () => {
   it('shows the letter badge and the option text with an accessible name', () => {
     render(<OptionButton id="b" text="Option B" selected={false} onToggle={vi.fn()} />);
-    expect(screen.getByText('b)')).toBeInTheDocument();
+    expect(screen.getByText('b')).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Option B' })).toBeInTheDocument();
   });
 

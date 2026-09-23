@@ -134,6 +134,12 @@ describe('QuestionView', () => {
     expect(button(/next/i)).toHaveAccessibleName('Next');
   });
 
+  it('gives the answer pane the wider column for typing kinds', () => {
+    const { container } = setup(code);
+    expect(container.querySelector('.grid.md\\:grid-cols-\\[2fr_3fr\\]')).not.toBeNull();
+    expect(container.querySelector('.grid.md\\:grid-cols-2')).toBeNull();
+  });
+
   it('hides Next when the caller passes no onNext and offers Reset only for editable answers', () => {
     setup(code, { onNext: null });
     expect(within(actionBar()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Reset', 'Show answer', 'Submit']);
@@ -141,8 +147,8 @@ describe('QuestionView', () => {
 
   it('shows the option letter before each option', () => {
     setup(single);
-    expect(screen.getByText('a)')).toBeVisible();
-    expect(screen.getByText('b)')).toBeVisible();
+    expect(screen.getByText('a')).toBeVisible();
+    expect(screen.getByText('b')).toBeVisible();
   });
 
   it('locks a wrong pick without revealing the key, then records 1 once when solved on a retry', async () => {

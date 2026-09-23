@@ -22,7 +22,9 @@ import { usePreferences } from '../../hooks/usePreferences';
 
 export type EditorLanguage = 'javascript' | 'typescript' | 'sql';
 
-type Props = { value: string; onChange: (value: string) => void; language: EditorLanguage; readOnly?: boolean; ariaLabel?: string };
+type Props = { value: string; onChange: (value: string) => void; language: EditorLanguage; readOnly?: boolean; ariaLabel?: string; minLines?: number };
+
+const LINE_HEIGHT_RATIO = 1.5;
 
 const FONT_STACKS: Record<EditorFont, string> = {
   jetbrains: "'JetBrains Mono', ui-monospace, monospace",
@@ -37,7 +39,7 @@ function languageExtension(language: EditorLanguage): ReturnType<typeof javascri
   return javascript({ typescript: language === 'typescript' });
 }
 
-export function CodeEditor({ value, onChange, language, readOnly = false, ariaLabel }: Props): JSX.Element {
+export function CodeEditor({ value, onChange, language, readOnly = false, ariaLabel, minLines }: Props): JSX.Element {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
@@ -63,7 +65,7 @@ export function CodeEditor({ value, onChange, language, readOnly = false, ariaLa
         indentUnit.of(indentWithTabs ? '\t' : ' '.repeat(tabSize)),
         keymap.of([indentWithTab]),
         EditorView.theme({
-          '&': { fontSize: `${editorFontSize}px` },
+          '&': { fontSize: `${editorFontSize}px`, ...(minLines === undefined ? {} : { minHeight: `${Math.round(minLines * editorFontSize * LINE_HEIGHT_RATIO)}px` }) },
           '.cm-content': { fontFamily: FONT_STACKS[editorFont] },
         }),
         EditorView.updateListener.of((update): void => {
@@ -81,7 +83,7 @@ export function CodeEditor({ value, onChange, language, readOnly = false, ariaLa
     };
     // The editor is recreated only when language, theme, readOnly, its label or these preferences change; `value` is the initial doc.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language, theme, readOnly, label, editorFont, editorFontSize, tabSize, indentWithTabs]);
+  }, [language, theme, readOnly, label, editorFont, editorFontSize, tabSize, indentWithTabs, minLines]);
 
   useEffect(() => {
     const current = view.current;

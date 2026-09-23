@@ -34,7 +34,7 @@ export function CodeExercise({ question, disabled, onSubmit, value, onChange, re
   };
   return (
     <div className="space-y-3">
-      <CodeEditor value={source} onChange={setSource} language={question.language} ariaLabel={t('question.solution')} readOnly={readOnly} />
+      <CodeEditor value={source} onChange={setSource} language={question.language} ariaLabel={t('question.solution')} readOnly={readOnly} minLines={18} />
       <ul className="text-sm text-zinc-600 dark:text-zinc-400">
         {question.tests.map((test) => (
           <li key={test.name}>{t('question.test', { name: test.name })}</li>
