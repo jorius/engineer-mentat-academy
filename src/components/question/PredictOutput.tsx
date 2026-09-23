@@ -10,11 +10,26 @@ import type { Answer, PredictQuestion } from '../../engine/question';
 import { CodeEditor } from '../common/CodeEditor';
 import { Button } from '../primitives/Button';
 
-type Props = { question: PredictQuestion; disabled: boolean; onSubmit: (answer: Answer) => void };
+type Props = {
+  question: PredictQuestion;
+  disabled: boolean;
+  onSubmit: (answer: Answer) => void;
+  value?: string;
+  onChange?: (value: string) => void;
+  readOnly?: boolean;
+  submitLabelHidden?: boolean;
+};
 
-export function PredictOutput({ question, disabled, onSubmit }: Props): JSX.Element {
+export function PredictOutput({ question, disabled, onSubmit, value, onChange, readOnly = false, submitLabelHidden = false }: Props): JSX.Element {
   const { t } = useTranslation();
-  const [text, setText] = useState('');
+  const [internalText, setInternalText] = useState('');
+  const text = value ?? internalText;
+  const setText = (next: string): void => {
+    onChange?.(next);
+    if (value === undefined) {
+      setInternalText(next);
+    }
+  };
   return (
     <div className="space-y-3">
       <CodeEditor value={question.code} onChange={(): void => undefined} language={question.language} readOnly ariaLabel={t('question.program')} />
@@ -24,11 +39,13 @@ export function PredictOutput({ question, disabled, onSubmit }: Props): JSX.Elem
           className="mt-1 w-full rounded-md border border-zinc-300 bg-white p-2 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-900"
           rows={5}
           value={text}
-          disabled={disabled}
+          disabled={disabled || readOnly}
           onChange={(event): void => setText(event.target.value)}
         />
       </label>
-      <Button disabled={disabled || text.trim().length === 0} onClick={(): void => onSubmit({ kind: 'predict', text })}>{t('question.submit')}</Button>
+      {!submitLabelHidden && (
+        <Button disabled={disabled || text.trim().length === 0} onClick={(): void => onSubmit({ kind: 'predict', text })}>{t('question.submit')}</Button>
+      )}
     </div>
   );
 }

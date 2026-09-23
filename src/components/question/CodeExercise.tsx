@@ -10,22 +10,41 @@ import type { Answer, CodeQuestion, FixQuestion } from '../../engine/question';
 import { CodeEditor } from '../common/CodeEditor';
 import { Button } from '../primitives/Button';
 
-type Props = { question: CodeQuestion | FixQuestion; disabled: boolean; onSubmit: (answer: Answer) => void };
+type Props = {
+  question: CodeQuestion | FixQuestion;
+  disabled: boolean;
+  onSubmit: (answer: Answer) => void;
+  value?: string;
+  onChange?: (value: string) => void;
+  readOnly?: boolean;
+  submitLabelHidden?: boolean;
+};
 
-export function CodeExercise({ question, disabled, onSubmit }: Props): JSX.Element {
+export function CodeExercise({ question, disabled, onSubmit, value, onChange, readOnly = false, submitLabelHidden = false }: Props): JSX.Element {
   const { t } = useTranslation();
-  const [source, setSource] = useState(question.starter);
+  const [internalSource, setInternalSource] = useState(question.starter);
+  const source = value ?? internalSource;
+  const setSource = (next: string): void => {
+    onChange?.(next);
+    if (value === undefined) {
+      setInternalSource(next);
+    }
+  };
   return (
     <div className="space-y-3">
-      <CodeEditor value={source} onChange={setSource} language={question.language} ariaLabel={t('question.solution')} />
+      <CodeEditor value={source} onChange={setSource} language={question.language} ariaLabel={t('question.solution')} readOnly={readOnly} />
       <ul className="text-sm text-zinc-600 dark:text-zinc-400">
         {question.tests.map((test) => (
           <li key={test.name}>{t('question.test', { name: test.name })}</li>
         ))}
       </ul>
       <div className="flex gap-2">
-        <Button disabled={disabled} onClick={(): void => onSubmit({ kind: 'code', source })}>{t('question.submit')}</Button>
-        <Button variant="ghost" disabled={disabled} onClick={(): void => setSource(question.starter)}>{t('common.reset')}</Button>
+        {!submitLabelHidden && (
+          <Button disabled={disabled} onClick={(): void => onSubmit({ kind: 'code', source })}>{t('question.submit')}</Button>
+        )}
+        {!readOnly && (
+          <Button variant="ghost" disabled={disabled} onClick={(): void => setSource(question.starter)}>{t('common.reset')}</Button>
+        )}
       </div>
     </div>
   );
