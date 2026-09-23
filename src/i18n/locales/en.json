@@ -108,6 +108,8 @@
     "systemMonospace": "System monospace",
     "preview": "Preview",
     "editorPreview": "Editor preview",
+    "colorTheme": "Colour theme",
+    "themeAuto": "Follow app theme",
     "appearanceHeading": "Appearance",
     "accentColor": "Accent color",
     "accents": {

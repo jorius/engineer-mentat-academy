@@ -8,7 +8,8 @@ import { usePreferences } from '../hooks/usePreferences';
 import { useProgress } from '../hooks/useProgress';
 
 // engine
-import type { Accent, EditorFont, MaxAttempts, TabSize } from '../engine/preferences';
+import { EDITOR_THEMES } from '../engine/editorThemes';
+import type { Accent, EditorFont, EditorTheme, MaxAttempts, TabSize } from '../engine/preferences';
 
 // components
 import { Button } from '../components/primitives/Button';
@@ -167,6 +168,18 @@ export function Settings(): JSX.Element {
             </label>
           </fieldset>
         </div>
+        <label className="flex flex-col gap-1 text-sm">
+          {t('settings.colorTheme')}
+          <select
+            className="w-56 rounded-md border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            value={preferences.editorTheme}
+            onChange={(e): void => preferencesStore.set({ editorTheme: e.target.value as EditorTheme })}
+          >
+            {EDITOR_THEMES.map((editorTheme) => (
+              <option key={editorTheme.id} value={editorTheme.id}>{editorTheme.id === 'auto' ? t('settings.themeAuto') : editorTheme.name}</option>
+            ))}
+          </select>
+        </label>
         <div>
           <p className="mb-1 text-sm text-zinc-500">{t('settings.preview')}</p>
           <CodeEditor value={previewCode} onChange={setPreviewCode} language="typescript" readOnly={false} ariaLabel={t('settings.editorPreview')} />

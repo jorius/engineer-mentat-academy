@@ -108,6 +108,8 @@
     "systemMonospace": "Monoespaciada del sistema",
     "preview": "Vista previa",
     "editorPreview": "Vista previa del editor",
+    "colorTheme": "Tema de color",
+    "themeAuto": "Seguir el tema de la app",
     "appearanceHeading": "Apariencia",
     "accentColor": "Color de acento",
     "accents": {

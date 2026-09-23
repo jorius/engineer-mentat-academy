@@ -39,6 +39,7 @@ describe('createPreferencesStore', () => {
       tabSize: 4,
       indentWithTabs: true,
       maxAttempts: 2,
+      editorTheme: 'auto',
     });
 
     const fresh = createPreferencesStore(storage);
@@ -85,6 +86,22 @@ describe('createPreferencesStore', () => {
 
     storage.setItem(PREFERENCES_KEY, JSON.stringify({ maxAttempts: 'unlimited' }));
     expect(createPreferencesStore(storage).get().maxAttempts).toBe('unlimited');
+  });
+
+  it('defaults the editor theme to auto and keeps a known theme', () => {
+    expect(DEFAULT_PREFERENCES.editorTheme).toBe('auto');
+    const storage = memoryStorage();
+    storage.setItem(PREFERENCES_KEY, JSON.stringify({ editorTheme: 'tokyo-night' }));
+    expect(createPreferencesStore(storage).get().editorTheme).toBe('tokyo-night');
+  });
+
+  it('falls back to the default for an unknown editor theme', () => {
+    const storage = memoryStorage();
+    storage.setItem(PREFERENCES_KEY, JSON.stringify({ editorTheme: 'one-dark' }));
+    expect(createPreferencesStore(storage).get().editorTheme).toBe(DEFAULT_PREFERENCES.editorTheme);
+
+    storage.setItem(PREFERENCES_KEY, JSON.stringify({ editorTheme: 7 }));
+    expect(createPreferencesStore(storage).get().editorTheme).toBe(DEFAULT_PREFERENCES.editorTheme);
   });
 
   it('rejects a non-boolean indentWithTabs', () => {

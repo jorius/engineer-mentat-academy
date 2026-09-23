@@ -8,13 +8,13 @@ import { EditorView, keymap } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { sql } from '@codemirror/lang-sql';
-import { oneDark } from '@codemirror/theme-one-dark';
 import type { JSX } from 'react';
 
 // contexts
 import { useTheme } from '../../contexts/ThemeContext';
 
 // engine
+import { editorThemeExtension } from '../../engine/editorThemes';
 import type { EditorFont } from '../../engine/preferences';
 
 // hooks
@@ -48,7 +48,7 @@ export function CodeEditor({ value, onChange, language, readOnly = false, ariaLa
   const label = ariaLabel ?? t('question.codeEditor');
   const { theme } = useTheme();
   const { preferences } = usePreferences();
-  const { editorFont, editorFontSize, tabSize, indentWithTabs } = preferences;
+  const { editorFont, editorFontSize, tabSize, indentWithTabs, editorTheme } = preferences;
 
   useEffect(() => {
     if (host.current === null) {
@@ -59,7 +59,7 @@ export function CodeEditor({ value, onChange, language, readOnly = false, ariaLa
       extensions: [
         basicSetup,
         languageExtension(language),
-        ...(theme === 'dark' ? [oneDark] : []),
+        editorThemeExtension(editorTheme, theme),
         EditorState.readOnly.of(readOnly),
         EditorState.tabSize.of(tabSize),
         indentUnit.of(indentWithTabs ? '\t' : ' '.repeat(tabSize)),
@@ -83,7 +83,7 @@ export function CodeEditor({ value, onChange, language, readOnly = false, ariaLa
     };
     // The editor is recreated only when language, theme, readOnly, its label or these preferences change; `value` is the initial doc.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language, theme, readOnly, label, editorFont, editorFontSize, tabSize, indentWithTabs, minLines]);
+  }, [language, theme, readOnly, label, editorFont, editorFontSize, tabSize, indentWithTabs, editorTheme, minLines]);
 
   useEffect(() => {
     const current = view.current;

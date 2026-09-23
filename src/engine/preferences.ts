@@ -4,6 +4,17 @@ export type Accent = 'spice' | 'sky' | 'emerald' | 'violet' | 'rose';
 export type EditorFont = 'jetbrains' | 'fira' | 'system';
 export type TabSize = 2 | 4 | 8;
 export type MaxAttempts = 1 | 2 | 3 | 'unlimited';
+export type EditorTheme =
+  | 'auto'
+  | 'dracula'
+  | 'monokai'
+  | 'github-light'
+  | 'github-dark'
+  | 'solarized-light'
+  | 'solarized-dark'
+  | 'nord'
+  | 'tokyo-night'
+  | 'vscode-dark';
 
 export type Preferences = {
   accent: Accent;
@@ -12,6 +23,7 @@ export type Preferences = {
   tabSize: TabSize;
   indentWithTabs: boolean;
   maxAttempts: MaxAttempts;
+  editorTheme: EditorTheme;
 };
 
 export interface PreferencesStore {
@@ -28,12 +40,25 @@ export const DEFAULT_PREFERENCES: Preferences = {
   tabSize: 2,
   indentWithTabs: false,
   maxAttempts: 3,
+  editorTheme: 'auto',
 };
 
 const ACCENTS: readonly string[] = ['spice', 'sky', 'emerald', 'violet', 'rose'];
 const EDITOR_FONTS: readonly string[] = ['jetbrains', 'fira', 'system'];
 const TAB_SIZES: readonly number[] = [2, 4, 8];
 const MAX_ATTEMPTS_NUMBERS: readonly number[] = [1, 2, 3];
+const EDITOR_THEME_IDS: readonly string[] = [
+  'auto',
+  'dracula',
+  'monokai',
+  'github-light',
+  'github-dark',
+  'solarized-light',
+  'solarized-dark',
+  'nord',
+  'tokyo-night',
+  'vscode-dark',
+];
 const MIN_EDITOR_FONT_SIZE = 12;
 const MAX_EDITOR_FONT_SIZE = 20;
 
@@ -66,6 +91,10 @@ function validateMaxAttempts(value: unknown): MaxAttempts {
   return typeof value === 'number' && MAX_ATTEMPTS_NUMBERS.includes(value) ? (value as MaxAttempts) : DEFAULT_PREFERENCES.maxAttempts;
 }
 
+function validateEditorTheme(value: unknown): EditorTheme {
+  return typeof value === 'string' && EDITOR_THEME_IDS.includes(value) ? (value as EditorTheme) : DEFAULT_PREFERENCES.editorTheme;
+}
+
 function validate(partial: Record<string, unknown>): Preferences {
   return {
     accent: validateAccent(partial.accent),
@@ -74,6 +103,7 @@ function validate(partial: Record<string, unknown>): Preferences {
     tabSize: validateTabSize(partial.tabSize),
     indentWithTabs: validateIndentWithTabs(partial.indentWithTabs),
     maxAttempts: validateMaxAttempts(partial.maxAttempts),
+    editorTheme: validateEditorTheme(partial.editorTheme),
   };
 }
 

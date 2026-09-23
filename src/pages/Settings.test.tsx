@@ -94,6 +94,16 @@ describe('Settings', () => {
     expect(preferencesStore.get().editorFontSize).toBe(18);
   });
 
+  it('persists an editor colour theme change and labels auto as following the app theme', async () => {
+    const user = userEvent.setup();
+    const preferencesStore = createPreferencesStore(null);
+    renderSettings({ preferencesStore });
+    const colorTheme = screen.getByLabelText(/colour theme/i);
+    expect(screen.getByRole('option', { name: /follow app theme/i })).toBeInTheDocument();
+    await user.selectOptions(colorTheme, 'dracula');
+    expect(preferencesStore.get().editorTheme).toBe('dracula');
+  });
+
   it('sets data-accent on the document root when a swatch is picked', async () => {
     const user = userEvent.setup();
     renderSettings();
