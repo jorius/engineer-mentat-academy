@@ -31,6 +31,8 @@ npm run build      # tsc -b && vite build, copies 404.html for SPA deep links
 
 Node 24.15.0, npm only, exact version pins.
 
+Before the first push to `main`, set the repository's Pages source to GitHub Actions (Settings → Pages → Source), or the deploy job fails.
+
 ## Adding questions
 
 Questions live in `src/content/<domain>/<subject>.ts` and export a `questions` array
