@@ -1,0 +1,50 @@
+// engine
+import type { QuestionTranslation } from '../../engine/question';
+
+export const translations: Record<string, QuestionTranslation> = {
+  'react-router-link-vs-anchor': {
+    prompt: '¿Por qué renderizas `<Link to="/orders">` en lugar de `<a href="/orders">` para la navegación dentro de una app con React Router?',
+    options: {
+      a: '`<Link>` actualiza la URL con la History API y vuelve a renderizar las rutas que coinciden sin recargar toda la página',
+      b: 'Las etiquetas `<a>` no están permitidas en JSX',
+      c: '`<Link>` precarga todas las rutas de la app al montarse',
+      d: 'Los motores de búsqueda no pueden rastrear `<a href>`, mientras que `<Link>` sí',
+    },
+    explanation: '`<Link>` igual renderiza un `<a href>` real (así sigue siendo accesible, rastreable y permite abrir en una pestaña nueva), pero intercepta el clic, llama a `history.pushState` y deja que el router renderice la nueva coincidencia. Un `<a>` simple dispara una carga completa del documento: el bundle de JS se vuelve a evaluar y se pierde todo el state en memoria (state de React, store de Redux, cachés). Usa `<NavLink>` cuando necesites un estilo de enlace activo.',
+  },
+  'react-router-params-are-strings': {
+    prompt: '```jsx\n<Route path="/orders/:orderId" element={<OrderPage />} />\n\nfunction OrderPage() {\n  const { orderId } = useParams();\n  const order = orders.find((o) => o.id === orderId); // o.id is a number\n  // ...\n}\n```\nEn `/orders/42`, `order` es `undefined` aunque existe un pedido con `id: 42`. ¿Por qué?',
+    options: {
+      a: 'Los params de la URL siempre son strings, así que `42 === "42"` es false',
+      b: '`useParams` solo funciona dentro de un loader',
+      c: 'El path debe declarar un param numérico, por ejemplo `:orderId(\\d+)`',
+      d: 'El `<Route>` necesita la prop `exact`',
+    },
+    explanation: 'Todo en una URL es texto, así que `useParams` devuelve `{ orderId: "42" }`. Parsea y valida en el borde (`Number(orderId)` con una verificación de `NaN`, o un schema de Zod) y maneja el caso inválido, porque los usuarios pueden escribir cualquier URL. React Router v6+ eliminó las restricciones de params con regex y la prop `exact`; el ranking de rutas elige la mejor coincidencia por su cuenta.',
+  },
+  'react-router-loaders-timing': {
+    prompt: 'Con `createBrowserRouter`, una ruta padre `/projects/:id` tiene el loader A y su hija `/projects/:id/tasks` tiene el loader B. El usuario hace clic en un enlace a `/projects/7/tasks`. ¿Cuándo se ejecutan los loaders?',
+    options: {
+      a: 'A y B arrancan en paralelo antes de que se rendericen las nuevas rutas; la página anterior sigue visible con `useNavigation().state === "loading"`',
+      b: 'A se ejecuta, el padre se renderiza y luego B se ejecuta cuando se monta la hija',
+      c: 'Las rutas se renderizan primero y los loaders se ejecutan después, como un `useEffect`',
+      d: 'Solo se ejecuta B, porque los loaders pertenecen a las rutas hoja',
+    },
+    explanation: 'Los data routers conocen todas las rutas que coinciden antes de renderizar, así que llaman a todos los loaders coincidentes en paralelo en cuanto empieza la navegación, y renderizan cuando los datos están listos. Hacer fetch en `useEffect` dentro de componentes anidados crea una cascada: el padre hace fetch, renderiza y luego la hija empieza su fetch. Lee los datos con `useLoaderData`; muestra la UI pendiente con `useNavigation`; transmite en streaming los datos lentos y no críticos devolviendo una promesa y renderizándola con `<Await>` dentro de `<Suspense>`. Después de una `action` (envío de un formulario), el router revalida los loaders automáticamente.',
+  },
+  'react-router-navigate-replace': {
+    prompt: 'Después de un login exitoso en `/login`, envías al usuario a la página que pidió originalmente. Presionar después el botón Atrás del navegador **no** debe regresar al formulario de login. ¿Qué llamada usas?',
+    explanation: '`replace: true` reemplaza la entrada actual del historial (`/login`) en lugar de agregar una nueva, así que Atrás se salta el formulario de login. (b) agrega una entrada, así que Atrás vuelve a caer en `/login`. (c) provoca una recarga completa y además agrega una entrada. (d) regresa a donde sea que viniera el usuario, que puede no ser la página que pidió. `from` normalmente viene del guard que redirigió al login: `<Navigate to="/login" replace state={{ from: location }} />`, y se lee con `useLocation().state`.',
+  },
+  'react-router-protected-routes': {
+    prompt: 'Diseña la autenticación y el acceso basado en roles para una app con React Router que tiene un área pública de marketing, un área de la app para usuarios con sesión iniciada y una sección de administración. Cubre dónde viven las verificaciones, cómo se comportan las redirecciones y qué es lo que el guard del lado del cliente **no** protege.',
+    modelAnswer: 'Agrupo las rutas bajo layout routes: un layout público, un layout autenticado y un layout de admin anidado dentro de este, cada uno renderizando un `<Outlet />`. Con un data router, la verificación va en el loader de la layout route: si no hay sesión, `throw redirect("/login?from=" + encodeURIComponent(path))`, y si el rol es incorrecto, lanza una respuesta 403 que maneja el `errorElement` de la ruta. Como los loaders se ejecutan antes del render, la UI protegida nunca aparece por un instante, y una sola verificación cubre todas las rutas hijas. Sin loaders, un componente de layout `<RequireAuth>` renderiza `<Navigate replace state={{ from: location }} />` mientras muestra un spinner durante la verificación de la sesión. Después del login navego a `from` con `replace` para que Atrás no regrese al formulario. Las rutas de admin se dividen con code splitting usando `lazy` para que el bundle de admin no se envíe a todos. Lo más importante: los guards del cliente son UX, no seguridad; cada endpoint de la API debe aplicar la autenticación y la autorización en el servidor, porque cualquiera puede llamar a la API o modificar el JavaScript.',
+    rubric: [
+      'Usa layout routes anidadas con `<Outlet />` para que una sola verificación cubra un subárbol',
+      'Pone la verificación en un loader (`redirect`) o en un componente guard con `<Navigate replace>` y conserva la ubicación original',
+      'Maneja el estado de carga y evita que el contenido protegido aparezca por un instante',
+      'Deja claro que el servidor debe aplicar la autorización; los guards del cliente son solo UX',
+    ],
+    explanation: 'La respuesta trampa es "envolver cada página en `if (!user) return <Navigate />`": duplica verificaciones, muestra contenido por un instante e implica que el cliente es una frontera de seguridad.\n\n**Dilo en voz alta:** "Protejo subárboles completos con una layout route y verifico la autenticación en su loader para que nada se renderice antes de la decisión, pero lo trato como UX; la API aplica la autorización en cada petición."',
+  },
+};
