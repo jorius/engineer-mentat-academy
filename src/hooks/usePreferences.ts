@@ -1,5 +1,5 @@
 // packages
-import { createContext, createElement, useContext, useEffect, useMemo, useSyncExternalStore } from 'react';
+import { createContext, createElement, useContext, useLayoutEffect, useMemo, useSyncExternalStore } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 
 // engine
@@ -24,7 +24,9 @@ export function PreferencesProvider({ children, store }: { children: ReactNode; 
     (): Preferences['accent'] => value.get().accent,
   );
 
-  useEffect(() => {
+  // useLayoutEffect (not useEffect) so a saved accent is applied before paint, never
+  // flashing the default orange accent for a frame.
+  useLayoutEffect(() => {
     document.documentElement.dataset.accent = accent;
   }, [accent]);
 
