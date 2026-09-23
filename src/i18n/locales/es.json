@@ -148,6 +148,7 @@
     "markForReview": "Marcar para repasar",
     "marked": "Marcada",
     "markHint": "Las preguntas marcadas aparecen en Repaso y en los resultados del simulacro aunque las hayas respondido bien.",
+    "autoMarkedHint": "Resuelta tras un reintento, así que quedó marcada para repaso",
     "notes": "Mis notas",
     "notesHint": "Notas privadas de esta pregunta, guardadas en este navegador; las verás de nuevo al volver a ella.",
     "showAnswer": "Mostrar respuesta",

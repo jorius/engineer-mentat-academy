@@ -256,14 +256,19 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
     activeId.current = question.id;
   }, [question.id]);
 
-  // Progress is recorded exactly once, on the transition into 'resolved'. Focus follows the attempt so
-  // keyboard users never sit on a control that just became disabled: a wrong single-choice pick moves
-  // to the first unlocked option, and resolving moves to Next (or the feedback panel without Next).
+  // Progress is recorded exactly once, on the transition into 'resolved'; a question solved only after a
+  // wrong attempt is also marked for review, since its score of 1 alone would keep it out of Review.
+  // Focus follows the attempt so keyboard users never sit on a control that just became disabled: a
+  // wrong single-choice pick moves to the first unlocked option, and resolving moves to Next (or the
+  // feedback panel without Next).
   useEffect(() => {
     const prev = previous.current;
     previous.current = attempt;
     if (shouldRecord(prev, attempt)) {
       store.record(question.id, recordedScore(attempt));
+      if (attempt.outcome === 'solved' && attempt.attemptsUsed > 0) {
+        store.setFlag(question.id, true);
+      }
       (nextRef.current ?? feedbackRef.current)?.focus();
     } else if (attempt.phase === 'wrong' && attempt.attemptsUsed > prev.attemptsUsed) {
       focusFirstUnlockedOption(answerPaneRef.current, question, attempt.lockedOptionIds);
@@ -375,6 +380,8 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
 
   const submitLabel = isOpen ? (answers.openRevealed ? t('question.submitSelfScore') : t('question.reveal')) : t('question.submit');
   const showFullFeedback = resolved && attempt.outcome !== 'shown' && attempt.lastResult !== undefined;
+  // Only while the mark still stands, so the hint never claims a mark the learner has since removed.
+  const autoMarked = resolved && attempt.outcome === 'solved' && attempt.attemptsUsed > 0 && marked;
 
   return (
     <Card className="space-y-4">
@@ -421,6 +428,7 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
           {resolved && (
             <div ref={feedbackRef} tabIndex={-1} className="space-y-3 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
               {showFullFeedback && attempt.lastResult !== undefined && <Feedback result={attempt.lastResult} />}
+              {autoMarked && <p className="text-xs text-zinc-500">{t('question.autoMarkedHint')}</p>}
               <div className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
                 <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">{t('question.explanation')}</p>
                 <Markdown text={question.explanation} />

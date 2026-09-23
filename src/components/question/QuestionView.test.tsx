@@ -171,6 +171,28 @@ describe('QuestionView', () => {
     expect(store.get(single.id)?.attempts).toBe(1);
   });
 
+  it('marks a question solved after a wrong attempt for review and says so', async () => {
+    const user = userEvent.setup();
+    const { store } = setup(single);
+    await user.click(screen.getByRole('radio', { name: 'A' }));
+    await user.click(button(/submit/i));
+    await screen.findByText('Not yet. Try again, or show the answer.');
+    await user.click(screen.getByRole('radio', { name: 'B' }));
+    await user.click(button(/submit/i));
+    expect(await screen.findByText("Solved after a retry, so it's marked for review")).toBeInTheDocument();
+    expect(store.get(single.id)).toMatchObject({ attempts: 1, lastScore: 1, flagged: true });
+  });
+
+  it('does not mark a question solved on the first attempt', async () => {
+    const user = userEvent.setup();
+    const { store } = setup(single);
+    await user.click(screen.getByRole('radio', { name: 'B' }));
+    await user.click(button(/submit/i));
+    await screen.findByText('Because B.');
+    expect(store.get(single.id)).toMatchObject({ attempts: 1, lastScore: 1, flagged: false });
+    expect(screen.queryByText(/solved after a retry/i)).not.toBeInTheDocument();
+  });
+
   it('moves focus to the first unlocked option after a wrong single-choice submit', async () => {
     const user = userEvent.setup();
     setup(single);
