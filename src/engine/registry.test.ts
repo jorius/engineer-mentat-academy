@@ -41,11 +41,15 @@ describe('registry helpers', () => {
 
   it('summarizes mastery from progress', () => {
     const summary = summarize(bank, { a: { attempts: 1, lastScore: 1, lastAt: '', flagged: false, notes: '' }, b: { attempts: 2, lastScore: 0.5, lastAt: '', flagged: true, notes: '' } });
-    expect(summary).toEqual({ total: 3, attempted: 2, unattempted: 1, mastery: 0.75, flagged: 1 });
+    expect(summary).toEqual({ total: 3, attempted: 2, unattempted: 1, mastery: 0.75, progress: 2 / 3, flagged: 1 });
   });
 
-  it('summarizes an untouched bank with zero mastery', () => {
-    expect(summarize(bank, {})).toEqual({ total: 3, attempted: 0, unattempted: 3, mastery: 0, flagged: 0 });
+  it('summarizes an untouched bank with zero mastery and zero progress', () => {
+    expect(summarize(bank, {})).toEqual({ total: 3, attempted: 0, unattempted: 3, mastery: 0, progress: 0, flagged: 0 });
+  });
+
+  it('reports zero progress for an empty question list', () => {
+    expect(summarize([], {})).toEqual({ total: 0, attempted: 0, unattempted: 0, mastery: 0, progress: 0, flagged: 0 });
   });
 
   it('counts by a key', () => {

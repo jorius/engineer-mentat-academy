@@ -38,8 +38,11 @@ export function Home(): JSX.Element {
           return (
             <Card key={domain.id} className="space-y-1">
               <Link to={`/browse/${domain.id}`} className="font-medium underline">{domain.name}</Link>
-              <p className="text-xs text-zinc-500">{summary.attempted}/{summary.total} attempted</p>
-              <ProgressBar value={summary.mastery} label={`${domain.name} mastery`} />
+              <p className="text-xs text-zinc-500">
+                {summary.attempted}/{summary.total} attempted
+                {summary.attempted > 0 && <> · mastery {Math.round(summary.mastery * 100)}%</>}
+              </p>
+              <ProgressBar value={summary.progress} label={`${domain.name} progress`} />
             </Card>
           );
         })}

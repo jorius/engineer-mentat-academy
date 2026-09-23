@@ -11,7 +11,7 @@ export type QuestionFilter = {
   ids?: string[];
 };
 
-export type Summary = { total: number; attempted: number; unattempted: number; mastery: number; flagged: number };
+export type Summary = { total: number; attempted: number; unattempted: number; mastery: number; progress: number; flagged: number };
 
 type ContentModule = { questions: Question[] };
 
@@ -41,11 +41,13 @@ export function summarize(list: Question[], progress: ProgressMap): Summary {
   const entries = list.map((question) => progress[question.id]).filter((p) => p !== undefined);
   const attempted = entries.filter((p) => p.attempts > 0);
   const mastery = attempted.length === 0 ? 0 : attempted.reduce((sum, p) => sum + p.lastScore, 0) / attempted.length;
+  const progressRatio = list.length === 0 ? 0 : attempted.length / list.length;
   return {
     total: list.length,
     attempted: attempted.length,
     unattempted: list.length - attempted.length,
     mastery,
+    progress: progressRatio,
     flagged: entries.filter((p) => p.flagged).length,
   };
 }

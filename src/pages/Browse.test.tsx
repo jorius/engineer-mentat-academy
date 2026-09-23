@@ -10,14 +10,19 @@ import { routes } from '../App';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { GraderProvider } from '../contexts/GraderContext';
 
+// engine
+import { filterQuestions, loadQuestions } from '../engine/registry';
+import { createProgressStore } from '../engine/progress';
+import type { ProgressStore } from '../engine/progress';
+
 // hooks
 import { ProgressProvider } from '../hooks/useProgress';
 
-function renderAt(path: string): void {
+function renderAt(path: string, store?: ProgressStore): void {
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   render(
     <ThemeProvider>
-      <ProgressProvider>
+      <ProgressProvider store={store}>
         <GraderProvider>
           <RouterProvider router={router} />
         </GraderProvider>
@@ -48,5 +53,17 @@ describe('browse pages', () => {
   it('shows not found for an unknown domain', () => {
     renderAt('/browse/nope');
     expect(screen.getByText(/not found/i)).toBeInTheDocument();
+  });
+
+  it('shows attempted progress, not mastery, on the domain bar', () => {
+    const store = createProgressStore(null);
+    store.record('javascript-closure-counter-independence', 1);
+    renderAt('/browse', store);
+    const languagesTotal = filterQuestions(loadQuestions(), { domain: 'languages' }).length;
+    const expectedPercent = Math.round((1 / languagesTotal) * 100);
+    const bar = screen.getByRole('progressbar', { name: /languages/i });
+    expect(bar).toHaveAttribute('aria-valuenow', String(expectedPercent));
+    const card = bar.closest('a');
+    expect(card?.textContent).toContain('mastery 100%');
   });
 });

@@ -36,7 +36,11 @@ export function BrowseDomain(): JSX.Element {
               <Card className="h-full space-y-2 hover:border-spice-500">
                 <p className="font-medium">{subject.name}</p>
                 <p className="text-xs text-zinc-500">{summary.total} questions · {summary.unattempted} unseen · {summary.flagged} flagged</p>
-                <ProgressBar value={summary.mastery} label={`${subject.name} mastery`} />
+                <p className="text-xs text-zinc-500">
+                  {summary.attempted}/{summary.total} attempted
+                  {summary.attempted > 0 && <> · mastery {Math.round(summary.mastery * 100)}%</>}
+                </p>
+                <ProgressBar value={summary.progress} label={`${subject.name} progress`} />
               </Card>
             </Link>
           );
