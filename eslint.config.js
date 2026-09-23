@@ -22,6 +22,11 @@ export default defineConfig([
     rules: {
       '@typescript-eslint/explicit-function-return-type': ['error', { allowExpressions: true }],
       'no-var': 'error',
+    },
+  },
+  {
+    files: ['src/App.tsx', 'src/contexts/*.{ts,tsx}', 'src/hooks/*.{ts,tsx}'],
+    rules: {
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },
