@@ -11,7 +11,7 @@ export const translations: Record<string, QuestionTranslation> = {
       d: 'Un service lanza `OrderNotFoundError` y el controller lo traduce a un 404',
     },
     explanation:
-      'Las dependencias solo deben apuntar **hacia abajo**: presentación → negocio → acceso a datos. Un repository que conoce HTTP acopla la persistencia a un único mecanismo de entrega, así que la misma consulta no se puede reutilizar desde un consumidor de cola o un cron job, y no se puede probar sin simular una solicitud. Pasa `tenantId` como un argumento simple. Lanzar un error de dominio y traducirlo a un código HTTP en el borde (opción D) es la forma correcta de mantener HTTP fuera de la capa de servicios.',
+      'Las dependencias solo deben apuntar **hacia abajo**: presentación → negocio → acceso a datos. Un repository que conoce HTTP acopla la persistencia a un único mecanismo de entrega, así que la misma consulta no se puede reutilizar desde un consumidor de cola o un cron job, y no se puede probar sin simular una solicitud. Pasa `tenantId` como un argumento simple. Lanzar un error de dominio y traducirlo a un código HTTP en el borde es la forma correcta de mantener HTTP fuera de la capa de servicios.',
   },
   'architecture-patterns-hexagonal-ports': {
     prompt: 'En una arquitectura hexagonal (puertos y adaptadores), ¿dónde van la interfaz `OrderRepository` y la clase `PostgresOrderRepository`?',

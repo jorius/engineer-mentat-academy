@@ -63,7 +63,7 @@ export const questions: Question[] = [
     tags: ['ocp', 'strategy', 'registry'],
     source: 'notion',
     explanation:
-      'OCP means you extend behavior by **adding** code, not by editing working code. A registry (a strategy map) lets each format live in its own module, and the three call sites never change again. Option A works but must be repeated in every duplicated switch, which is exactly the shotgun-surgery smell OCP targets. Option C still edits a switch, just in a subclass, and D adds a boolean flag that does not scale past two formats.\n\nThe pragmatic caveat: a single `switch` over a stable, closed set of cases (for example the three states of a traffic light) is fine. OCP pays off when the set grows and the branching is duplicated.',
+      'OCP means you extend behavior by **adding** code, not by editing working code. A registry (a strategy map) lets each format live in its own module, and the three call sites never change again. Adding a `case \'xml\'` to each switch works but must be repeated in every duplicated switch, which is exactly the shotgun-surgery smell OCP targets. Subclassing the service still edits a switch, just in a subclass, and the `isXml` parameter adds a boolean flag that does not scale past two formats.\n\nThe pragmatic caveat: a single `switch` over a stable, closed set of cases (for example the three states of a traffic light) is fine. OCP pays off when the set grows and the branching is duplicated.',
   },
   {
     id: 'solid-lsp-penguin-predict',

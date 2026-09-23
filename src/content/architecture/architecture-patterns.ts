@@ -20,7 +20,7 @@ export const questions: Question[] = [
     tags: ['layered-architecture', 'dependency-direction'],
     source: 'topic-list',
     explanation:
-      'Dependencies should point **downward** only: presentation → business → data access. A repository that knows about HTTP couples persistence to one delivery mechanism, so the same query cannot be reused from a queue consumer or a cron job, and it cannot be tested without faking a request. Pass `tenantId` in as a plain argument. Throwing a domain error and translating it to an HTTP status at the edge (option D) is the correct way to keep HTTP out of the service layer.',
+      'Dependencies should point **downward** only: presentation → business → data access. A repository that knows about HTTP couples persistence to one delivery mechanism, so the same query cannot be reused from a queue consumer or a cron job, and it cannot be tested without faking a request. Pass `tenantId` in as a plain argument. Throwing a domain error and translating it to an HTTP status at the edge is the correct way to keep HTTP out of the service layer.',
   },
   {
     id: 'architecture-patterns-hexagonal-ports',

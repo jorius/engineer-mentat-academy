@@ -18,8 +18,8 @@ const runSql = createSqlRunner(loadSqlInNode);
 // Options are shuffled at render time and labelled by position, so prose must name an option
 // by its content, never by its id letter.
 const OPTION_LETTER_REFERENCES: readonly RegExp[] = [
-  /\b[Oo]ptions?\s+`?[a-f]`?\b/,
-  /\b[Oo]pci[oó]n(es)?\s+`?[a-f]`?\b/,
+  /\b[Oo]ptions?\s+`?[a-fA-F]`?\b/,
+  /\b[Oo]pci[oó]n(es)?\s+`?[a-fA-F]`?\b/,
   /`[a-f]`\s+(is|es|está|are|son)\s+(wrong|correct|right|incorrecta?|correcta?|falsa?|verdadera?)/,
   /\b(answer|respuesta)\s+`?[a-f]`?\b/i,
   /(^|[\s,(])[a-f]\s+(is|es|está|are|son)\s+(wrong|correct|right|false|true|incorrecta?|correcta?|falsa?|verdadera?)\b/,
@@ -27,7 +27,7 @@ const OPTION_LETTER_REFERENCES: readonly RegExp[] = [
 
 // A parenthesised label such as "(b)" or "(a, c)" only points at an option in single and multi
 // questions; open questions may use it for the scenarios listed in their own prompt.
-const OPTION_LABEL = /(^|[\s,])\(`?[a-f]`?(,\s*`?[a-f]`?)*\)/m;
+const OPTION_LABEL = /(^|[\s,])\(`?[a-fA-F]`?(,\s*`?[a-fA-F]`?)*\)/m;
 
 function optionLetterReferences(texts: readonly (string | undefined)[], hasOptions: boolean): string[] {
   const patterns = hasOptions ? [...OPTION_LETTER_REFERENCES, OPTION_LABEL] : OPTION_LETTER_REFERENCES;
