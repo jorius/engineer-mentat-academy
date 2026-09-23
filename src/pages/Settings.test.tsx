@@ -84,6 +84,16 @@ describe('Settings', () => {
     expect(preferencesStore.get().tabSize).toBe(4);
   });
 
+  it('persists a font size change to the preferences store via the select', async () => {
+    const user = userEvent.setup();
+    const preferencesStore = createPreferencesStore(null);
+    renderSettings({ preferencesStore });
+    const fontSize = screen.getByLabelText(/font size/i);
+    expect(fontSize.tagName).toBe('SELECT');
+    await user.selectOptions(fontSize, '18');
+    expect(preferencesStore.get().editorFontSize).toBe(18);
+  });
+
   it('sets data-accent on the document root when a swatch is picked', async () => {
     const user = userEvent.setup();
     renderSettings();

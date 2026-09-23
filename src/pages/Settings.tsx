@@ -33,6 +33,8 @@ const EDITOR_FONTS: readonly { value: EditorFont; label?: string }[] = [
 
 const TAB_SIZES: readonly TabSize[] = [2, 4, 8];
 
+const EDITOR_FONT_SIZES: readonly number[] = [12, 13, 14, 15, 16, 17, 18, 19, 20];
+
 const MAX_ATTEMPTS_OPTIONS: readonly MaxAttempts[] = [1, 2, 3, 'unlimited'];
 
 const PREVIEW_CODE = ['function greet(name: string): string {', "  return `Hello, ${name}!`;", '}', '', 'console.log(greet("Mentat"));'].join('\n');
@@ -120,14 +122,15 @@ export function Settings(): JSX.Element {
           </label>
           <label className="flex flex-col gap-1 text-sm">
             {t('settings.fontSize')}
-            <input
-              type="number"
-              min={12}
-              max={20}
+            <select
               className="w-20 rounded-md border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
               value={preferences.editorFontSize}
               onChange={(e): void => preferencesStore.set({ editorFontSize: Number(e.target.value) })}
-            />
+            >
+              {EDITOR_FONT_SIZES.map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
             {t('settings.tabSize')}
