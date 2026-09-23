@@ -1,13 +1,35 @@
 // packages
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 
 // components
-import { App } from './App';
+import { routes } from './App';
 
-describe('App', () => {
-  it('renders the academy title', () => {
-    render(<App />);
-    expect(screen.getByRole('heading', { name: /engineer mentat academy/i })).toBeInTheDocument();
+// contexts
+import { ThemeProvider } from './contexts/ThemeContext';
+import { GraderProvider } from './contexts/GraderContext';
+
+// hooks
+import { ProgressProvider } from './hooks/useProgress';
+
+function renderAt(path: string): void {
+  const router = createMemoryRouter(routes, { initialEntries: [path] });
+  render(
+    <ThemeProvider>
+      <ProgressProvider>
+        <GraderProvider>
+          <RouterProvider router={router} />
+        </GraderProvider>
+      </ProgressProvider>
+    </ThemeProvider>,
+  );
+}
+
+describe('routes', () => {
+  it('renders the navigation and the home page', () => {
+    renderAt('/');
+    expect(screen.getByRole('link', { name: 'Browse' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
   });
 });
