@@ -575,7 +575,7 @@ function TicketList({ tickets }) {
     level: 'junior',
     kind: 'single',
     prompt:
-      'EPAM asks about data binding. In React, `const [name, setName] = useState("Ada")` and the JSX renders `<input value={name} />` with no `onChange`. What happens when the user types?',
+      'Interviewers ask about data binding. In React, `const [name, setName] = useState("Ada")` and the JSX renders `<input value={name} />` with no `onChange`. What happens when the user types?',
     options: [
       { id: 'a', text: 'The input and `name` both update (two-way binding)' },
       { id: 'b', text: 'The input keeps showing "Ada", and React warns that `value` was provided without `onChange`' },
@@ -583,7 +583,7 @@ function TicketList({ tickets }) {
       { id: 'd', text: 'React throws and unmounts the component' },
     ],
     answer: 'b',
-    tags: ['controlled-components', 'data-binding', 'epam-25'],
+    tags: ['controlled-components', 'data-binding', 'core-25'],
     source: 'epam-pdf',
     explanation:
       'React has **one-way** data flow: `value={name}` makes the input controlled, so on every render React forces the DOM value back to `name`. Keystrokes change nothing until an `onChange` calls `setName(e.target.value)`, which is how React does what other frameworks call two-way binding. For an uncontrolled input, use `defaultValue` and read the value through a ref or `FormData` on submit. If read-only is intended, add `readOnly` to silence the warning.',
@@ -627,10 +627,10 @@ function TicketList({ tickets }) {
       'Mentions referential stability for effect dependencies or context values',
       'States the cost of over-memoizing and profiles first; bonus: React Compiler',
     ],
-    tags: ['React.memo', 'useCallback', 'useMemo', 'memoization', 'epam-25'],
+    tags: ['React.memo', 'useCallback', 'useMemo', 'memoization', 'core-25'],
     source: 'notion',
     explanation:
-      'EPAM\'s list asks about memoization in general; in a React interview it becomes this question. The nuance they probe is the interaction: `useCallback` alone does nothing for performance unless the receiver is memoized or uses the function as a dependency.\n\n**Say this out loud:** "`React.memo` only helps if the props are actually stable, so I pair it with `useCallback` and `useMemo` for function and object props, and I only do that where the Profiler shows hot renders, because memoization has its own cost."',
+      'The classic senior list asks about memoization in general; in a React interview it becomes this question. The nuance they probe is the interaction: `useCallback` alone does nothing for performance unless the receiver is memoized or uses the function as a dependency.\n\n**Say this out loud:** "`React.memo` only helps if the props are actually stable, so I pair it with `useCallback` and `useMemo` for function and object props, and I only do that where the Profiler shows hot renders, because memoization has its own cost."',
   },
   {
     id: 'react-transition-vs-deferred',

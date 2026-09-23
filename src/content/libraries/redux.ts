@@ -133,10 +133,10 @@ export function solution(actions) {
   }
   return { history, changed };
 }`,
-    tags: ['immutability', 'reducers', 'react-redux', 'epam-25'],
+    tags: ['immutability', 'reducers', 'react-redux', 'core-25'],
     source: 'epam-pdf',
     explanation:
-      'Redux and react-redux detect change by **reference**: `useSelector` re-renders only when the selected value is `!==` the previous one. Mutating and returning the same object means "nothing changed", so the UI goes stale, and every state in the history is secretly the same object (which also breaks time-travel debugging). The mutating version even corrupts the module-level `initialState`. Copy every level you change (`...state`, `[...state.todos, x]`, `map` with `{ ...t }`) and share untouched branches (structural sharing).\n\nThis is EPAM\'s immutability question in practice. In Redux Toolkit, the original mutating code would be legal inside `createSlice`, because Immer records the mutations on a draft and produces the new immutable state for you.',
+      'Redux and react-redux detect change by **reference**: `useSelector` re-renders only when the selected value is `!==` the previous one. Mutating and returning the same object means "nothing changed", so the UI goes stale, and every state in the history is secretly the same object (which also breaks time-travel debugging). The mutating version even corrupts the module-level `initialState`. Copy every level you change (`...state`, `[...state.todos, x]`, `map` with `{ ...t }`) and share untouched branches (structural sharing).\n\nThis is the classic immutability question in practice. In Redux Toolkit, the original mutating code would be legal inside `createSlice`, because Immer records the mutations on a draft and produces the new immutable state for you.',
   },
   {
     id: 'redux-middleware-order',
@@ -324,7 +324,7 @@ export function solution(todos: Todo[], steps: Step[]) {
   }
   return { computations, sameReference, visibleIds: previous.map((t) => t.id) };
 }`,
-    tags: ['selectors', 'reselect', 'memoization', 'useSelector', 'epam-25'],
+    tags: ['selectors', 'reselect', 'memoization', 'useSelector', 'core-25'],
     source: 'topic-list',
     explanation:
       "`useSelector` runs the selector after **every** dispatch and re-renders when the result is `!==` the previous one. A selector that returns `filter(...)` produces a new array every time, so the component re-renders on unrelated actions. Memoizing on the input references works because reducers use structural sharing: a theme toggle creates a new root object but keeps the same `todos` array. Reselect's `createSelector` (re-exported by Redux Toolkit) does exactly this with a cache size of 1, which is why a selector shared by several components with different arguments needs a factory (one selector instance per component) or a bigger cache.\n\n**Say this out loud:** \"Selectors that derive arrays or objects must be memoized, otherwise `useSelector` sees a new reference on every dispatch and re-renders. Memoization works because immutable updates keep unchanged branches referentially equal.\"",

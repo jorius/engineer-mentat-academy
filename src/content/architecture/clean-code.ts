@@ -160,7 +160,7 @@ export function solution(cart, percent) {
   const charged = applyDiscount(cart, percent);
   return { previewTotal, chargedTotal: charged.total, inputUnchanged: JSON.stringify(cart) === snapshot };
 }`,
-    tags: ['pure-functions', 'immutability', 'side-effects', 'epam-25'],
+    tags: ['pure-functions', 'immutability', 'side-effects', 'core-25'],
     source: 'epam-pdf',
     explanation:
       "The starter mutates the caller's cart, so the second call discounts already-discounted prices (22.5 becomes 20.25). A pure function depends only on its inputs and has no side effects, so calling it twice gives the same answer and it is trivially testable. Note that `{ ...cart }` alone is not enough: it is a shallow copy and `items` would still be shared, so each item is copied too.\n\nThis is the functional-core idea: keep calculations pure and push mutation and I/O to the edges. Immutability is also what makes React and Redux change detection by reference work.",

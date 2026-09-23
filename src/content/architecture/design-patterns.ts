@@ -250,7 +250,7 @@ export function solution(inputs) {
   const outputs = inputs.map((n) => fastSquare(n));
   return { outputs, computations };
 }`,
-    tags: ['memoization', 'decorator', 'map', 'epam-25'],
+    tags: ['memoization', 'decorator', 'map', 'core-25'],
     source: 'epam-pdf',
     explanation:
       'The truthiness check treats a cached `0` (or `""`, `false`, `null`) as a miss, so falsy results are never served from cache. Check for **presence** (`Map#has`, or `key in cache`) instead of the value.\n\nA `Map` also avoids two other object-cache traps: keys are stringified (`1` and `"1"` collide) and inherited keys such as `"constructor"` look like hits. For multi-argument functions you need a key strategy (`JSON.stringify(args)` for primitives, nested `WeakMap`s for object arguments), and for long-lived processes a bound (LRU) so the cache is not a memory leak. Memoization is only safe for **pure** functions.',

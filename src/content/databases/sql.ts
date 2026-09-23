@@ -310,7 +310,7 @@ ORDER BY department, e.name`,
     level: 'mid',
     kind: 'single',
     prompt:
-      "`customers.email` has a B-tree index. Why does `WHERE email LIKE '%@epam.com'` still scan every row, while `WHERE email LIKE 'ana%'` can use the index?",
+      "`customers.email` has a B-tree index. Why does `WHERE email LIKE '%@example.com'` still scan every row, while `WHERE email LIKE 'ana%'` can use the index?",
     options: [
       { id: 'a', text: '`LIKE` never uses indexes; the second query is fast only because of the result cache.' },
       {
@@ -324,7 +324,7 @@ ORDER BY department, e.name`,
     tags: ['like', 'sargable', 'b-tree', 'full-text'],
     source: 'topic-list',
     explanation:
-      "`LIKE 'ana%'` is rewritten as the range `email >= 'ana' AND email < 'anb'`, a seek. `'%@epam.com'` could start anywhere, so the engine must test every row (at best a full index scan). Fixes for suffix search: index a reversed copy of the column and search `LIKE reverse('%@epam.com')` as a prefix, store the domain in its own indexed column, or use a trigram index (`pg_trgm` GIN in Postgres) or full-text search for infix matches. Engine caveats: prefix `LIKE` also needs a compatible collation (Postgres needs `text_pattern_ops` under a non-C locale; SQLite needs the index collation to match its case-insensitive `LIKE`).",
+      "`LIKE 'ana%'` is rewritten as the range `email >= 'ana' AND email < 'anb'`, a seek. `'%@example.com'` could start anywhere, so the engine must test every row (at best a full index scan). Fixes for suffix search: index a reversed copy of the column and search `LIKE reverse('%@example.com')` as a prefix, store the domain in its own indexed column, or use a trigram index (`pg_trgm` GIN in Postgres) or full-text search for infix matches. Engine caveats: prefix `LIKE` also needs a compatible collation (Postgres needs `text_pattern_ops` under a non-C locale; SQLite needs the index collation to match its case-insensitive `LIKE`).",
   },
   {
     id: 'sql-covering-index-tradeoffs',
