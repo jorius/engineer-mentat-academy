@@ -18,13 +18,17 @@ import { useLocale } from '../hooks/useLocale';
 import { Card } from '../components/primitives/Card';
 import { ProgressBar } from '../components/primitives/ProgressBar';
 
+// utils
+import { reviewQueueCount } from '../utils/reviewQueue';
+
 export function Home(): JSX.Element {
   const { t } = useTranslation();
   const locale = useLocale();
   const { list } = useQuestionBank();
   const { progress } = useProgress();
   const overall = summarize(list, progress);
-  const missed = list.filter((q) => (progress[q.id]?.attempts ?? 0) > 0 && (progress[q.id]?.lastScore ?? 1) < 1).length;
+  // Same rule Review uses to build its queue: missed on the last attempt, or marked for review.
+  const missed = reviewQueueCount(list, progress);
   return (
     <div className="space-y-6">
       <div>

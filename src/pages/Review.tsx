@@ -21,6 +21,7 @@ import { Card } from '../components/primitives/Card';
 
 // utils
 import { questionSummary } from '../utils/questionSummary';
+import { isInReviewQueue } from '../utils/reviewQueue';
 
 export function Review(): JSX.Element {
   const { t } = useTranslation();
@@ -34,10 +35,7 @@ export function Review(): JSX.Element {
   const queue = useMemo(
     () =>
       list
-        .filter((q) => {
-          const entry = source[q.id];
-          return entry !== undefined && (entry.flagged || (entry.attempts > 0 && entry.lastScore < 1));
-        })
+        .filter((q) => isInReviewQueue(source[q.id]))
         .sort((a, b) => (source[a.id]?.lastAt ?? '').localeCompare(source[b.id]?.lastAt ?? '')),
     [list, source],
   );

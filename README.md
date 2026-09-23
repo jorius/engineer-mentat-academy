@@ -12,7 +12,13 @@ Live: https://jorius.github.io/engineer-mentat-academy/
 - **Browse**: domain → subject → topic, with mastery per subject.
 - **Drill**: filtered stream with instant grading and explanations.
 - **Mock**: timed, random, mixed-level session with a results page.
-- **Review**: everything you missed or flagged.
+- **Review**: everything you missed or marked for review.
+
+Every question gives you retries up to the max attempts set in Settings (or unlimited), with
+a Show answer fallback that reveals the key without grading once you're done trying. The
+header's Mark for review star puts a question in Review and in mock results even if you got
+it right. Keyboard: `Ctrl+Enter` submits, `N` moves to the next question once it is resolved,
+and `M` toggles Mark for review.
 
 ## Question kinds
 

@@ -17,7 +17,7 @@
     "progressLabel": "Progreso en {{name}}",
     "unseen": "sin ver",
     "unattempted": "sin intentar",
-    "flagged": "marcada",
+    "flagged": "marcada para repaso",
     "scoreAttempts_one": "{{percent}}% · {{count}} intento",
     "scoreAttempts_other": "{{percent}}% · {{count}} intentos",
     "questionCount_one": "{{name}}, {{count}} pregunta",
@@ -43,7 +43,7 @@
     "title": "Explorar",
     "domainNotFound": "No se encontró el dominio.",
     "subjectNotFound": "No se encontró el tema.",
-    "subjectStats": "{{total}} preguntas · {{unseen}} sin ver · {{flagged}} marcadas",
+    "subjectStats": "{{total}} preguntas · {{unseen}} sin ver · {{flagged}} marcadas para repaso",
     "drillThese_one": "Practicar esta {{count}}",
     "drillThese_other": "Practicar estas {{count}}"
   },
@@ -79,7 +79,7 @@
     "backToList": "Volver a la lista",
     "drillAll_one": "Practicar la {{count}}",
     "drillAll_other": "Practicar las {{count}}",
-    "empty": "No hay nada que repasar. Aquí aparecen las preguntas falladas y las que marques."
+    "empty": "No hay nada que repasar. Aquí aparecen las preguntas falladas y las marcadas para repaso."
   },
   "settings": {
     "title": "Configuración",

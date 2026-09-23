@@ -17,7 +17,7 @@
     "progressLabel": "{{name}} progress",
     "unseen": "unseen",
     "unattempted": "unattempted",
-    "flagged": "flagged",
+    "flagged": "marked for review",
     "scoreAttempts_one": "{{percent}}% · {{count}}x",
     "scoreAttempts_other": "{{percent}}% · {{count}}x",
     "questionCount_one": "{{name}}, {{count}} question",
@@ -43,7 +43,7 @@
     "title": "Browse",
     "domainNotFound": "Domain not found.",
     "subjectNotFound": "Subject not found.",
-    "subjectStats": "{{total}} questions · {{unseen}} unseen · {{flagged}} flagged",
+    "subjectStats": "{{total}} questions · {{unseen}} unseen · {{flagged}} marked for review",
     "drillThese_one": "Drill this {{count}}",
     "drillThese_other": "Drill these {{count}}"
   },
@@ -79,7 +79,7 @@
     "backToList": "Back to the list",
     "drillAll_one": "Drill {{count}}",
     "drillAll_other": "Drill all {{count}}",
-    "empty": "Nothing to review. Missed and flagged questions land here."
+    "empty": "Nothing to review. Missed and marked-for-review questions land here."
   },
   "settings": {
     "title": "Settings",
