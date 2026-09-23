@@ -43,7 +43,7 @@ export function OptionButton({
   const stateClasses = correct
     ? 'border-emerald-500/50 bg-emerald-50 dark:bg-emerald-900/20'
     : selected
-      ? 'border-accent-500 bg-accent-50 dark:bg-accent-500/10'
+      ? 'border-zinc-900 bg-zinc-100 ring-1 ring-zinc-900 dark:border-zinc-100 dark:bg-zinc-800 dark:ring-zinc-100'
       : 'border-zinc-200 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900';
 
   return (
@@ -60,7 +60,7 @@ export function OptionButton({
     >
       <span
         className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md font-mono text-sm font-semibold uppercase ${
-          correct ? 'bg-emerald-600 text-white' : selected ? 'bg-accent-500 text-white' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
+          correct ? 'bg-emerald-600 text-white' : selected ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
         }`}
       >
         {id}

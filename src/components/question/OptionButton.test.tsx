@@ -26,9 +26,10 @@ describe('OptionButton', () => {
     expect(onToggle).toHaveBeenCalledWith('a');
   });
 
-  it('carries the accent border when selected', () => {
+  it('carries a neutral outline when selected, never the accent', () => {
     render(<OptionButton id="a" text="Option A" selected onToggle={vi.fn()} />);
-    expect(screen.getByRole('radio', { name: 'Option A' })).toHaveClass('border-accent-500');
+    expect(screen.getByRole('radio', { name: 'Option A' })).toHaveClass('border-zinc-900');
+    expect(screen.getByRole('radio', { name: 'Option A' })).not.toHaveClass('border-accent-500');
   });
 
   it('marks a locked option struck through, dimmed and aria-disabled', () => {
