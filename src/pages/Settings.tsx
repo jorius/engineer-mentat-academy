@@ -20,7 +20,7 @@ export function Settings(): JSX.Element {
     anchor.href = url;
     anchor.download = `mentat-progress-${new Date().toISOString().slice(0, 10)}.json`;
     anchor.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   const importProgress = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {

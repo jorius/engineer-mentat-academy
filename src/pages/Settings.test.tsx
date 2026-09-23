@@ -1,6 +1,6 @@
 // packages
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -13,7 +13,32 @@ import { ProgressProvider } from '../hooks/useProgress';
 // engine
 import { createProgressStore } from '../engine/progress';
 
+const originalUrlStatics = { createObjectURL: URL.createObjectURL, revokeObjectURL: URL.revokeObjectURL };
+
 describe('Settings', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    Object.assign(URL, originalUrlStatics);
+  });
+
+  it('revokes the export URL only after the download click has been handled', async () => {
+    const createObjectURL = vi.fn((): string => 'blob:progress');
+    const revokeObjectURL = vi.fn();
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    render(
+      <MemoryRouter>
+        <ProgressProvider store={createProgressStore(null)}>
+          <Settings />
+        </ProgressProvider>
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /export json/i }));
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+    await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith('blob:progress'));
+  });
+
   it('imports a progress file', async () => {
     const user = userEvent.setup();
     const store = createProgressStore(null);
