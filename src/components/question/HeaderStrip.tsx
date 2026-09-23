@@ -85,12 +85,12 @@ export function HeaderStrip({ question, position, marked, onToggleMark, notesOpe
       <Badge title={kind.hint}>{kind.label}</Badge>
       <nav aria-label={t('question.breadcrumb')} className="flex items-center gap-1.5 text-base">
         <Link to={`/browse/${question.domain}`} className="hover:underline">
-          <Glyph kind="domain" id={question.domain} className="mr-1 inline-block shrink-0 align-[-0.125em]" />
+          <Glyph kind="domain" id={question.domain} className="mr-1" />
           {domain === undefined ? question.domain : domainName(domain, locale)}
         </Link>
         <span aria-hidden="true">›</span>
         <Link to={`/browse/${question.domain}/${question.subject}`} className="font-semibold text-zinc-800 hover:underline dark:text-zinc-100">
-          <Glyph kind="subject" id={question.subject} className="mr-1 inline-block shrink-0 align-[-0.125em]" />
+          <Glyph kind="subject" id={question.subject} className="mr-1" />
           {subject === undefined ? question.subject : subjectName(subject, locale)}
         </Link>
         <span aria-hidden="true">›</span>

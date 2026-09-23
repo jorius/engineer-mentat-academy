@@ -48,7 +48,7 @@ export function Home(): JSX.Element {
           return (
             <Card key={domain.id} className="space-y-1">
               <Link to={`/browse/${domain.id}`} className="font-medium underline">
-                <Glyph kind="domain" id={domain.id} className="mr-1 inline-block shrink-0 align-[-0.125em]" />
+                <Glyph kind="domain" id={domain.id} className="mr-1" />
                 {name}
               </Link>
               <p className="text-xs text-zinc-500">

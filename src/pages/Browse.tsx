@@ -35,7 +35,7 @@ export function Browse(): JSX.Element {
             <Link key={domain.id} to={`/browse/${domain.id}`} aria-label={t('common.questionCount', { name, count: summary.total })}>
               <Card className="h-full space-y-2 hover:border-accent-500">
                 <p className="text-lg font-medium">
-                  <Glyph kind="domain" id={domain.id} className="mr-1 inline-block shrink-0 align-[-0.125em]" />
+                  <Glyph kind="domain" id={domain.id} className="mr-1" />
                   {name}
                 </p>
                 <p className="text-sm text-zinc-500">{domainBlurb(domain, locale)}</p>
