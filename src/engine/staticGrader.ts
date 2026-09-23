@@ -17,6 +17,17 @@ export function normalizeOutput(text: string): string {
     .join('\n');
 }
 
+function looseLine(line: string): string {
+  return line.replace(/\s+/g, '').replace(/'/g, '"');
+}
+
+function linesMatch(expected: string | undefined, actual: string | undefined): boolean {
+  if (expected === undefined || actual === undefined) {
+    return expected === actual;
+  }
+  return expected === actual || looseLine(expected) === looseLine(actual);
+}
+
 function optionText(question: SingleQuestion | MultiQuestion, id: string): string {
   return question.options.find((o) => o.id === id)?.text ?? id;
 }
@@ -70,7 +81,7 @@ function gradePredict(question: PredictQuestion, answer: Answer): GradeResult {
   const feedback: string[] = [];
   const max = Math.max(expectedLines.length, actualLines.length);
   for (let i = 0; i < max; i += 1) {
-    if (expectedLines[i] !== actualLines[i]) {
+    if (!linesMatch(expectedLines[i], actualLines[i])) {
       feedback.push(`Line ${i + 1}: expected "${expectedLines[i] ?? ''}", got "${actualLines[i] ?? ''}"`);
     }
   }

@@ -55,6 +55,19 @@ describe('createStaticGrader', () => {
     expect(wrong.feedback[0]).toMatch(/line 2/i);
   });
 
+  it('accepts console-style spacing and quotes for arrays and objects in predict', async () => {
+    const array: Question = { ...base, id: 'pa', kind: 'predict', language: 'javascript', code: 'x', answer: '[5,4]' };
+    expect((await grader.grade(array, { kind: 'predict', text: '[ 5, 4 ]' })).verdict).toBe('pass');
+    const object: Question = { ...base, id: 'po', kind: 'predict', language: 'javascript', code: 'x', answer: '{"value":1}' };
+    expect((await grader.grade(object, { kind: 'predict', text: '{ value: 1 }' })).verdict).toBe('fail');
+    expect((await grader.grade(object, { kind: 'predict', text: '{ "value": 1 }' })).verdict).toBe('pass');
+    const strings: Question = { ...base, id: 'ps', kind: 'predict', language: 'javascript', code: 'x', answer: '["x"]' };
+    expect((await grader.grade(strings, { kind: 'predict', text: "[ 'x' ]" })).verdict).toBe('pass');
+    const different = await grader.grade(array, { kind: 'predict', text: '[ 5, 3 ]' });
+    expect(different.verdict).toBe('fail');
+    expect(different.feedback).toEqual(['Line 1: expected "[5,4]", got "[ 5, 3 ]"']);
+  });
+
   it('grades code by running tests', async () => {
     const q: Question = {
       ...base,
