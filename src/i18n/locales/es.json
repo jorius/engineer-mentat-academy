@@ -88,7 +88,6 @@
     "imported_one": "Se importó {{count}} registro de pregunta.",
     "imported_other": "Se importaron {{count}} registros de preguntas.",
     "importFailed": "No se pudo importar",
-    "confirmReset": "¿Borrar todo el progreso local? Esta acción no se puede deshacer.",
     "cleared": "Progreso borrado.",
     "gradingHeading": "Evaluación",
     "claudeGrader": "Evaluador con Claude",
@@ -121,7 +120,13 @@
     },
     "practiceHeading": "Práctica",
     "maxAttempts": "Intentos máximos por pregunta",
-    "unlimited": "Ilimitados"
+    "unlimited": "Ilimitados",
+    "dangerHeading": "Zona de peligro",
+    "dangerNote": "Estas acciones solo afectan a este navegador y no se pueden deshacer.",
+    "typeToConfirm": "Escribe RESET para confirmar",
+    "clearProgress": "Borrar progreso",
+    "resetEverything": "Restablecer todo",
+    "resetDone": "Se restableció todo."
   },
   "question": {
     "notFound": "No se encontró la pregunta.",

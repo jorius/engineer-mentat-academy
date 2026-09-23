@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { JSX, ReactNode } from 'react';
 
 type Theme = 'dark' | 'light';
-type ThemeValue = { theme: Theme; toggle: () => void };
+type ThemeValue = { theme: Theme; toggle: () => void; reset: () => void };
 
 const THEME_KEY = 'ema:theme';
 const ThemeContext = createContext<ThemeValue | null>(null);
@@ -29,7 +29,15 @@ export function ThemeProvider({ children }: { children: ReactNode }): JSX.Elemen
   }, [theme]);
 
   const toggle = useCallback((): void => setTheme((t) => (t === 'dark' ? 'light' : 'dark')), []);
-  const value = useMemo((): ThemeValue => ({ theme, toggle }), [theme, toggle]);
+  const reset = useCallback((): void => {
+    try {
+      localStorage.removeItem(THEME_KEY);
+    } catch {
+      // ignore blocked storage
+    }
+    setTheme('dark');
+  }, []);
+  const value = useMemo((): ThemeValue => ({ theme, toggle, reset }), [theme, toggle, reset]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 

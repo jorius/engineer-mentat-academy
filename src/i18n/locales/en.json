@@ -88,7 +88,6 @@
     "imported_one": "Imported {{count}} question record.",
     "imported_other": "Imported {{count}} question records.",
     "importFailed": "Import failed",
-    "confirmReset": "Delete all local progress? This cannot be undone.",
     "cleared": "Progress cleared.",
     "gradingHeading": "Grading",
     "claudeGrader": "Claude grader",
@@ -121,7 +120,13 @@
     },
     "practiceHeading": "Practice",
     "maxAttempts": "Max attempts per question",
-    "unlimited": "Unlimited"
+    "unlimited": "Unlimited",
+    "dangerHeading": "Danger zone",
+    "dangerNote": "These actions only affect this browser and cannot be undone.",
+    "typeToConfirm": "Type RESET to confirm",
+    "clearProgress": "Clear progress",
+    "resetEverything": "Reset everything",
+    "resetDone": "Everything was reset."
   },
   "question": {
     "notFound": "Question not found.",

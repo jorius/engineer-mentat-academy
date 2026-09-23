@@ -3,6 +3,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ChangeEvent, JSX } from 'react';
 
+// contexts
+import { useTheme } from '../contexts/ThemeContext';
+
 // hooks
 import { usePreferences } from '../hooks/usePreferences';
 import { useProgress } from '../hooks/useProgress';
@@ -15,6 +18,9 @@ import type { Accent, EditorFont, EditorTheme, MaxAttempts, TabSize } from '../e
 import { Button } from '../components/primitives/Button';
 import { Card } from '../components/primitives/Card';
 import { CodeEditor } from '../components/common/CodeEditor';
+
+// i18n
+import i18n, { LANGUAGE_KEY } from '../i18n';
 
 const ACCENTS: readonly Accent[] = ['spice', 'sky', 'emerald', 'violet', 'rose'];
 const ACCENT_SWATCH_CLASSES: Record<Accent, string> = {
@@ -45,8 +51,10 @@ export function Settings(): JSX.Element {
   const { t } = useTranslation();
   const { store, progress } = useProgress();
   const { preferences, store: preferencesStore } = usePreferences();
+  const theme = useTheme();
   const [message, setMessage] = useState<string | null>(null);
   const [previewCode, setPreviewCode] = useState<string>(PREVIEW_CODE);
+  const [confirmText, setConfirmText] = useState<string>('');
 
   const exportProgress = (): void => {
     const blob = new Blob([store.exportJson()], { type: 'application/json' });
@@ -74,11 +82,24 @@ export function Settings(): JSX.Element {
     }
   };
 
-  const reset = (): void => {
-    if (window.confirm(t('settings.confirmReset'))) {
-      store.reset();
-      setMessage(t('settings.cleared'));
+  const clearProgress = (): void => {
+    store.reset();
+    setMessage(t('settings.cleared'));
+    setConfirmText('');
+  };
+
+  const resetEverything = (): void => {
+    store.reset();
+    preferencesStore.reset();
+    theme.reset();
+    try {
+      window.localStorage.removeItem(LANGUAGE_KEY);
+    } catch {
+      // ignore blocked storage
     }
+    void i18n.changeLanguage('en');
+    setMessage(t('settings.resetDone'));
+    setConfirmText('');
   };
 
   return (
@@ -93,9 +114,7 @@ export function Settings(): JSX.Element {
             {t('settings.importProgress')}
             <input type="file" accept="application/json" className="sr-only" aria-label={t('settings.importProgress')} onChange={(e): void => void importProgress(e)} />
           </label>
-          <Button variant="danger" onClick={reset}>{t('common.reset')}</Button>
         </div>
-        {message !== null && <p className="text-sm" role="status">{message}</p>}
       </Card>
       <Card className="space-y-2">
         <h2 className="font-medium">{t('settings.gradingHeading')}</h2>
@@ -220,6 +239,23 @@ export function Settings(): JSX.Element {
             ))}
           </select>
         </label>
+      </Card>
+      <Card className="space-y-3 border-red-300 dark:border-red-900">
+        <h2 className="font-medium">{t('settings.dangerHeading')}</h2>
+        <p className="text-sm text-zinc-500">{t('settings.dangerNote')}</p>
+        <input
+          type="text"
+          aria-label={t('settings.typeToConfirm')}
+          placeholder="RESET"
+          value={confirmText}
+          onChange={(e): void => setConfirmText(e.target.value)}
+          className="w-40 rounded-md border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        />
+        <div className="flex flex-wrap gap-2">
+          <Button variant="danger" disabled={confirmText.trim() !== 'RESET'} onClick={clearProgress}>{t('settings.clearProgress')}</Button>
+          <Button variant="danger" disabled={confirmText.trim() !== 'RESET'} onClick={resetEverything}>{t('settings.resetEverything')}</Button>
+        </div>
+        {message !== null && <p className="text-sm" role="status">{message}</p>}
       </Card>
     </div>
   );

@@ -16,9 +16,12 @@ import { ProgressProvider } from '../hooks/useProgress';
 
 // engine
 import { createProgressStore } from '../engine/progress';
-import { createPreferencesStore } from '../engine/preferences';
+import { createPreferencesStore, DEFAULT_PREFERENCES } from '../engine/preferences';
 import type { ProgressStore } from '../engine/progress';
 import type { PreferencesStore } from '../engine/preferences';
+
+// i18n
+import i18n, { LANGUAGE_KEY } from '../i18n';
 
 const originalUrlStatics = { createObjectURL: URL.createObjectURL, revokeObjectURL: URL.revokeObjectURL };
 
@@ -109,5 +112,55 @@ describe('Settings', () => {
     renderSettings();
     await user.click(screen.getByRole('radio', { name: 'violet' }));
     expect(document.documentElement.dataset.accent).toBe('violet');
+  });
+
+  it('keeps the danger zone buttons disabled until RESET is typed', async () => {
+    const user = userEvent.setup();
+    renderSettings();
+    const clearButton = screen.getByRole('button', { name: /clear progress/i });
+    const resetButton = screen.getByRole('button', { name: /reset everything/i });
+    expect(clearButton).toBeDisabled();
+    expect(resetButton).toBeDisabled();
+    await user.type(screen.getByLabelText(/type reset to confirm/i), 'RESET');
+    expect(clearButton).toBeEnabled();
+    expect(resetButton).toBeEnabled();
+  });
+
+  it('clears progress but keeps preferences when confirmed', async () => {
+    const user = userEvent.setup();
+    const progressStore = createProgressStore(null);
+    progressStore.record('q1', 1);
+    const preferencesStore = createPreferencesStore(null);
+    preferencesStore.set({ tabSize: 4 });
+    renderSettings({ progressStore, preferencesStore });
+    await user.type(screen.getByLabelText(/type reset to confirm/i), 'RESET');
+    await user.click(screen.getByRole('button', { name: /clear progress/i }));
+    expect(progressStore.all()).toEqual({});
+    expect(preferencesStore.get().tabSize).toBe(4);
+    expect(await screen.findByRole('status')).toHaveTextContent(/progress cleared/i);
+    expect(screen.getByLabelText(/type reset to confirm/i)).toHaveValue('');
+  });
+
+  it('resets everything: preferences, theme and language storage keys, and shows the done message', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('ema:theme', 'light');
+    localStorage.setItem(LANGUAGE_KEY, 'es');
+    const progressStore = createProgressStore(null);
+    progressStore.record('q1', 1);
+    const preferencesStore = createPreferencesStore(null);
+    preferencesStore.set({ tabSize: 4 });
+    renderSettings({ progressStore, preferencesStore });
+    await user.type(screen.getByLabelText(/type reset to confirm/i), 'RESET');
+    await user.click(screen.getByRole('button', { name: /reset everything/i }));
+    expect(progressStore.all()).toEqual({});
+    expect(preferencesStore.get()).toEqual(DEFAULT_PREFERENCES);
+    // The theme and language keys are removed synchronously inside the reset, but React's
+    // own theme-persistence effect and i18next's language-detector cache both write their
+    // default value straight back, so the settled state is the default rather than absent.
+    await waitFor(() => expect(i18n.language).toBe('en'));
+    await waitFor(() => expect(localStorage.getItem(LANGUAGE_KEY)).toBe('en'));
+    await waitFor(() => expect(localStorage.getItem('ema:theme')).toBe('dark'));
+    expect(await screen.findByRole('status')).toHaveTextContent(/everything was reset/i);
+    expect(screen.getByLabelText(/type reset to confirm/i)).toHaveValue('');
   });
 });
