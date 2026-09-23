@@ -18,7 +18,8 @@
     "unseen": "sin ver",
     "unattempted": "sin intentar",
     "flagged": "marcada",
-    "scoreAttempts": "{{percent}}% · {{attempts}} intentos",
+    "scoreAttempts_one": "{{percent}}% · {{count}} intento",
+    "scoreAttempts_other": "{{percent}}% · {{count}} intentos",
     "questionCount_one": "{{name}}, {{count}} pregunta",
     "questionCount_other": "{{name}}, {{count}} preguntas"
   },
@@ -43,7 +44,8 @@
     "domainNotFound": "No se encontró el dominio.",
     "subjectNotFound": "No se encontró el tema.",
     "subjectStats": "{{total}} preguntas · {{unseen}} sin ver · {{flagged}} marcadas",
-    "drillThese": "Practicar estas {{count}}"
+    "drillThese_one": "Practicar esta {{count}}",
+    "drillThese_other": "Practicar estas {{count}}"
   },
   "drill": {
     "title": "Práctica",
@@ -75,7 +77,8 @@
     "title": "Repaso",
     "completeTitle": "Repaso terminado",
     "backToList": "Volver a la lista",
-    "drillAll": "Practicar las {{count}}",
+    "drillAll_one": "Practicar la {{count}}",
+    "drillAll_other": "Practicar las {{count}}",
     "empty": "No hay nada que repasar. Aquí aparecen las preguntas falladas y las que marques."
   },
   "settings": {

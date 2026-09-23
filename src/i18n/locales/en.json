@@ -18,7 +18,8 @@
     "unseen": "unseen",
     "unattempted": "unattempted",
     "flagged": "flagged",
-    "scoreAttempts": "{{percent}}% · {{attempts}}x",
+    "scoreAttempts_one": "{{percent}}% · {{count}}x",
+    "scoreAttempts_other": "{{percent}}% · {{count}}x",
     "questionCount_one": "{{name}}, {{count}} question",
     "questionCount_other": "{{name}}, {{count}} questions"
   },
@@ -43,7 +44,8 @@
     "domainNotFound": "Domain not found.",
     "subjectNotFound": "Subject not found.",
     "subjectStats": "{{total}} questions · {{unseen}} unseen · {{flagged}} flagged",
-    "drillThese": "Drill these {{count}}"
+    "drillThese_one": "Drill this {{count}}",
+    "drillThese_other": "Drill these {{count}}"
   },
   "drill": {
     "title": "Drill",
@@ -75,7 +77,8 @@
     "title": "Review",
     "completeTitle": "Review complete",
     "backToList": "Back to the list",
-    "drillAll": "Drill all {{count}}",
+    "drillAll_one": "Drill {{count}}",
+    "drillAll_other": "Drill all {{count}}",
     "empty": "Nothing to review. Missed and flagged questions land here."
   },
   "settings": {

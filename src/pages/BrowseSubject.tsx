@@ -88,7 +88,7 @@ export function BrowseSubject(): JSX.Element {
                   <Badge title={kind.hint}>{kind.label}</Badge>
                   <Link to={`/q/${q.id}`} className="underline">{questionSummary(q, { locale, t })}</Link>
                   <span className="ml-auto text-xs text-zinc-500">
-                    {entry === undefined || entry.attempts === 0 ? t('common.unseen') : t('common.scoreAttempts', { percent: Math.round(entry.lastScore * 100), attempts: entry.attempts })}
+                    {entry === undefined || entry.attempts === 0 ? t('common.unseen') : t('common.scoreAttempts', { percent: Math.round(entry.lastScore * 100), count: entry.attempts })}
                     {entry?.flagged === true ? ` · ${t('common.flagged')}` : ''}
                   </span>
                 </Card>
