@@ -51,21 +51,26 @@ export function QuestionView({ question, onNext, position }: Props): JSX.Element
   const { store, progress } = useProgress();
   const [result, setResult] = useState<GradeResult | null>(null);
   const [grading, setGrading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const entry = progress[question.id];
   const flagged = entry?.flagged ?? false;
 
   useEffect(() => {
     setResult(null);
     setGrading(false);
+    setError(null);
   }, [question.id]);
 
   const submit = useCallback(
     async (answer: Answer): Promise<void> => {
       setGrading(true);
+      setError(null);
       try {
         const graded = await grader.grade(question, answer);
         setResult(graded);
         store.record(question.id, graded.score);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
       } finally {
         setGrading(false);
       }
@@ -103,8 +108,13 @@ export function QuestionView({ question, onNext, position }: Props): JSX.Element
         <Button variant="ghost" onClick={toggleFlag} aria-pressed={flagged}>{flagged ? 'Flagged' : 'Flag'}</Button>
       </div>
       <Markdown text={question.prompt} />
-      <AnswerArea question={question} disabled={grading || result !== null} onSubmit={submit} />
+      <AnswerArea key={question.id} question={question} disabled={grading || result !== null} onSubmit={submit} />
       {grading && <p className="text-sm text-zinc-500">Grading…</p>}
+      {error !== null && (
+        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          Grading failed: {error}
+        </p>
+      )}
       {result !== null && (
         <div className="space-y-3">
           <Feedback result={result} />
@@ -118,6 +128,7 @@ export function QuestionView({ question, onNext, position }: Props): JSX.Element
       <label className="block text-xs text-zinc-500">
         Notes
         <textarea
+          key={question.id}
           className="mt-1 w-full rounded-md border border-zinc-300 bg-white p-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           rows={2}
           defaultValue={entry?.notes ?? ''}

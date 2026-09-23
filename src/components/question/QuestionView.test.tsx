@@ -19,6 +19,7 @@ import { createProgressStore } from '../../engine/progress';
 import { createStaticGrader } from '../../engine/staticGrader';
 import { executeSource } from '../../engine/runner/execute';
 import type { Question } from '../../engine/question';
+import type { Grader } from '../../engine/grader';
 
 const single: Question = {
   id: 'javascript-test-single',
@@ -45,6 +46,8 @@ const code: Question = {
   tests: [{ name: 'one', args: [], expected: 1 }],
   solution: 'export function solution() { return 1; }',
 };
+
+const single2: Question = { ...single, id: 'javascript-test-single-2' };
 
 function setup(question: Question, onNext = vi.fn()): { store: ReturnType<typeof createProgressStore>; onNext: typeof onNext } {
   const store = createProgressStore(null);
@@ -100,5 +103,60 @@ describe('QuestionView', () => {
     await user.click(screen.getByRole('button', { name: /submit/i }));
     expect(await screen.findByText(/one: expected 1, got 0/)).toBeInTheDocument();
     expect(store.get('javascript-test-code')?.lastScore).toBe(0);
+  });
+
+  it('resets answer state when the question changes', async () => {
+    const user = userEvent.setup();
+    const store = createProgressStore(null);
+    const grader = createStaticGrader({
+      runJs: (r) => executeSource(r.source, r.tests, r.language),
+      runSql: async () => ({ status: 'error', columns: [], rows: [], error: 'not in test' }),
+    });
+    const { rerender } = render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ProgressProvider store={store}>
+            <GraderProvider grader={grader}>
+              <QuestionView question={single} />
+            </GraderProvider>
+          </ProgressProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+    await user.click(screen.getByRole('radio', { name: 'B' }));
+    rerender(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ProgressProvider store={store}>
+            <GraderProvider grader={grader}>
+              <QuestionView question={single2} />
+            </GraderProvider>
+          </ProgressProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getAllByRole('radio').every((radio) => !(radio as HTMLInputElement).checked)).toBe(true);
+    expect(screen.getByRole('button', { name: /submit/i })).toBeDisabled();
+  });
+
+  it('shows an error when grading fails', async () => {
+    const user = userEvent.setup();
+    const store = createProgressStore(null);
+    const grader: Grader = { grade: async () => Promise.reject(new Error('worker died')) };
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ProgressProvider store={store}>
+            <GraderProvider grader={grader}>
+              <QuestionView question={single} />
+            </GraderProvider>
+          </ProgressProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+    await user.click(screen.getByRole('radio', { name: 'B' }));
+    await user.click(screen.getByRole('button', { name: /submit/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/worker died/);
+    expect(store.get(single.id)).toBeUndefined();
   });
 });
