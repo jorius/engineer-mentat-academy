@@ -121,7 +121,7 @@
       "rose": "rose"
     },
     "practiceHeading": "Practice",
-    "maxAttempts": "Max attempts per question (used by the upcoming retry flow)",
+    "maxAttempts": "Max attempts per question",
     "unlimited": "Unlimited"
   },
   "question": {

@@ -25,6 +25,7 @@ type Props = {
   marked: boolean;
   onToggleMark: () => void;
   notesOpen: boolean;
+  hasNotes: boolean;
   notesId: string;
   onToggleNotes: () => void;
 };
@@ -32,7 +33,7 @@ type Props = {
 const toolClass =
   'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800';
 
-export function HeaderStrip({ question, position, marked, onToggleMark, notesOpen, notesId, onToggleNotes }: Props): JSX.Element {
+export function HeaderStrip({ question, position, marked, onToggleMark, notesOpen, hasNotes, notesId, onToggleNotes }: Props): JSX.Element {
   const { t } = useTranslation();
   const locale = useLocale();
   const navigate = useNavigate();
@@ -89,6 +90,7 @@ export function HeaderStrip({ question, position, marked, onToggleMark, notesOpe
         <button type="button" className={toolClass} onClick={onToggleNotes} aria-expanded={notesOpen} aria-controls={notesId} title={t('question.notesHint')}>
           <span aria-hidden="true">📝</span>
           {t('question.notes')}
+          {hasNotes && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-accent-500" />}
         </button>
         <span className="relative">
           <Link to={permalinkPath} className={toolClass} aria-label={t('question.permalink')} title={t('question.permalink')} onClick={(event): void => void copyPermalink(event)}>

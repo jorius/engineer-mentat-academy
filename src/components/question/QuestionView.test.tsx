@@ -233,6 +233,18 @@ describe('QuestionView', () => {
     expect(store.get(code.id)?.lastScore).toBe(0);
   });
 
+  it('shows the reference solution read-only when a code question runs out of attempts', async () => {
+    const user = userEvent.setup();
+    const { store } = setup(code, { maxAttempts: 1 });
+    await user.click(button(/submit/i));
+    expect(await screen.findByText('Because B.')).toBeInTheDocument();
+    const editor = screen.getByLabelText('Solution');
+    expect(editor).toHaveTextContent('return 1;');
+    expect(editor.getAttribute('aria-readonly')).toBe('true');
+    expect(within(actionBar()).getByText('Out of attempts')).toBeInTheDocument();
+    expect(store.get(code.id)).toMatchObject({ attempts: 1, lastScore: 0 });
+  });
+
   it('reset clears a predict answer and keeps the attempts used', async () => {
     const user = userEvent.setup();
     setup(predict);
@@ -299,6 +311,16 @@ describe('QuestionView', () => {
     expect(screen.getByRole('textbox', { name: /my notes/i })).toHaveValue('check phase');
   });
 
+  it('opens the notes drawer with saved notes on a revisit and marks the notes button', () => {
+    const store = createProgressStore(null);
+    store.setNotes(single.id, 'check phase, after poll');
+    setup(single, { store });
+    const toggle = screen.getByRole('button', { name: /my notes/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle.querySelector('.rounded-full')).not.toBeNull();
+    expect(screen.getByRole('textbox', { name: /my notes/i })).toHaveValue('check phase, after poll');
+  });
+
   it('copies the permalink and shows a Copied toast', async () => {
     const user = userEvent.setup();
     setup(single);
@@ -328,6 +350,7 @@ describe('QuestionView', () => {
     const grade = vi.fn<Grader['grade']>(async () => ({ score: 0.5, verdict: 'self', feedback: [] }));
     const { store } = setup(open, { grader: { grade } });
     expect(within(actionBar()).queryByText(/attempt/i)).not.toBeInTheDocument();
+    expect(within(actionBar()).queryByRole('button', { name: /show answer/i })).not.toBeInTheDocument();
     await user.type(screen.getByPlaceholderText(/say it out loud/i), 'Closures capture bindings');
     await user.click(button(/reveal model answer/i));
     expect(screen.getByText('Model.')).toBeInTheDocument();

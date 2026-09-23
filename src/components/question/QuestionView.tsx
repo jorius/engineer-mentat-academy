@@ -84,7 +84,7 @@ function answerFor(question: Question, answers: Answers): Answer | null {
   }
 }
 
-/** The answer values after Show answer: the reference output, solution or query from the canonical question. */
+/** The answer values once the reference is revealed (Show answer or out of attempts): the canonical output, solution or query. */
 function shownAnswers(canonical: Question, answers: Answers): Answers {
   switch (canonical.kind) {
     case 'predict':
@@ -210,7 +210,9 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
   const [answers, setAnswers] = useState<Answers>(() => initialAnswers(question));
   const [grading, setGrading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notesOpen, setNotesOpen] = useState(false);
+  const hasSavedNotes = (id: string): boolean => (progress[id]?.notes ?? '').trim().length > 0;
+  // Saved notes open with their question so they are seen on a revisit.
+  const [notesOpen, setNotesOpen] = useState(() => hasSavedNotes(question.id));
   const [currentId, setCurrentId] = useState(question.id);
   const notesId = useId();
   const activeId = useRef(question.id);
@@ -222,6 +224,7 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
     setAnswers(initialAnswers(question));
     setGrading(false);
     setError(null);
+    setNotesOpen(hasSavedNotes(question.id));
     dispatch({ type: 'NEW_QUESTION' });
   }
 
@@ -245,7 +248,10 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
   const isOpen = question.kind === 'open';
   const pending = answerFor(question, answers);
   const submitDisabled = resolved || grading || (!isOpen && pending === null);
-  const showAnswerDisabled = resolved || grading || (isOpen && answers.openRevealed);
+  const showAnswerDisabled = resolved || grading;
+  // Show answer and running out of attempts both reveal the reference answer, read-only.
+  const referenceShown = resolved && (attempt.outcome === 'shown' || attempt.outcome === 'exhausted');
+  const displayedAnswers = referenceShown ? shownAnswers(canonical, answers) : answers;
 
   const update = (patch: Partial<Answers>): void => setAnswers((current) => ({ ...current, ...patch }));
 
@@ -291,11 +297,6 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
     if (showAnswerDisabled) {
       return;
     }
-    if (isOpen) {
-      update({ openRevealed: true });
-      return;
-    }
-    setAnswers((current) => shownAnswers(canonical, current));
     dispatch({ type: 'SHOW_ANSWER' });
   };
 
@@ -343,6 +344,7 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
         marked={marked}
         onToggleMark={toggleMark}
         notesOpen={notesOpen}
+        hasNotes={hasSavedNotes(question.id)}
         notesId={notesId}
         onToggleNotes={(): void => setNotesOpen((open) => !open)}
       />
@@ -360,7 +362,7 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
           <AnswerInput
             key={question.id}
             question={question}
-            answers={answers}
+            answers={displayedAnswers}
             update={update}
             onSubmit={(): void => void submit()}
             disabled={grading || resolved}
@@ -389,7 +391,7 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
         resolved={resolved}
         busy={grading}
         onReset={hasResettableInput(question) ? reset : undefined}
-        onShowAnswer={showAnswer}
+        onShowAnswer={isOpen ? undefined : showAnswer}
         showAnswerDisabled={showAnswerDisabled}
         submitLabel={submitLabel}
         onSubmit={(): void => void submit()}

@@ -10,7 +10,7 @@ type Props = {
   resolved: boolean;
   busy: boolean;
   onReset?: () => void;
-  onShowAnswer: () => void;
+  onShowAnswer?: () => void;
   showAnswerDisabled: boolean;
   submitLabel: string;
   onSubmit: () => void;
@@ -20,7 +20,7 @@ type Props = {
 
 /**
  * The workbench's single row of actions, pinned to the bottom of the card. Order: Reset (only when
- * the caller passes `onReset`), Show answer, Submit (primary until resolved), Next (primary once
+ * the caller passes `onReset`), Show answer (only with `onShowAnswer`), Submit (primary until resolved), Next (primary once
  * resolved; hidden without `onNext`).
  */
 export function ActionBar({ pill, resolved, busy, onReset, onShowAnswer, showAnswerDisabled, submitLabel, onSubmit, submitDisabled, onNext }: Props): JSX.Element {
@@ -38,9 +38,11 @@ export function ActionBar({ pill, resolved, busy, onReset, onShowAnswer, showAns
             {t('question.reset')}
           </Button>
         )}
-        <Button variant="ghost" className="disabled:opacity-40" onClick={onShowAnswer} disabled={showAnswerDisabled}>
-          {t('question.showAnswer')}
-        </Button>
+        {onShowAnswer !== undefined && (
+          <Button variant="ghost" className="disabled:opacity-40" onClick={onShowAnswer} disabled={showAnswerDisabled}>
+            {t('question.showAnswer')}
+          </Button>
+        )}
         <Button variant={resolved ? 'ghost' : 'primary'} className="disabled:opacity-40" onClick={onSubmit} disabled={submitDisabled}>
           {submitLabel}
         </Button>
