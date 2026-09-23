@@ -58,13 +58,19 @@ export function Mock(): JSX.Element {
   const [levels, setLevels] = useState<Level[]>([...LEVELS]);
   const [domains, setDomains] = useState<string[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [startedAt, setStartedAt] = useState<string>('');
 
   const toggle = <T extends string>(value: T, current: T[], set: (next: T[]) => void): void =>
     set(current.includes(value) ? current.filter((v) => v !== value) : [...current, value]);
 
   const results = useMemo(
-    () => questions.map((q) => ({ question: q, score: progress[q.id]?.lastScore ?? 0, attempted: (progress[q.id]?.attempts ?? 0) > 0 })),
-    [questions, progress],
+    () =>
+      questions.map((q) => {
+        const entry = progress[q.id];
+        const attempted = entry !== undefined && entry.lastAt >= startedAt;
+        return { question: q, score: attempted ? entry.lastScore : 0, attempted };
+      }),
+    [questions, progress, startedAt],
   );
 
   if (phase === 'session') {
@@ -120,6 +126,7 @@ export function Mock(): JSX.Element {
           disabled={levels.length === 0 || count < 1}
           onClick={(): void => {
             setQuestions(pickMock(list, { count, levels, domains }));
+            setStartedAt(new Date().toISOString());
             setPhase('session');
           }}
         >

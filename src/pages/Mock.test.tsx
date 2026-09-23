@@ -1,6 +1,6 @@
 // packages
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -16,12 +16,13 @@ import { ProgressProvider } from '../hooks/useProgress';
 
 // engine
 import { createProgressStore } from '../engine/progress';
+import type { ProgressStore } from '../engine/progress';
 
-function setup(): void {
+function setup(store: ProgressStore = createProgressStore(null)): void {
   render(
     <MemoryRouter>
       <ThemeProvider>
-        <ProgressProvider store={createProgressStore(null)}>
+        <ProgressProvider store={store}>
           <GraderProvider>
             <Mock />
           </GraderProvider>
@@ -32,6 +33,10 @@ function setup(): void {
 }
 
 describe('Mock', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('starts a session with the chosen count and shows a timer', async () => {
     const user = userEvent.setup();
     setup();
@@ -49,5 +54,26 @@ describe('Mock', () => {
       await user.click(screen.getByLabelText(level));
     }
     expect(screen.getByRole('button', { name: /start/i })).toBeDisabled();
+  });
+
+  it('ignores progress recorded before the session started', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    const user = userEvent.setup();
+    const store = createProgressStore(null);
+    store.record('javascript-closure-counter-independence', 1);
+    setup(store);
+
+    await user.clear(screen.getByLabelText(/questions/i));
+    await user.type(screen.getByLabelText(/questions/i), '999');
+    await user.clear(screen.getByLabelText(/minutes/i));
+    await user.type(screen.getByLabelText(/minutes/i), '1');
+    await user.click(screen.getByRole('button', { name: /start/i }));
+
+    await act(async () => {
+      vi.advanceTimersByTime(61_000);
+    });
+
+    await user.click(screen.getByRole('button', { name: /see results/i }));
+    expect(screen.getByText(/0 of \d+ answered/)).toBeInTheDocument();
   });
 });
