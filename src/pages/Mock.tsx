@@ -43,6 +43,7 @@ function Session({ questions, minutes, onFinish }: { questions: Question[]; minu
   if (queue.done || expired || queue.current === undefined) {
     return (
       <div className="space-y-3">
+        <h1 className="text-2xl font-semibold">{t('mock.title')}</h1>
         <p>{expired ? t('mock.timeUp') : t('mock.allAnswered')}</p>
         <Button onClick={onFinish}>{t('mock.seeResults')}</Button>
       </div>
@@ -85,7 +86,6 @@ export function Mock(): JSX.Element {
   if (phase === 'session') {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">{t('mock.title')}</h1>
         <Session questions={questions} minutes={minutes} onFinish={(): void => setPhase('results')} />
       </div>
     );

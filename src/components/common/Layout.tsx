@@ -1,7 +1,8 @@
 // packages
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { JSX } from 'react';
+import { FiMoon, FiSun } from 'react-icons/fi';
+import type { ChangeEvent, JSX } from 'react';
 
 // contexts
 import { useTheme } from '../../contexts/ThemeContext';
@@ -29,6 +30,7 @@ export function Layout(): JSX.Element {
   const { pathname } = useLocation();
   const width = containerWidth(pathname);
   const active = i18n.resolvedLanguage ?? 'en';
+  const themeLabel = theme === 'dark' ? t('common.switchToLight') : t('common.switchToDark');
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
@@ -46,23 +48,20 @@ export function Layout(): JSX.Element {
               {t(link.key)}
             </NavLink>
           ))}
-          <div role="group" aria-label={t('common.language')} className="ml-auto flex gap-1">
+          <select
+            aria-label={t('common.language')}
+            value={active}
+            onChange={(event: ChangeEvent<HTMLSelectElement>): void => void i18n.changeLanguage(event.target.value)}
+            className="ml-auto rounded border border-zinc-300 bg-transparent px-2 py-1 dark:border-zinc-700 dark:bg-zinc-950"
+          >
             {SUPPORTED_LANGUAGES.map((language) => (
-              <button
-                key={language}
-                type="button"
-                lang={language}
-                title={t(LANGUAGE_NAMES[language])}
-                aria-pressed={active === language}
-                onClick={(): void => void i18n.changeLanguage(language)}
-                className={`rounded px-2 py-1 ${active === language ? 'bg-zinc-200 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-900'}`}
-              >
-                {t(`common.${language}`)}
-              </button>
+              <option key={language} value={language} lang={language}>
+                {t(LANGUAGE_NAMES[language])}
+              </option>
             ))}
-          </div>
-          <button type="button" onClick={toggle} className="rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900" aria-label={t('common.toggleTheme')}>
-            {theme === 'dark' ? t('common.light') : t('common.dark')}
+          </select>
+          <button type="button" onClick={toggle} className="rounded p-2 hover:bg-zinc-100 dark:hover:bg-zinc-900" aria-label={themeLabel} title={themeLabel}>
+            {theme === 'dark' ? <FiSun aria-hidden="true" /> : <FiMoon aria-hidden="true" />}
           </button>
         </nav>
       </header>

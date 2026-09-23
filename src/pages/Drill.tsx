@@ -52,7 +52,6 @@ function DrillQueue({ questions, unseen }: { questions: Question[]; unseen: bool
   }
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">{t('drill.title')}</h1>
       <QuestionView key={drill.current.id} question={drill.current} onNext={drill.next} position={{ index: drill.index, total: drill.total }} />
     </div>
   );

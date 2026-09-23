@@ -382,12 +382,12 @@ describe('QuestionView', () => {
     const mark = screen.getByRole('button', { name: /mark for review/i });
     expect(mark).toHaveAttribute('aria-pressed', 'false');
     expect(mark).toHaveAttribute('title', expect.stringMatching(/show up in review/i));
-    expect(mark).toHaveTextContent('☆');
+    expect(mark.querySelector('svg')).toHaveAttribute('fill', 'none');
     await user.click(mark);
     expect(store.get(single.id)?.flagged).toBe(true);
     expect(mark).toHaveAccessibleName('Mark for review');
     expect(mark).toHaveAttribute('aria-pressed', 'true');
-    expect(mark).toHaveTextContent('★');
+    expect(mark.querySelector('svg')).toHaveAttribute('fill', 'currentColor');
     await user.keyboard('m');
     expect(store.get(single.id)?.flagged).toBe(false);
     expect(mark).toHaveAttribute('aria-pressed', 'false');
@@ -449,8 +449,9 @@ describe('QuestionView', () => {
   it('copies the permalink and shows a Link copied toast', async () => {
     const user = userEvent.setup();
     setup(single);
-    const link = screen.getByRole('link', { name: 'permalink' });
+    const link = screen.getByRole('link', { name: 'Copy link to this question' });
     expect(link).toHaveAttribute('href', '/q/javascript-test-single');
+    expect(link).toHaveAttribute('title', 'Copy link to this question');
     await user.click(link);
     expect(await screen.findByText('Link copied')).toHaveAttribute('role', 'status');
     expect(await navigator.clipboard.readText()).toMatch(/\/q\/javascript-test-single$/);

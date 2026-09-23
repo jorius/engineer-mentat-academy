@@ -40,11 +40,10 @@ describe('routes', () => {
   it('switches the interface language from the header and remembers it', async () => {
     const user = userEvent.setup();
     renderAt('/');
-    expect(screen.getByRole('button', { name: 'EN' })).toHaveAttribute('aria-pressed', 'true');
-    await user.click(screen.getByRole('button', { name: 'ES' }));
+    expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Language' }), 'es');
     expect(screen.getByRole('link', { name: 'Explorar' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'ES' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'EN' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('combobox', { name: 'Idioma' })).toHaveValue('es');
     expect(localStorage.getItem('ema:lang')).toBe('es');
     expect(document.documentElement.lang).toBe('es');
   });

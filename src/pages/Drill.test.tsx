@@ -48,10 +48,12 @@ describe('Drill page', () => {
     renderAt('/drill?subject=javascript');
     expect(screen.getByText(/1 \/ \d+/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /submit|reveal model answer/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
   });
 
   it('explains when nothing matches', () => {
     renderAt('/drill?subject=nothing');
     expect(screen.getByText(/no questions match/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Drill' })).toBeInTheDocument();
   });
 });

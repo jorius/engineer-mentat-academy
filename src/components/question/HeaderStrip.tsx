@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useHref, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { FiFileText, FiLink, FiStar } from 'react-icons/fi';
 import type { JSX, MouseEvent, Ref } from 'react';
 
 // content
@@ -97,17 +98,17 @@ export function HeaderStrip({ question, position, marked, onToggleMark, notesOpe
       </nav>
       <div className="ml-auto flex items-center gap-1">
         <button type="button" className={toolClass} onClick={onToggleMark} aria-pressed={marked} title={t('question.markHint')}>
-          <span aria-hidden="true" className={marked ? 'text-accent-500' : ''}>{marked ? '★' : '☆'}</span>
+          <FiStar aria-hidden="true" className={marked ? 'text-accent-500' : ''} fill={marked ? 'currentColor' : 'none'} />
           {t('question.markForReview')}
         </button>
         <button ref={notesButtonRef} type="button" className={toolClass} onClick={onToggleNotes} aria-expanded={notesOpen} aria-controls={notesId} title={t('question.notesHint')}>
-          <span aria-hidden="true">📝</span>
+          <FiFileText aria-hidden="true" />
           {t('question.notes')}
           {hasNotes && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-accent-500" />}
         </button>
         <span className="relative">
-          <Link to={permalinkPath} className={toolClass} aria-label={t('question.permalink')} title={t('question.permalink')} onClick={(event): void => void copyPermalink(event)}>
-            <span aria-hidden="true">⛓</span>
+          <Link to={permalinkPath} className={toolClass} aria-label={t('question.copyLink')} title={t('question.copyLink')} onClick={(event): void => void copyPermalink(event)}>
+            <FiLink aria-hidden="true" />
           </Link>
           {copied && (
             <span role="status" className="absolute right-0 top-full z-10 mt-1 whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-xs text-white shadow dark:bg-zinc-100 dark:text-zinc-900">
