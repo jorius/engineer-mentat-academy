@@ -94,21 +94,42 @@ describe('attemptReducer', () => {
     expect(next.lockedOptionIds).toEqual([]);
   });
 
-  it('SUBMIT_RESULT fail with no attempts remaining resolves exhausted', () => {
-    const checking: AttemptState = { ...initialAttemptState, phase: 'checking', attemptsUsed: 2 };
+  it('SUBMIT_RESULT fail with no attempts remaining resolves exhausted and still locks the option', () => {
+    const checking: AttemptState = { ...initialAttemptState, phase: 'checking', attemptsUsed: 2, lockedOptionIds: ['x', 'y'] };
     const result = grade({ verdict: 'fail' });
     const next = attemptReducer(checking, { type: 'SUBMIT_RESULT', result, kind: 'single', submittedOptionId: 'a' }, 3);
     expect(next.phase).toBe('resolved');
     expect(next.outcome).toBe('exhausted');
     expect(next.attemptsUsed).toBe(3);
+    expect(next.lockedOptionIds).toEqual(['x', 'y', 'a']);
   });
 
-  it('SUBMIT_RESULT fail with maxAttempts 1 exhausts on the first attempt', () => {
+  it('SUBMIT_RESULT fail with maxAttempts 1 exhausts on the first attempt and locks that option', () => {
     const checking: AttemptState = { ...initialAttemptState, phase: 'checking' };
     const result = grade({ verdict: 'fail' });
     const next = attemptReducer(checking, { type: 'SUBMIT_RESULT', result, kind: 'single', submittedOptionId: 'a' }, 1);
     expect(next.phase).toBe('resolved');
     expect(next.outcome).toBe('exhausted');
+    expect(next.lockedOptionIds).toEqual(['a']);
+  });
+
+  it('SUBMIT_RESULT fail with maxAttempts 2 locks both wrong options in order before exhausting', () => {
+    const first = attemptReducer(
+      { ...initialAttemptState, phase: 'checking' },
+      { type: 'SUBMIT_RESULT', result: grade({ verdict: 'fail' }), kind: 'single', submittedOptionId: 'a' },
+      2,
+    );
+    expect(first.phase).toBe('wrong');
+    expect(first.lockedOptionIds).toEqual(['a']);
+
+    const second = attemptReducer(
+      { ...first, phase: 'checking' },
+      { type: 'SUBMIT_RESULT', result: grade({ verdict: 'fail' }), kind: 'single', submittedOptionId: 'b' },
+      2,
+    );
+    expect(second.phase).toBe('resolved');
+    expect(second.outcome).toBe('exhausted');
+    expect(second.lockedOptionIds).toEqual(['a', 'b']);
   });
 
   it('SUBMIT_RESULT fail is never exhausted when maxAttempts is unlimited', () => {

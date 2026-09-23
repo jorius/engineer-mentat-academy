@@ -53,14 +53,14 @@ function submitResult(
     return { ...state, phase: 'resolved', outcome: 'solved', lastResult: result };
   }
   const attemptsUsed = state.attemptsUsed + 1;
+  const lockedOptionIds =
+    kind === 'single' && submittedOptionId !== undefined
+      ? [...state.lockedOptionIds, submittedOptionId]
+      : state.lockedOptionIds;
   if (attemptsRemain(state, maxAttempts)) {
-    const lockedOptionIds =
-      kind === 'single' && submittedOptionId !== undefined
-        ? [...state.lockedOptionIds, submittedOptionId]
-        : state.lockedOptionIds;
     return { ...state, phase: 'wrong', attemptsUsed, lastResult: result, lockedOptionIds };
   }
-  return { ...state, phase: 'resolved', outcome: 'exhausted', attemptsUsed, lastResult: result };
+  return { ...state, phase: 'resolved', outcome: 'exhausted', attemptsUsed, lastResult: result, lockedOptionIds };
 }
 
 export function attemptReducer(state: AttemptState, event: AttemptEvent, maxAttempts: MaxAttempts): AttemptState {
