@@ -23,7 +23,7 @@ const STEP_BUTTON = 'h-8 w-8 rounded-md border border-zinc-300 text-base leading
 export function Stepper({ label, value, min, max, step = 1, onChange, hint }: Props): JSX.Element {
   const { t } = useTranslation();
   const [draft, setDraft] = useState<string | null>(null);
-  const clamp = (next: number): number => Math.min(max, Math.max(min, next));
+  const clamp = (next: number): number => Math.min(max, Math.max(min, Math.round(next / step) * step));
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
       <span className="w-20 font-medium">{label}</span>

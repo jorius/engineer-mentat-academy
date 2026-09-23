@@ -96,14 +96,15 @@ function MockSetup({ settings, onChange, onStart }: SetupProps): JSX.Element {
   const groups = facets(scope, { levels: options.levels, kinds: options.kinds });
   const available = mockPool(list, options).length;
 
+  const effectiveCount = Math.min(count, available);
   const summaryValues = {
-    count: Math.min(count, available),
+    count: effectiveCount,
     minutes,
     available,
     scope: describeSelection(DOMAINS, DOMAINS.filter((d) => domains.includes(d.id)), (d) => domainName(d, locale), t('mock.allDomains')),
     levels: describeSelection(scopeLevels, options.levels, (level) => levelLabel(level, t).label, t('mock.allLevels')),
   };
-  const perQuestion = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(minutes / count);
+  const perQuestion = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(minutes / Math.max(effectiveCount, 1));
 
   return (
     <div className="space-y-4">

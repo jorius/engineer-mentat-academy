@@ -56,4 +56,15 @@ describe('Stepper', () => {
     await user.tab();
     expect(input).toHaveValue(5);
   });
+
+  it('rounds typed values to the step', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={3} />);
+    const input = screen.getByRole('spinbutton', { name: 'Questions' });
+    await user.clear(input);
+    await user.type(input, '2.4');
+    expect(screen.getByTestId('value')).toHaveTextContent('2');
+    await user.tab();
+    expect(input).toHaveValue(2);
+  });
 });
