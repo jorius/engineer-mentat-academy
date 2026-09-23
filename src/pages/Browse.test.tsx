@@ -42,7 +42,7 @@ describe('browse pages', () => {
   it('lists the questions of a subject with a drill link', () => {
     renderAt('/browse/languages/javascript');
     expect(screen.getAllByRole('link', { name: /drill/i }).length).toBeGreaterThan(0);
-    expect(screen.getByText(/event loop/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /event loop/i })).toBeInTheDocument();
   });
 
   it('shows not found for an unknown domain', () => {
