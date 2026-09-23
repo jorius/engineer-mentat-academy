@@ -7,32 +7,75 @@ import type { JSX } from 'react';
 import type { Answer, SingleQuestion } from '../../engine/question';
 
 // components
-import { Markdown } from '../common/Markdown';
 import { Button } from '../primitives/Button';
+import { OptionButton } from './OptionButton';
 
-type Props = { question: SingleQuestion; disabled: boolean; onSubmit: (answer: Answer) => void };
+type Props = {
+  question: SingleQuestion;
+  disabled: boolean;
+  onSubmit: (answer: Answer) => void;
+  // Controlled mode (used by the future workbench action bar): passing `value`/`onChange`
+  // hands selection state to the parent. Without them the component keeps its own state and
+  // its own Submit button, exactly as before.
+  value?: string | null;
+  onChange?: (value: string) => void;
+  lockedOptionIds?: string[];
+  correctOptionIds?: string[];
+  submitLabelHidden?: boolean;
+};
 
-export function SingleChoice({ question, disabled, onSubmit }: Props): JSX.Element {
+export function SingleChoice({
+  question,
+  disabled,
+  onSubmit,
+  value,
+  onChange,
+  lockedOptionIds,
+  correctOptionIds,
+  submitLabelHidden = false,
+}: Props): JSX.Element {
   const { t } = useTranslation();
-  const [selected, setSelected] = useState<string | null>(null);
+  const [internalSelected, setInternalSelected] = useState<string | null>(null);
+  const controlled = value !== undefined;
+  const selected = controlled ? value : internalSelected;
+  const lockedOptions = new Set(lockedOptionIds ?? []);
+  const correctOptions = new Set(correctOptionIds ?? []);
+
+  const select = (id: string): void => {
+    if (controlled) {
+      onChange?.(id);
+    } else {
+      setInternalSelected(id);
+    }
+  };
+
   return (
     <form
       className="space-y-2"
       onSubmit={(event): void => {
         event.preventDefault();
-        if (selected !== null) {
+        if (selected !== null && selected !== undefined) {
           onSubmit({ kind: 'single', optionId: selected });
         }
       }}
     >
       {question.options.map((option) => (
-        <label key={option.id} className="flex cursor-pointer items-start gap-2 rounded-md border border-zinc-200 p-2 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900">
-          <input type="radio" name={question.id} value={option.id} disabled={disabled} checked={selected === option.id} onChange={(): void => setSelected(option.id)} aria-label={option.text} className="mt-1" />
-          <span className="mr-2 font-mono text-xs text-zinc-500">{option.id})</span>
-          <Markdown text={option.text} />
-        </label>
+        <OptionButton
+          key={option.id}
+          id={option.id}
+          text={option.text}
+          selected={selected === option.id}
+          locked={lockedOptions.has(option.id)}
+          correct={correctOptions.has(option.id)}
+          disabled={disabled}
+          onToggle={select}
+        />
       ))}
-      <Button type="submit" disabled={disabled || selected === null}>{t('question.submit')}</Button>
+      {!submitLabelHidden && (
+        <Button type="submit" disabled={disabled || selected === null || selected === undefined}>
+          {t('question.submit')}
+        </Button>
+      )}
     </form>
   );
 }
