@@ -154,7 +154,7 @@
     "single": { "label": "Single choice", "hint": "Pick the one correct option" },
     "multi": { "label": "Multiple choice", "hint": "Select every correct option" },
     "predict": { "label": "Predict output", "hint": "Type what the program prints" },
-    "code": { "label": "Write code", "hint": "Implement `solution` to pass the hidden tests" },
+    "code": { "label": "Write code", "hint": "Implement solution to pass the hidden tests" },
     "fix": { "label": "Fix the code", "hint": "Repair the starter until the tests pass" },
     "sql": { "label": "SQL query", "hint": "Write a query against the seeded database" },
     "open": { "label": "Explain", "hint": "Answer out loud, then self-score against the rubric" }

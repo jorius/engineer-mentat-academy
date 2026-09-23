@@ -154,7 +154,7 @@
     "single": { "label": "Opción única", "hint": "Elige la única opción correcta" },
     "multi": { "label": "Opción múltiple", "hint": "Selecciona todas las opciones correctas" },
     "predict": { "label": "Predecir la salida", "hint": "Escribe lo que imprime el programa" },
-    "code": { "label": "Escribir código", "hint": "Implementa `solution` para que pasen las pruebas ocultas" },
+    "code": { "label": "Escribir código", "hint": "Implementa solution para que pasen las pruebas ocultas" },
     "fix": { "label": "Corregir el código", "hint": "Repara el código inicial hasta que pasen las pruebas" },
     "sql": { "label": "Consulta SQL", "hint": "Escribe una consulta sobre la base de datos precargada" },
     "open": { "label": "Explicar", "hint": "Responde en voz alta y luego autoevalúate con la rúbrica" }
