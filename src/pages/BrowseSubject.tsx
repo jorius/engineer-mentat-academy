@@ -19,6 +19,9 @@ import { useProgress } from '../hooks/useProgress';
 import { Badge } from '../components/primitives/Badge';
 import { Card } from '../components/primitives/Card';
 
+// utils
+import { questionSummary } from '../utils/questionSummary';
+
 export function BrowseSubject(): JSX.Element {
   const { domain: domainId = '', subject: subjectId = '' } = useParams();
   const domain = findDomain(domainId);
@@ -70,7 +73,7 @@ export function BrowseSubject(): JSX.Element {
                 <Card key={q.id} className="flex flex-wrap items-center gap-2 text-sm">
                   <Badge tone={q.level}>{q.level}</Badge>
                   <Badge>{q.kind}</Badge>
-                  <Link to={`/q/${q.id}`} className="underline">{q.prompt.split('\n')[0]?.slice(0, 90)}</Link>
+                  <Link to={`/q/${q.id}`} className="underline">{questionSummary(q)}</Link>
                   <span className="ml-auto text-xs text-zinc-500">
                     {entry === undefined || entry.attempts === 0 ? 'unseen' : `${Math.round(entry.lastScore * 100)}% · ${entry.attempts}x`}
                     {entry?.flagged === true ? ' · flagged' : ''}

@@ -14,6 +14,9 @@ import { Badge } from '../components/primitives/Badge';
 import { Button } from '../components/primitives/Button';
 import { Card } from '../components/primitives/Card';
 
+// utils
+import { questionSummary } from '../utils/questionSummary';
+
 export function Review(): JSX.Element {
   const { list } = useQuestionBank();
   const { progress } = useProgress();
@@ -62,7 +65,7 @@ export function Review(): JSX.Element {
           <Card key={q.id} className="flex flex-wrap items-center gap-2 text-sm">
             <Badge tone={q.level}>{q.level}</Badge>
             <Badge>{q.kind}</Badge>
-            <Link to={`/q/${q.id}`} className="underline">{q.prompt.split('\n')[0]?.slice(0, 90)}</Link>
+            <Link to={`/q/${q.id}`} className="underline">{questionSummary(q)}</Link>
             <span className="ml-auto text-xs text-zinc-500">
               {(entry?.attempts ?? 0) > 0 ? `${Math.round((entry?.lastScore ?? 0) * 100)}%` : 'unattempted'}{entry?.flagged === true ? ' · flagged' : ''}
             </span>

@@ -22,6 +22,9 @@ import { QuestionView } from '../components/question/QuestionView';
 import { Button } from '../components/primitives/Button';
 import { Card } from '../components/primitives/Card';
 
+// utils
+import { questionSummary } from '../utils/questionSummary';
+
 type Phase = 'setup' | 'session' | 'results';
 
 function formatClock(totalSeconds: number): string {
@@ -90,7 +93,7 @@ export function Mock(): JSX.Element {
         <p>{answered.length} of {results.length} answered · average {Math.round(mean * 100)}%</p>
         {results.map((r) => (
           <Card key={r.question.id} className="flex items-center gap-2 text-sm">
-            <Link to={`/q/${r.question.id}`} className="underline">{r.question.prompt.split('\n')[0]?.slice(0, 90)}</Link>
+            <Link to={`/q/${r.question.id}`} className="underline">{questionSummary(r.question)}</Link>
             <span className="ml-auto">{r.attempted ? `${Math.round(r.score * 100)}%` : 'skipped'}</span>
           </Card>
         ))}
