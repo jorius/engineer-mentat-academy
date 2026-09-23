@@ -37,7 +37,7 @@
     "tagline": "Entrena como un Mentat: {{total}} preguntas, {{attempted}} intentadas, {{missed}} por repasar.",
     "drillUnseen": "Practicar las no vistas",
     "mockInterview": "Entrevista simulada",
-    "reviewMissed": "Repasar falladas ({{count}})"
+    "reviewMissed": "Repasar ({{count}})"
   },
   "browse": {
     "title": "Explorar",
@@ -146,7 +146,7 @@
     "reveal": "Mostrar respuesta modelo",
     "rubricLegend": "Marca lo que cubriste",
     "submitSelfScore": "Enviar autoevaluación",
-    "markForReview": "Marcar para repasar",
+    "markForReview": "Marcar para repaso",
     "markHint": "Las preguntas marcadas aparecen en Repaso aunque las hayas respondido bien.",
     "autoMarkedHint": "Resuelta tras un reintento, así que quedó marcada para repaso",
     "notes": "Mis notas",
@@ -164,7 +164,7 @@
     "outOfAttempts": "Se acabaron los intentos",
     "unlimitedAttempts": "Intentos ilimitados",
     "selfScored": "Autoevaluada",
-    "copied": "Copiado",
+    "copied": "Enlace copiado",
     "actions": "Acciones de respuesta"
   },
   "feedback": {

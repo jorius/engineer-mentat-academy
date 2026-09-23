@@ -37,7 +37,7 @@
     "tagline": "Train like a Mentat: {{total}} questions, {{attempted}} attempted, {{missed}} to revisit.",
     "drillUnseen": "Drill unseen",
     "mockInterview": "Mock interview",
-    "reviewMissed": "Review missed ({{count}})"
+    "reviewMissed": "Review ({{count}})"
   },
   "browse": {
     "title": "Browse",
@@ -164,7 +164,7 @@
     "outOfAttempts": "Out of attempts",
     "unlimitedAttempts": "Unlimited attempts",
     "selfScored": "Self-scored",
-    "copied": "Copied",
+    "copied": "Link copied",
     "actions": "Answer actions"
   },
   "feedback": {

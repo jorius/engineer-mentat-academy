@@ -432,13 +432,13 @@ describe('QuestionView', () => {
     expect(screen.getByRole('textbox', { name: /my notes/i })).toHaveValue('check phase, after poll');
   });
 
-  it('copies the permalink and shows a Copied toast', async () => {
+  it('copies the permalink and shows a Link copied toast', async () => {
     const user = userEvent.setup();
     setup(single);
     const link = screen.getByRole('link', { name: 'permalink' });
     expect(link).toHaveAttribute('href', '/q/javascript-test-single');
     await user.click(link);
-    expect(await screen.findByText('Copied')).toHaveAttribute('role', 'status');
+    expect(await screen.findByText('Link copied')).toHaveAttribute('role', 'status');
     expect(await navigator.clipboard.readText()).toMatch(/\/q\/javascript-test-single$/);
   });
 
