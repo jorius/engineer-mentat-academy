@@ -128,6 +128,7 @@
     "notFound": "Question not found.",
     "position": "{{index}} / {{total}}",
     "permalink": "permalink",
+    "breadcrumb": "Where this question belongs",
     "submit": "Submit",
     "optionsGroup": "Answer options",
     "next": "Next",

@@ -134,6 +134,14 @@ describe('QuestionView', () => {
     expect(button(/next/i)).toHaveAccessibleName('Next');
   });
 
+  it('shows domain, subject and topic as a breadcrumb', () => {
+    setup(single);
+    const breadcrumb = within(screen.getByRole('navigation', { name: 'Where this question belongs' }));
+    expect(breadcrumb.getByRole('link', { name: 'Languages' })).toHaveAttribute('href', '/browse/languages');
+    expect(breadcrumb.getByRole('link', { name: 'JavaScript' })).toHaveAttribute('href', '/browse/languages/javascript');
+    expect(breadcrumb.getByText('Closures')).toBeInTheDocument();
+  });
+
   it('gives the answer pane the wider column for typing kinds', () => {
     const { container } = setup(code);
     expect(container.querySelector('.grid.md\\:grid-cols-\\[2fr_3fr\\]')).not.toBeNull();
@@ -501,7 +509,10 @@ describe('QuestionView', () => {
     const grade = vi.fn<Grader['grade']>(async () => ({ score: 1, verdict: 'pass', feedback: [] }));
     setup(canonical, { grader: { grade } });
     expect(screen.getByText('¿Qué se imprime?')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'JavaScript · Closures (clausuras)' })).toBeInTheDocument();
+    const breadcrumb = within(screen.getByRole('navigation', { name: 'A qué pertenece esta pregunta' }));
+    expect(breadcrumb.getByRole('link', { name: 'Lenguajes' })).toHaveAttribute('href', '/browse/languages');
+    expect(breadcrumb.getByRole('link', { name: 'JavaScript' })).toHaveAttribute('href', '/browse/languages/javascript');
+    expect(breadcrumb.getByText('Closures (clausuras)')).toBeInTheDocument();
     await user.click(screen.getByRole('radio', { name: '1' }));
     await user.click(within(screen.getByRole('group', { name: /acciones de respuesta/i })).getByRole('button', { name: /enviar/i }));
     expect(grade).toHaveBeenCalledWith(canonical, { kind: 'single', optionId: 'a' });

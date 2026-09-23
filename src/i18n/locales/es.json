@@ -128,6 +128,7 @@
     "notFound": "No se encontró la pregunta.",
     "position": "{{index}} / {{total}}",
     "permalink": "enlace permanente",
+    "breadcrumb": "A qué pertenece esta pregunta",
     "submit": "Enviar",
     "optionsGroup": "Opciones de respuesta",
     "next": "Siguiente",

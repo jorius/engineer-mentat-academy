@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { JSX, MouseEvent, Ref } from 'react';
 
 // content
-import { findSubject, findTopic, subjectName, topicName } from '../../content/taxonomy';
+import { domainName, findDomain, findSubject, findTopic, subjectName, topicName } from '../../content/taxonomy';
 
 // engine
 import type { Question } from '../../engine/question';
@@ -44,6 +44,7 @@ export function HeaderStrip({ question, position, marked, onToggleMark, notesOpe
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const kind = kindLabel(question.kind, t);
   const level = levelLabel(question.level, t);
+  const domain = findDomain(question.domain);
   const subject = findSubject(question.domain, question.subject);
   const topic = findTopic(question.domain, question.subject, question.topic);
 
@@ -80,9 +81,17 @@ export function HeaderStrip({ question, position, marked, onToggleMark, notesOpe
       {position !== undefined && <span>{t('question.position', { index: position.index + 1, total: position.total })}</span>}
       <Badge tone={question.level} title={level.hint}>{level.label}</Badge>
       <Badge title={kind.hint}>{kind.label}</Badge>
-      <Link to={`/browse/${question.domain}/${question.subject}`} className="underline">
-        {subject === undefined ? question.subject : subjectName(subject, locale)} · {topic === undefined ? question.topic : topicName(topic, locale)}
-      </Link>
+      <nav aria-label={t('question.breadcrumb')} className="flex items-center gap-1.5 text-sm">
+        <Link to={`/browse/${question.domain}`} className="hover:underline">
+          {domain === undefined ? question.domain : domainName(domain, locale)}
+        </Link>
+        <span aria-hidden="true">›</span>
+        <Link to={`/browse/${question.domain}/${question.subject}`} className="font-semibold text-zinc-800 hover:underline dark:text-zinc-100">
+          {subject === undefined ? question.subject : subjectName(subject, locale)}
+        </Link>
+        <span aria-hidden="true">›</span>
+        <span>{topic === undefined ? question.topic : topicName(topic, locale)}</span>
+      </nav>
       <div className="ml-auto flex items-center gap-1">
         <button type="button" className={toolClass} onClick={onToggleMark} aria-pressed={marked} title={t('question.markHint')}>
           <span aria-hidden="true" className={marked ? 'text-accent-500' : ''}>{marked ? '★' : '☆'}</span>
