@@ -1,0 +1,35 @@
+// packages
+import { useState } from 'react';
+import type { JSX } from 'react';
+
+// engine
+import type { Answer, SingleQuestion } from '../../engine/question';
+
+// components
+import { Markdown } from '../common/Markdown';
+import { Button } from '../primitives/Button';
+
+type Props = { question: SingleQuestion; disabled: boolean; onSubmit: (answer: Answer) => void };
+
+export function SingleChoice({ question, disabled, onSubmit }: Props): JSX.Element {
+  const [selected, setSelected] = useState<string | null>(null);
+  return (
+    <form
+      className="space-y-2"
+      onSubmit={(event): void => {
+        event.preventDefault();
+        if (selected !== null) {
+          onSubmit({ kind: 'single', optionId: selected });
+        }
+      }}
+    >
+      {question.options.map((option) => (
+        <label key={option.id} className="flex cursor-pointer items-start gap-2 rounded-md border border-zinc-200 p-2 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900">
+          <input type="radio" name={question.id} value={option.id} disabled={disabled} checked={selected === option.id} onChange={(): void => setSelected(option.id)} aria-label={option.text} className="mt-1" />
+          <Markdown text={option.text} />
+        </label>
+      ))}
+      <Button type="submit" disabled={disabled || selected === null}>Submit</Button>
+    </form>
+  );
+}
