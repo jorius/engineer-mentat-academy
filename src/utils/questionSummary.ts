@@ -6,17 +6,28 @@ import { KIND_LABELS } from '../engine/labels';
 import { findTopic } from '../content/taxonomy';
 
 const FENCED_CODE_BLOCK = /```[\s\S]*?```/g;
+const UNTERMINATED_FENCE = /```[\s\S]*$/;
 const MARKDOWN_LINK = /\[([^\]]*)\]\([^)]*\)/g;
 const INLINE_CODE = /`([^`]+)`/g;
 const BOLD = /\*\*([^*]+)\*\*/g;
-const ITALIC = /\*([^*]+)\*|_([^_]+)_/g;
+const ITALIC_STAR = /\*([^*]+)\*/g;
+// Only treats `_word_` as italic when the underscores sit at a word boundary
+// (start/end of string or surrounded by whitespace/punctuation), so dunder
+// identifiers like `__proto__` pass through untouched.
+const ITALIC_UNDERSCORE = /(^|[\s(])_([^_\s][^_]*?)_(?=[\s).,;:!?]|$)/g;
 const WHITESPACE = /\s+/g;
 
 const ELLIPSIS = '…';
 
-function firstNonEmptyLine(text: string): string {
-  for (const line of text.split('\n')) {
-    const trimmed = line.trim();
+function stripFencedCode(prompt: string): string {
+  // Paired fences first, then any trailing fence marker that never closes
+  // (an unterminated ``` through the end of the prompt).
+  return prompt.replace(FENCED_CODE_BLOCK, '').replace(UNTERMINATED_FENCE, '');
+}
+
+function firstParagraph(text: string): string {
+  for (const paragraph of text.split(/\n\s*\n/)) {
+    const trimmed = paragraph.trim();
     if (trimmed !== '') {
       return trimmed;
     }
@@ -24,12 +35,13 @@ function firstNonEmptyLine(text: string): string {
   return '';
 }
 
-function stripInlineMarkdown(line: string): string {
-  return line
+function stripInlineMarkdown(text: string): string {
+  return text
     .replace(MARKDOWN_LINK, '$1')
     .replace(INLINE_CODE, '$1')
     .replace(BOLD, '$1')
-    .replace(ITALIC, (_match, star: string | undefined, underscore: string | undefined) => star ?? underscore ?? '')
+    .replace(ITALIC_STAR, '$1')
+    .replace(ITALIC_UNDERSCORE, '$1$2')
     .replace(WHITESPACE, ' ')
     .trim();
 }
@@ -54,9 +66,9 @@ function fallbackSummary(question: Question): string {
 }
 
 export function questionSummary(question: Question, max = 90): string {
-  const withoutCode = question.prompt.replace(FENCED_CODE_BLOCK, '');
-  const line = firstNonEmptyLine(withoutCode);
-  const plain = stripInlineMarkdown(line);
+  const withoutCode = stripFencedCode(question.prompt);
+  const paragraph = firstParagraph(withoutCode);
+  const plain = stripInlineMarkdown(paragraph);
   if (plain === '') {
     return fallbackSummary(question);
   }

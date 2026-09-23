@@ -79,4 +79,34 @@ describe('questionSummary', () => {
     });
     expect(questionSummary(question)).toBe('Fix the code: not-a-real-topic');
   });
+
+  it('falls back to the kind label and topic name when a code fence is never closed', () => {
+    const question = q({
+      kind: 'code',
+      domain: 'languages',
+      subject: 'javascript',
+      topic: 'closures',
+      language: 'javascript',
+      starter: 's',
+      tests: [{ name: 't', args: [], expected: 1 }],
+      solution: 's',
+      prompt: '```js\nconst a = 1;',
+    });
+    expect(questionSummary(question)).toBe('Write code: Closures');
+  });
+
+  it('keeps the text before an unterminated fence and drops the rest', () => {
+    const question = q({ prompt: 'Intro line\n```js\nconst a = 1;' });
+    expect(questionSummary(question)).toBe('Intro line');
+  });
+
+  it('collapses runs of spaces, tabs and newlines to a single space', () => {
+    const question = q({ prompt: 'What   does\tthis\n  print?' });
+    expect(questionSummary(question)).toBe('What does this print?');
+  });
+
+  it('does not mangle dunder identifiers when stripping underscore italics', () => {
+    const question = q({ prompt: 'Explain `__proto__` and `Object.create`' });
+    expect(questionSummary(question)).toBe('Explain __proto__ and Object.create');
+  });
 });
