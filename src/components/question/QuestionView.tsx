@@ -123,6 +123,15 @@ function withoutAnswerKey(result: GradeResult, lineGot: (n: string, got: string)
   return { ...result, feedback };
 }
 
+/** Focuses the first single-choice option not locked by a wrong pick, so focus never lands on a disabled Submit. */
+function focusFirstUnlockedOption(pane: HTMLElement | null, question: Question, lockedOptionIds: string[]): void {
+  if (pane === null || question.kind !== 'single') {
+    return;
+  }
+  const index = question.options.findIndex((option) => !lockedOptionIds.includes(option.id));
+  pane.querySelectorAll<HTMLElement>('[role="radio"]')[index]?.focus();
+}
+
 function isTypingTarget(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable);
 }
@@ -229,6 +238,9 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
   const previous = useRef(attempt);
   const notesRef = useRef<HTMLDivElement>(null);
   const notesButtonRef = useRef<HTMLButtonElement>(null);
+  const answerPaneRef = useRef<HTMLDivElement>(null);
+  const nextRef = useRef<HTMLButtonElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
 
   // A new question (callers usually remount through `key`, but not all do) starts from a clean slate.
   if (currentId !== question.id) {
@@ -244,14 +256,19 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
     activeId.current = question.id;
   }, [question.id]);
 
-  // Progress is recorded exactly once, on the transition into 'resolved'.
+  // Progress is recorded exactly once, on the transition into 'resolved'. Focus follows the attempt so
+  // keyboard users never sit on a control that just became disabled: a wrong single-choice pick moves
+  // to the first unlocked option, and resolving moves to Next (or the feedback panel without Next).
   useEffect(() => {
     const prev = previous.current;
     previous.current = attempt;
     if (shouldRecord(prev, attempt)) {
       store.record(question.id, recordedScore(attempt));
+      (nextRef.current ?? feedbackRef.current)?.focus();
+    } else if (attempt.phase === 'wrong' && attempt.attemptsUsed > prev.attemptsUsed) {
+      focusFirstUnlockedOption(answerPaneRef.current, question, attempt.lockedOptionIds);
     }
-  }, [attempt, store, question.id]);
+  }, [attempt, store, question]);
 
   const entry = progress[question.id];
   const marked = entry?.flagged ?? false;
@@ -382,7 +399,7 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
           <p className="text-xs text-zinc-400">{kind.hint}</p>
           <NotesDrawer key={question.id} ref={notesRef} id={notesId} open={notesOpen} notes={entry?.notes ?? ''} onSave={(notes): void => store.setNotes(question.id, notes)} />
         </div>
-        <div className="min-w-0 space-y-3">
+        <div ref={answerPaneRef} className="min-w-0 space-y-3">
           <AnswerInput
             key={question.id}
             question={question}
@@ -401,11 +418,13 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
             </p>
           )}
           {attempt.phase === 'wrong' && attempt.lastResult !== undefined && <Feedback result={withoutAnswerKey(attempt.lastResult, (n, got): string => t('question.lineGot', { n, got }))} retry />}
-          {showFullFeedback && attempt.lastResult !== undefined && <Feedback result={attempt.lastResult} />}
           {resolved && (
-            <div className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">{t('question.explanation')}</p>
-              <Markdown text={question.explanation} />
+            <div ref={feedbackRef} tabIndex={-1} className="space-y-3 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
+              {showFullFeedback && attempt.lastResult !== undefined && <Feedback result={attempt.lastResult} />}
+              <div className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">{t('question.explanation')}</p>
+                <Markdown text={question.explanation} />
+              </div>
             </div>
           )}
         </div>
@@ -421,6 +440,7 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
         onSubmit={(): void => void submit()}
         submitDisabled={submitDisabled}
         onNext={onNext}
+        nextRef={nextRef}
       />
     </Card>
   );

@@ -171,6 +171,36 @@ describe('QuestionView', () => {
     expect(store.get(single.id)?.attempts).toBe(1);
   });
 
+  it('moves focus to the first unlocked option after a wrong single-choice submit', async () => {
+    const user = userEvent.setup();
+    setup(single);
+    await user.click(screen.getByRole('radio', { name: 'A' }));
+    await user.click(button(/submit/i));
+    await screen.findByText('Not yet. Try again, or show the answer.');
+    expect(document.activeElement).toBe(screen.getByRole('radio', { name: 'B' }));
+  });
+
+  it('moves focus to Next when the question resolves', async () => {
+    const user = userEvent.setup();
+    setup(single);
+    await user.click(screen.getByRole('radio', { name: 'B' }));
+    await user.click(button(/submit/i));
+    await screen.findByText('Because B.');
+    expect(document.activeElement).toBe(button(/next/i));
+  });
+
+  it('moves focus to the feedback panel when the question resolves without Next', async () => {
+    const user = userEvent.setup();
+    setup(single, { onNext: null });
+    await user.click(screen.getByRole('radio', { name: 'B' }));
+    await user.click(button(/submit/i));
+    const explanation = await screen.findByText('Because B.');
+    const panel = document.activeElement;
+    expect(panel).toHaveAttribute('tabindex', '-1');
+    expect(panel).toContainElement(explanation);
+    expect(panel).toHaveTextContent(/correct · 100%/i);
+  });
+
   it('records 0 once and reveals the correct option when attempts run out', async () => {
     const user = userEvent.setup();
     const { store } = setup(single, { maxAttempts: 2 });

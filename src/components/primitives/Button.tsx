@@ -1,7 +1,7 @@
 // packages
-import type { ButtonHTMLAttributes, JSX } from 'react';
+import type { ButtonHTMLAttributes, JSX, Ref } from 'react';
 
-type Props = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'ghost' | 'danger' };
+type Props = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'ghost' | 'danger'; ref?: Ref<HTMLButtonElement> };
 
 const styles: Record<NonNullable<Props['variant']>, string> = {
   primary: 'bg-accent-500 text-white hover:bg-accent-600 disabled:bg-zinc-400',

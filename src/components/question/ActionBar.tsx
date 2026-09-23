@@ -1,6 +1,6 @@
 // packages
 import { useTranslation } from 'react-i18next';
-import type { JSX, ReactNode } from 'react';
+import type { JSX, ReactNode, Ref } from 'react';
 
 // components
 import { Button } from '../primitives/Button';
@@ -16,6 +16,8 @@ type Props = {
   onSubmit: () => void;
   submitDisabled: boolean;
   onNext?: () => void;
+  // Lets the workbench move focus to Next once the question resolves.
+  nextRef?: Ref<HTMLButtonElement>;
 };
 
 /**
@@ -23,7 +25,7 @@ type Props = {
  * the caller passes `onReset`), Show answer (only with `onShowAnswer`), Submit (primary until resolved), Next (primary once
  * resolved; hidden without `onNext`).
  */
-export function ActionBar({ pill, resolved, busy, onReset, onShowAnswer, showAnswerDisabled, submitLabel, onSubmit, submitDisabled, onNext }: Props): JSX.Element {
+export function ActionBar({ pill, resolved, busy, onReset, onShowAnswer, showAnswerDisabled, submitLabel, onSubmit, submitDisabled, onNext, nextRef }: Props): JSX.Element {
   const { t } = useTranslation();
   return (
     <div
@@ -47,7 +49,7 @@ export function ActionBar({ pill, resolved, busy, onReset, onShowAnswer, showAns
           {submitLabel}
         </Button>
         {onNext !== undefined && (
-          <Button variant={resolved ? 'primary' : 'ghost'} className="disabled:opacity-40" onClick={onNext} disabled={!resolved}>
+          <Button ref={nextRef} variant={resolved ? 'primary' : 'ghost'} className="disabled:opacity-40" onClick={onNext} disabled={!resolved}>
             {t('question.next')}
           </Button>
         )}
