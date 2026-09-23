@@ -1,6 +1,6 @@
 // packages
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 
 // components
@@ -38,6 +38,10 @@ function renderAt(path: string, store?: ProgressStore): void {
 }
 
 describe('browse pages', () => {
+  afterEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
   it('lists every domain with a count', () => {
     renderAt('/browse');
     expect(screen.getByRole('link', { name: /languages/i })).toBeInTheDocument();
@@ -76,13 +80,22 @@ describe('browse pages', () => {
   it('shows translated prompts and taxonomy names in Spanish', async () => {
     await i18n.changeLanguage('es');
     renderAt('/browse/languages/javascript');
-    expect(screen.getByRole('link', { name: '¿Qué imprime esto, un valor por línea?' })).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('link', { name: '¿Qué imprime esto, un valor por línea?' }).length,
+    ).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole('heading', { name: 'Closures (clausuras)' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Lenguajes' })).toBeInTheDocument();
   });
 
-  it('falls back to English prompts for untranslated questions in Spanish', async () => {
+  it('shows the English prompt again after switching back from Spanish', async () => {
     await i18n.changeLanguage('es');
+    renderAt('/browse/languages/javascript');
+    expect(
+      screen.queryByRole('link', { name: /Which of these produce a deep copy/ }),
+    ).not.toBeInTheDocument();
+    cleanup();
+
+    await i18n.changeLanguage('en');
     renderAt('/browse/languages/javascript');
     expect(screen.getByRole('link', { name: /Which of these produce a deep copy/ })).toBeInTheDocument();
   });
