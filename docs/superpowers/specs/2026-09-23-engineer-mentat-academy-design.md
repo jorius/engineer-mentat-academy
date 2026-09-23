@@ -69,7 +69,7 @@ Every question is a TypeScript object validated by a zod schema. Common fields:
 | `kind` | see below | discriminant |
 | `prompt` | string | Markdown, may include fenced code |
 | `tags` | string[] | cross-cutting: `aws`, `performance`, `core-25`, ... |
-| `source` | `'epam-pdf' \| 'notion' \| 'topic-list'` | provenance |
+| `source` | `'core-list' \| 'notion' \| 'topic-list'` | provenance |
 | `explanation` | string | Markdown shown after grading, always present |
 
 Kinds are a discriminated union:

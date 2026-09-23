@@ -134,7 +134,7 @@ export function solution(actions) {
   return { history, changed };
 }`,
     tags: ['immutability', 'reducers', 'react-redux', 'core-25'],
-    source: 'epam-pdf',
+    source: 'core-list',
     explanation:
       'Redux and react-redux detect change by **reference**: `useSelector` re-renders only when the selected value is `!==` the previous one. Mutating and returning the same object means "nothing changed", so the UI goes stale, and every state in the history is secretly the same object (which also breaks time-travel debugging). The mutating version even corrupts the module-level `initialState`. Copy every level you change (`...state`, `[...state.todos, x]`, `map` with `{ ...t }`) and share untouched branches (structural sharing).\n\nThis is the classic immutability question in practice. In Redux Toolkit, the original mutating code would be legal inside `createSlice`, because Immer records the mutations on a draft and produces the new immutable state for you.',
   },

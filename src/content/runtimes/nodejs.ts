@@ -41,7 +41,7 @@ export const questions: Question[] = [
     ],
     answer: ['a', 'b', 'd'],
     tags: ['libuv', 'threadpool', 'async-io', 'core-25'],
-    source: 'epam-pdf',
+    source: 'core-list',
     explanation:
       'Network sockets do **not** use the pool: libuv registers them with the kernel readiness API (epoll, kqueue, IOCP) and the event loop is notified in the poll phase, which is why one thread can hold tens of thousands of connections. File system calls, `dns.lookup` (it wraps blocking `getaddrinfo`), async crypto (`pbkdf2`, `scrypt`, `randomBytes`) and async `zlib` have no portable non-blocking kernel API, so they run on the pool.\n\nThe practical consequence: with the default 4 threads, four slow `pbkdf2` hashes or DNS lookups queue every other `fs` call behind them. Raise `UV_THREADPOOL_SIZE` (set before the pool is first used) or move the hashing off the request path. This is the concrete answer to "how does JavaScript handle async work if it is single-threaded".',
   },
@@ -68,7 +68,7 @@ sumTo(1000).then((total) => console.log('total ' + total));
 console.log('after call');`,
     answer: 'sum start\nsum done\nafter call\ntotal 500500',
     tags: ['async-await', 'blocking', 'core-25'],
-    source: 'epam-pdf',
+    source: 'core-list',
     explanation:
       'An `async` function runs **synchronously** until its first `await`. There is no `await` here, so the whole loop runs on the caller\'s stack before `after call` prints. Only the resolution of the returned promise is deferred to a microtask, which is why `total 500500` comes last.\n\n`async` changes how a result is delivered, not where the work runs. Real non-blocking behaviour comes from the runtime doing the work elsewhere (the kernel, libuv\'s pool) or from you moving CPU work to a worker thread.',
   },
@@ -174,7 +174,7 @@ Promise.resolve()
 console.log('sync');`,
     answer: 'sync\nmicro 1\npromise 1\nmicro 2\npromise 2\ntimeout',
     tags: ['event-loop', 'microtasks', 'queueMicrotask', 'core-25'],
-    source: 'epam-pdf',
+    source: 'core-list',
     explanation:
       'The microtask queue is FIFO and it is drained **completely**, including microtasks queued while draining, before the event loop moves to the next macrotask.\n\nAfter `sync`, the queue is `[micro 1, promise 1]`. Running `micro 1` appends `micro 2`; running `promise 1` resolves the chained promise and appends `promise 2`. Queue: `[micro 2, promise 2]`. Only when it is empty does the timers phase run `timeout`.\n\nThat same rule is how an endless chain of microtasks starves timers and I/O: the loop never gets past the drain.',
   },

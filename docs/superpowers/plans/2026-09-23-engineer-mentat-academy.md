@@ -779,7 +779,7 @@ export type Level = (typeof LEVELS)[number];
 export const KINDS = ['single', 'multi', 'predict', 'code', 'fix', 'sql', 'open'] as const;
 export type Kind = (typeof KINDS)[number];
 
-export const SOURCES = ['epam-pdf', 'notion', 'topic-list'] as const;
+export const SOURCES = ['core-list', 'notion', 'topic-list'] as const;
 export type Source = (typeof SOURCES)[number];
 
 export const CODE_LANGUAGES = ['javascript', 'typescript'] as const;
@@ -2438,7 +2438,7 @@ console.log([] + {});
 console.log(NaN === NaN);`,
     answer: 'true\ntrue\nfalse\n[object Object]\nfalse',
     tags: ['coercion', 'core-25'],
-    source: 'epam-pdf',
+    source: 'core-list',
     explanation: '`==` coerces (`""` becomes 0; `null`/`undefined` are loosely equal only to each other). `[] + {}` stringifies both sides. `NaN` is never equal to anything; use `Number.isNaN` or `Object.is`.',
   },
   {
@@ -2457,7 +2457,7 @@ console.log(NaN === NaN);`,
     ],
     answer: 'b',
     tags: ['hoisting', 'tdz', 'core-25'],
-    source: 'epam-pdf',
+    source: 'core-list',
     explanation: '`let` is hoisted but uninitialized until its declaration runs, so reading it throws. `var` would print `undefined`; the function declaration is fully hoisted but never reached here.',
   },
 ];

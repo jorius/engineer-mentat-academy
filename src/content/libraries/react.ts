@@ -584,7 +584,7 @@ function TicketList({ tickets }) {
     ],
     answer: 'b',
     tags: ['controlled-components', 'data-binding', 'core-25'],
-    source: 'epam-pdf',
+    source: 'core-list',
     explanation:
       'React has **one-way** data flow: `value={name}` makes the input controlled, so on every render React forces the DOM value back to `name`. Keystrokes change nothing until an `onChange` calls `setName(e.target.value)`, which is how React does what other frameworks call two-way binding. For an uncontrolled input, use `defaultValue` and read the value through a ref or `FormData` on submit. If read-only is intended, add `readOnly` to silence the warning.',
   },

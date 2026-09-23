@@ -7,7 +7,7 @@ export type Level = (typeof LEVELS)[number];
 export const KINDS = ['single', 'multi', 'predict', 'code', 'fix', 'sql', 'open'] as const;
 export type Kind = (typeof KINDS)[number];
 
-export const SOURCES = ['epam-pdf', 'notion', 'topic-list'] as const;
+export const SOURCES = ['core-list', 'notion', 'topic-list'] as const;
 export type Source = (typeof SOURCES)[number];
 
 export const CODE_LANGUAGES = ['javascript', 'typescript'] as const;
