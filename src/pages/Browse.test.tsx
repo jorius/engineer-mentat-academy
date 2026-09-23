@@ -16,18 +16,21 @@ import { createProgressStore } from '../engine/progress';
 import type { ProgressStore } from '../engine/progress';
 
 // hooks
+import { PreferencesProvider } from '../hooks/usePreferences';
 import { ProgressProvider } from '../hooks/useProgress';
 
 function renderAt(path: string, store?: ProgressStore): void {
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   render(
-    <ThemeProvider>
-      <ProgressProvider store={store}>
-        <GraderProvider>
-          <RouterProvider router={router} />
-        </GraderProvider>
-      </ProgressProvider>
-    </ThemeProvider>,
+    <PreferencesProvider>
+      <ThemeProvider>
+        <ProgressProvider store={store}>
+          <GraderProvider>
+            <RouterProvider router={router} />
+          </GraderProvider>
+        </ProgressProvider>
+      </ThemeProvider>
+    </PreferencesProvider>,
   );
 }
 

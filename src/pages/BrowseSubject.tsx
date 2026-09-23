@@ -49,7 +49,7 @@ export function BrowseSubject(): JSX.Element {
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="text-2xl font-semibold">{subject.name}</h1>
-        <Link to={`/drill?${drillParams.toString()}`} className="ml-auto rounded-md bg-spice-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-spice-600">Drill these {questions.length}</Link>
+        <Link to={`/drill?${drillParams.toString()}`} className="ml-auto rounded-md bg-accent-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-600">Drill these {questions.length}</Link>
       </div>
       <div className="flex flex-wrap gap-2 text-xs">
         {LEVELS.map((level) => (

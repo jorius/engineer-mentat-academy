@@ -11,6 +11,7 @@ import { ThemeProvider } from '../contexts/ThemeContext';
 import { GraderProvider } from '../contexts/GraderContext';
 
 // hooks
+import { PreferencesProvider } from '../hooks/usePreferences';
 import { ProgressProvider } from '../hooks/useProgress';
 
 // utils
@@ -19,13 +20,15 @@ import { parseDrillFilter } from '../utils/drillFilter';
 function renderAt(path: string): void {
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   render(
-    <ThemeProvider>
-      <ProgressProvider>
-        <GraderProvider>
-          <RouterProvider router={router} />
-        </GraderProvider>
-      </ProgressProvider>
-    </ThemeProvider>,
+    <PreferencesProvider>
+      <ThemeProvider>
+        <ProgressProvider>
+          <GraderProvider>
+            <RouterProvider router={router} />
+          </GraderProvider>
+        </ProgressProvider>
+      </ThemeProvider>
+    </PreferencesProvider>,
   );
 }
 

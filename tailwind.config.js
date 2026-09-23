@@ -9,11 +9,11 @@ export default {
         mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       colors: {
-        spice: {
-          50: '#fff7ed',
-          400: '#fb923c',
-          500: '#f97316',
-          600: '#ea580c',
+        accent: {
+          50: 'rgb(var(--accent-50) / <alpha-value>)',
+          400: 'rgb(var(--accent-400) / <alpha-value>)',
+          500: 'rgb(var(--accent-500) / <alpha-value>)',
+          600: 'rgb(var(--accent-600) / <alpha-value>)',
         },
       },
     },

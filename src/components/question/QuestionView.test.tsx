@@ -12,6 +12,7 @@ import { ThemeProvider } from '../../contexts/ThemeContext';
 import { GraderProvider } from '../../contexts/GraderContext';
 
 // hooks
+import { PreferencesProvider } from '../../hooks/usePreferences';
 import { ProgressProvider } from '../../hooks/useProgress';
 
 // engine
@@ -57,13 +58,15 @@ function setup(question: Question, onNext = vi.fn()): { store: ReturnType<typeof
   });
   render(
     <MemoryRouter>
-      <ThemeProvider>
-        <ProgressProvider store={store}>
-          <GraderProvider grader={grader}>
-            <QuestionView question={question} onNext={onNext} />
-          </GraderProvider>
-        </ProgressProvider>
-      </ThemeProvider>
+      <PreferencesProvider>
+        <ThemeProvider>
+          <ProgressProvider store={store}>
+            <GraderProvider grader={grader}>
+              <QuestionView question={question} onNext={onNext} />
+            </GraderProvider>
+          </ProgressProvider>
+        </ThemeProvider>
+      </PreferencesProvider>
     </MemoryRouter>,
   );
   return { store, onNext };
@@ -120,25 +123,29 @@ describe('QuestionView', () => {
     });
     const { rerender } = render(
       <MemoryRouter>
-        <ThemeProvider>
-          <ProgressProvider store={store}>
-            <GraderProvider grader={grader}>
-              <QuestionView question={single} />
-            </GraderProvider>
-          </ProgressProvider>
-        </ThemeProvider>
+        <PreferencesProvider>
+          <ThemeProvider>
+            <ProgressProvider store={store}>
+              <GraderProvider grader={grader}>
+                <QuestionView question={single} />
+              </GraderProvider>
+            </ProgressProvider>
+          </ThemeProvider>
+        </PreferencesProvider>
       </MemoryRouter>,
     );
     await user.click(screen.getByRole('radio', { name: 'B' }));
     rerender(
       <MemoryRouter>
-        <ThemeProvider>
-          <ProgressProvider store={store}>
-            <GraderProvider grader={grader}>
-              <QuestionView question={single2} />
-            </GraderProvider>
-          </ProgressProvider>
-        </ThemeProvider>
+        <PreferencesProvider>
+          <ThemeProvider>
+            <ProgressProvider store={store}>
+              <GraderProvider grader={grader}>
+                <QuestionView question={single2} />
+              </GraderProvider>
+            </ProgressProvider>
+          </ThemeProvider>
+        </PreferencesProvider>
       </MemoryRouter>,
     );
     expect(screen.getAllByRole('radio').every((radio) => !(radio as HTMLInputElement).checked)).toBe(true);
@@ -152,13 +159,15 @@ describe('QuestionView', () => {
     const open: Question = { ...single, id: 'javascript-test-open', kind: 'open', modelAnswer: 'Model.', rubric: ['one', 'two'] };
     render(
       <MemoryRouter>
-        <ThemeProvider>
-          <ProgressProvider store={store}>
-            <GraderProvider grader={{ grade }}>
-              <QuestionView question={open} />
-            </GraderProvider>
-          </ProgressProvider>
-        </ThemeProvider>
+        <PreferencesProvider>
+          <ThemeProvider>
+            <ProgressProvider store={store}>
+              <GraderProvider grader={{ grade }}>
+                <QuestionView question={open} />
+              </GraderProvider>
+            </ProgressProvider>
+          </ThemeProvider>
+        </PreferencesProvider>
       </MemoryRouter>,
     );
     await user.type(screen.getByPlaceholderText(/say it out loud/i), 'Closures capture bindings');
@@ -174,13 +183,15 @@ describe('QuestionView', () => {
     const grader: Grader = { grade: async () => Promise.reject(new Error('worker died')) };
     render(
       <MemoryRouter>
-        <ThemeProvider>
-          <ProgressProvider store={store}>
-            <GraderProvider grader={grader}>
-              <QuestionView question={single} />
-            </GraderProvider>
-          </ProgressProvider>
-        </ThemeProvider>
+        <PreferencesProvider>
+          <ThemeProvider>
+            <ProgressProvider store={store}>
+              <GraderProvider grader={grader}>
+                <QuestionView question={single} />
+              </GraderProvider>
+            </ProgressProvider>
+          </ThemeProvider>
+        </PreferencesProvider>
       </MemoryRouter>,
     );
     await user.click(screen.getByRole('radio', { name: 'B' }));

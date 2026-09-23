@@ -1,7 +1,9 @@
 // packages
 import { useEffect, useRef } from 'react';
+import { indentWithTab } from '@codemirror/commands';
+import { indentUnit } from '@codemirror/language';
 import { EditorState } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
+import { EditorView, keymap } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { sql } from '@codemirror/lang-sql';
@@ -11,9 +13,21 @@ import type { JSX } from 'react';
 // contexts
 import { useTheme } from '../../contexts/ThemeContext';
 
+// engine
+import type { EditorFont } from '../../engine/preferences';
+
+// hooks
+import { usePreferences } from '../../hooks/usePreferences';
+
 export type EditorLanguage = 'javascript' | 'typescript' | 'sql';
 
 type Props = { value: string; onChange: (value: string) => void; language: EditorLanguage; readOnly?: boolean; ariaLabel?: string };
+
+const FONT_STACKS: Record<EditorFont, string> = {
+  jetbrains: "'JetBrains Mono', ui-monospace, monospace",
+  fira: "'Fira Code', ui-monospace, monospace",
+  system: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+};
 
 function languageExtension(language: EditorLanguage): ReturnType<typeof javascript> {
   if (language === 'sql') {
@@ -28,6 +42,8 @@ export function CodeEditor({ value, onChange, language, readOnly = false, ariaLa
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const { theme } = useTheme();
+  const { preferences } = usePreferences();
+  const { editorFont, editorFontSize, tabSize, indentWithTabs } = preferences;
 
   useEffect(() => {
     if (host.current === null) {
@@ -40,6 +56,13 @@ export function CodeEditor({ value, onChange, language, readOnly = false, ariaLa
         languageExtension(language),
         ...(theme === 'dark' ? [oneDark] : []),
         EditorState.readOnly.of(readOnly),
+        EditorState.tabSize.of(tabSize),
+        indentUnit.of(indentWithTabs ? '\t' : ' '.repeat(tabSize)),
+        keymap.of([indentWithTab]),
+        EditorView.theme({
+          '&': { fontSize: `${editorFontSize}px` },
+          '.cm-content': { fontFamily: FONT_STACKS[editorFont] },
+        }),
         EditorView.updateListener.of((update): void => {
           if (update.docChanged) {
             onChangeRef.current(update.state.doc.toString());
@@ -53,9 +76,9 @@ export function CodeEditor({ value, onChange, language, readOnly = false, ariaLa
       view.current?.destroy();
       view.current = null;
     };
-    // The editor is recreated only when language, theme or readOnly change; `value` is the initial doc.
+    // The editor is recreated only when language, theme, readOnly or these preferences change; `value` is the initial doc.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language, theme, readOnly]);
+  }, [language, theme, readOnly, editorFont, editorFontSize, tabSize, indentWithTabs]);
 
   useEffect(() => {
     const current = view.current;

@@ -4,7 +4,7 @@ import type { ButtonHTMLAttributes, JSX } from 'react';
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'ghost' | 'danger' };
 
 const styles: Record<NonNullable<Props['variant']>, string> = {
-  primary: 'bg-spice-500 text-white hover:bg-spice-600 disabled:bg-zinc-400',
+  primary: 'bg-accent-500 text-white hover:bg-accent-600 disabled:bg-zinc-400',
   ghost: 'border border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800',
   danger: 'bg-red-600 text-white hover:bg-red-700',
 };

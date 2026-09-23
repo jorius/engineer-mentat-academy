@@ -7,6 +7,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { GraderProvider } from './contexts/GraderContext';
 
 // hooks
+import { PreferencesProvider } from './hooks/usePreferences';
 import { ProgressProvider } from './hooks/useProgress';
 
 // components
@@ -45,12 +46,14 @@ const router = createBrowserRouter(routes, { basename: import.meta.env.BASE_URL.
 
 export function App(): JSX.Element {
   return (
-    <ThemeProvider>
-      <ProgressProvider>
-        <GraderProvider>
-          <RouterProvider router={router} />
-        </GraderProvider>
-      </ProgressProvider>
-    </ThemeProvider>
+    <PreferencesProvider>
+      <ThemeProvider>
+        <ProgressProvider>
+          <GraderProvider>
+            <RouterProvider router={router} />
+          </GraderProvider>
+        </ProgressProvider>
+      </ThemeProvider>
+    </PreferencesProvider>
   );
 }

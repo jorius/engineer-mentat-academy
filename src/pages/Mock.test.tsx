@@ -12,6 +12,7 @@ import { ThemeProvider } from '../contexts/ThemeContext';
 import { GraderProvider } from '../contexts/GraderContext';
 
 // hooks
+import { PreferencesProvider } from '../hooks/usePreferences';
 import { ProgressProvider } from '../hooks/useProgress';
 
 // engine
@@ -21,13 +22,15 @@ import type { ProgressStore } from '../engine/progress';
 function setup(store: ProgressStore = createProgressStore(null)): void {
   render(
     <MemoryRouter>
-      <ThemeProvider>
-        <ProgressProvider store={store}>
-          <GraderProvider>
-            <Mock />
-          </GraderProvider>
-        </ProgressProvider>
-      </ThemeProvider>
+      <PreferencesProvider>
+        <ThemeProvider>
+          <ProgressProvider store={store}>
+            <GraderProvider>
+              <Mock />
+            </GraderProvider>
+          </ProgressProvider>
+        </ThemeProvider>
+      </PreferencesProvider>
     </MemoryRouter>,
   );
 }

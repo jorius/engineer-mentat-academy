@@ -30,7 +30,7 @@ export function OpenAnswer({ question, disabled, onSubmit }: Props): JSX.Element
         <Button onClick={(): void => setRevealed(true)}>Reveal model answer</Button>
       ) : (
         <div className="space-y-3">
-          <div className="rounded-md border border-spice-500/40 bg-spice-50/40 p-3 dark:bg-spice-500/10">
+          <div className="rounded-md border border-accent-500/40 bg-accent-50/40 p-3 dark:bg-accent-500/10">
             <Markdown text={question.modelAnswer} />
           </div>
           <fieldset className="space-y-1">

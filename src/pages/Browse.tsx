@@ -27,7 +27,7 @@ export function Browse(): JSX.Element {
           const summary = summarize(filterQuestions(list, { domain: domain.id }), progress);
           return (
             <Link key={domain.id} to={`/browse/${domain.id}`} aria-label={`${domain.name}, ${summary.total} questions`}>
-              <Card className="h-full space-y-2 hover:border-spice-500">
+              <Card className="h-full space-y-2 hover:border-accent-500">
                 <p className="text-lg font-medium">{domain.name}</p>
                 <p className="text-sm text-zinc-500">{domain.blurb}</p>
                 <p className="text-xs text-zinc-500">

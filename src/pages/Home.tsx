@@ -28,7 +28,7 @@ export function Home(): JSX.Element {
         <p className="text-zinc-500">Train like a Mentat: {overall.total} questions, {overall.attempted} attempted, {missed} to revisit.</p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Link to="/drill?unseen=1" className="rounded-md bg-spice-500 px-4 py-2 text-sm font-medium text-white hover:bg-spice-600">Drill unseen</Link>
+        <Link to="/drill?unseen=1" className="rounded-md bg-accent-500 px-4 py-2 text-sm font-medium text-white hover:bg-accent-600">Drill unseen</Link>
         <Link to="/mock" className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700">Mock interview</Link>
         <Link to="/review" className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700">Review missed ({missed})</Link>
       </div>
