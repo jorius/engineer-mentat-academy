@@ -68,6 +68,20 @@ describe('createStaticGrader', () => {
     expect(different.feedback).toEqual(['Line 1: expected "[5,4]", got "[ 5, 3 ]"']);
   });
 
+  it('keeps space-separated values distinct while still loosening array and object lines', async () => {
+    const twoValues: Question = { ...base, id: 'pv', kind: 'predict', language: 'javascript', code: 'x', answer: '4 0' };
+    const collapsed = await grader.grade(twoValues, { kind: 'predict', text: '40' });
+    expect(collapsed.verdict).toBe('fail');
+    expect(collapsed.feedback).toEqual(['Line 1: expected "4 0", got "40"']);
+    expect((await grader.grade(twoValues, { kind: 'predict', text: '4 0' })).verdict).toBe('pass');
+
+    const array: Question = { ...base, id: 'pv2', kind: 'predict', language: 'javascript', code: 'x', answer: '[5,4]' };
+    expect((await grader.grade(array, { kind: 'predict', text: '[ 5, 4 ]' })).verdict).toBe('pass');
+
+    const object: Question = { ...base, id: 'pv3', kind: 'predict', language: 'javascript', code: 'x', answer: '{"a":1}' };
+    expect((await grader.grade(object, { kind: 'predict', text: "{ 'a': 1 }" })).verdict).toBe('pass');
+  });
+
   it('grades code by running tests', async () => {
     const q: Question = {
       ...base,

@@ -21,11 +21,26 @@ function looseLine(line: string): string {
   return line.replace(/\s+/g, '').replace(/'/g, '"');
 }
 
+// Loose (whitespace/quote-insensitive) comparison only applies when both lines
+// look like an array or object literal (start with `[` or `{` after trimming).
+// Otherwise space-separated values (e.g. two console.log args like "4 0")
+// must match exactly, so they aren't conflated with a single value like "40".
+function isArrayOrObjectLine(line: string): boolean {
+  const trimmed = line.trim();
+  return trimmed.startsWith('[') || trimmed.startsWith('{');
+}
+
 function linesMatch(expected: string | undefined, actual: string | undefined): boolean {
   if (expected === undefined || actual === undefined) {
     return expected === actual;
   }
-  return expected === actual || looseLine(expected) === looseLine(actual);
+  if (expected === actual) {
+    return true;
+  }
+  if (isArrayOrObjectLine(expected) && isArrayOrObjectLine(actual)) {
+    return looseLine(expected) === looseLine(actual);
+  }
+  return false;
 }
 
 function optionText(question: SingleQuestion | MultiQuestion, id: string): string {
