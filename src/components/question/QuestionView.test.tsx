@@ -251,11 +251,25 @@ describe('QuestionView', () => {
     expect(screen.getByLabelText('Program')).toHaveTextContent('console.log(1);');
     await user.type(screen.getByLabelText(/expected output/i), '2');
     await user.click(button(/submit/i));
-    expect(await screen.findByText(/Line 1: expected "1", got "2"/)).toBeInTheDocument();
+    expect(await screen.findByText('Line 1: got "2"')).toBeInTheDocument();
     await user.click(button(/reset/i));
     expect(screen.getByLabelText(/expected output/i)).toHaveValue('');
     expect(within(actionBar()).getByText('Attempt 2 of 3')).toBeInTheDocument();
     expect(screen.queryByText('Not yet. Try again, or show the answer.')).not.toBeInTheDocument();
+  });
+
+  it('hides the expected predict output while attempts remain and shows it once resolved', async () => {
+    const user = userEvent.setup();
+    setup(predict, { maxAttempts: 2 });
+    await user.type(screen.getByLabelText(/expected output/i), '2');
+    await user.click(button(/submit/i));
+    expect(await screen.findByText('Line 1: got "2"')).toBeInTheDocument();
+    expect(screen.queryByText(/expected "1"/)).not.toBeInTheDocument();
+    await user.clear(screen.getByLabelText(/expected output/i));
+    await user.type(screen.getByLabelText(/expected output/i), '3');
+    await user.click(button(/submit/i));
+    expect(await screen.findByText('Line 1: expected "1", got "3"')).toBeInTheDocument();
+    expect(within(actionBar()).getByText('Out of attempts')).toBeInTheDocument();
   });
 
   it('submits with Ctrl+Enter from inside the answer textarea', async () => {

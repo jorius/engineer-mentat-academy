@@ -53,6 +53,10 @@ type Answers = {
 // submit never reveals the key early. The grader itself is unchanged.
 const ANSWER_KEY_PREFIXES = ['Correct answer:', 'Missing:', 'Should not be selected:'];
 
+// A predict mismatch line names the expected output; while attempts remain only the learner's own
+// line is kept. The expected part is matched greedily so a quote inside it can never leak.
+const PREDICT_LINE = /^Line (\d+): expected "[\s\S]*", got "([\s\S]*)"$/;
+
 function initialAnswers(question: Question): Answers {
   return {
     selectedId: null,
@@ -109,8 +113,14 @@ function correctOptionIds(canonical: Question): string[] {
   return [];
 }
 
-function withoutAnswerKey(result: GradeResult): GradeResult {
-  return { ...result, feedback: result.feedback.filter((line) => !ANSWER_KEY_PREFIXES.some((prefix) => line.startsWith(prefix))) };
+function withoutAnswerKey(result: GradeResult, lineGot: (n: string, got: string) => string): GradeResult {
+  const feedback = result.feedback
+    .filter((line) => !ANSWER_KEY_PREFIXES.some((prefix) => line.startsWith(prefix)))
+    .map((line) => {
+      const match = PREDICT_LINE.exec(line);
+      return match === null ? line : lineGot(match[1] ?? '', match[2] ?? '');
+    });
+  return { ...result, feedback };
 }
 
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -376,7 +386,7 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
               {t('question.gradingFailed', { error })}
             </p>
           )}
-          {attempt.phase === 'wrong' && attempt.lastResult !== undefined && <Feedback result={withoutAnswerKey(attempt.lastResult)} retry />}
+          {attempt.phase === 'wrong' && attempt.lastResult !== undefined && <Feedback result={withoutAnswerKey(attempt.lastResult, (n, got): string => t('question.lineGot', { n, got }))} retry />}
           {showFullFeedback && attempt.lastResult !== undefined && <Feedback result={attempt.lastResult} />}
           {resolved && (
             <div className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">

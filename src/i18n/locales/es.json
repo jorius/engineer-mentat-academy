@@ -153,6 +153,7 @@
     "showAnswer": "Mostrar respuesta",
     "reset": "Restablecer",
     "tryAgain": "Todavía no. Inténtalo de nuevo o muestra la respuesta.",
+    "lineGot": "Línea {{n}}: obtuviste \"{{got}}\"",
     "attemptsLeft_one": "Queda {{count}} intento",
     "attemptsLeft_other": "Quedan {{count}} intentos",
     "attemptOf": "Intento {{attempt}} de {{max}}",

@@ -153,6 +153,7 @@
     "showAnswer": "Show answer",
     "reset": "Reset",
     "tryAgain": "Not yet. Try again, or show the answer.",
+    "lineGot": "Line {{n}}: got \"{{got}}\"",
     "attemptsLeft_one": "{{count}} attempt left",
     "attemptsLeft_other": "{{count}} attempts left",
     "attemptOf": "Attempt {{attempt}} of {{max}}",
