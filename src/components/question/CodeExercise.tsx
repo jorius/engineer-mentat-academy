@@ -18,9 +18,11 @@ type Props = {
   onChange?: (value: string) => void;
   readOnly?: boolean;
   submitLabelHidden?: boolean;
+  // The workbench action bar owns Reset, so it asks this input to leave its own out.
+  hideReset?: boolean;
 };
 
-export function CodeExercise({ question, disabled, onSubmit, value, onChange, readOnly = false, submitLabelHidden = false }: Props): JSX.Element {
+export function CodeExercise({ question, disabled, onSubmit, value, onChange, readOnly = false, submitLabelHidden = false, hideReset = false }: Props): JSX.Element {
   const { t } = useTranslation();
   const [internalSource, setInternalSource] = useState(question.starter);
   const source = value ?? internalSource;
@@ -42,7 +44,7 @@ export function CodeExercise({ question, disabled, onSubmit, value, onChange, re
         {!submitLabelHidden && (
           <Button disabled={disabled} onClick={(): void => onSubmit({ kind: 'code', source })}>{t('question.submit')}</Button>
         )}
-        {!readOnly && (
+        {!readOnly && !hideReset && (
           <Button variant="ghost" disabled={disabled} onClick={(): void => setSource(question.starter)}>{t('common.reset')}</Button>
         )}
       </div>

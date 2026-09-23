@@ -11,13 +11,16 @@ const tone: Record<GradeResult['verdict'], string> = {
   self: 'border-sky-500/50 bg-sky-50 dark:bg-sky-900/20',
 };
 
-// The grader's feedback lines are English-only for now; only the headline is localized.
-export function Feedback({ result }: { result: GradeResult }): JSX.Element {
+const retryTone = 'border-zinc-300 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/40';
+
+// The grader's feedback lines are English-only for now; only the headline is localized. `retry` is the
+// neutral "try again" panel shown while attempts remain; the caller strips lines that reveal the key.
+export function Feedback({ result, retry = false }: { result: GradeResult; retry?: boolean }): JSX.Element {
   const { t } = useTranslation();
   return (
-    <div className={`rounded-md border p-3 text-sm ${tone[result.verdict]}`} role="status">
+    <div className={`rounded-md border p-3 text-sm ${retry ? retryTone : tone[result.verdict]}`} role="status">
       <p className="font-semibold">
-        {t(`feedback.${result.verdict}`)} · {Math.round(result.score * 100)}%
+        {retry ? t('question.tryAgain') : `${t(`feedback.${result.verdict}`)} · ${Math.round(result.score * 100)}%`}
       </p>
       {result.feedback.length > 0 && (
         <ul className="mt-1 list-disc pl-5">

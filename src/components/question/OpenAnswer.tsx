@@ -18,6 +18,8 @@ type Props = {
   onChange?: (value: string) => void;
   readOnly?: boolean;
   submitLabelHidden?: boolean;
+  // The workbench action bar owns the reveal step, so it asks this input to leave its own button out.
+  hideReveal?: boolean;
   revealed?: boolean;
   onReveal?: () => void;
   checked?: boolean[];
@@ -32,6 +34,7 @@ export function OpenAnswer({
   onChange,
   readOnly = false,
   submitLabelHidden = false,
+  hideReveal = false,
   revealed: revealedProp,
   onReveal,
   checked: checkedProp,
@@ -78,7 +81,7 @@ export function OpenAnswer({
         onChange={(event): void => setDraft(event.target.value)}
       />
       {!revealed ? (
-        <Button onClick={reveal}>{t('question.reveal')}</Button>
+        !hideReveal && <Button onClick={reveal}>{t('question.reveal')}</Button>
       ) : (
         <div className="space-y-3">
           <div className="rounded-md border border-accent-500/40 bg-accent-50/40 p-3 dark:bg-accent-500/10">

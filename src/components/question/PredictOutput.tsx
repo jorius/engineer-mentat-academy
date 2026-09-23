@@ -18,9 +18,11 @@ type Props = {
   onChange?: (value: string) => void;
   readOnly?: boolean;
   submitLabelHidden?: boolean;
+  // The workbench shows the program in the question pane, so it asks this input to leave it out.
+  hideCode?: boolean;
 };
 
-export function PredictOutput({ question, disabled, onSubmit, value, onChange, readOnly = false, submitLabelHidden = false }: Props): JSX.Element {
+export function PredictOutput({ question, disabled, onSubmit, value, onChange, readOnly = false, submitLabelHidden = false, hideCode = false }: Props): JSX.Element {
   const { t } = useTranslation();
   const [internalText, setInternalText] = useState('');
   const text = value ?? internalText;
@@ -32,7 +34,9 @@ export function PredictOutput({ question, disabled, onSubmit, value, onChange, r
   };
   return (
     <div className="space-y-3">
-      <CodeEditor value={question.code} onChange={(): void => undefined} language={question.language} readOnly ariaLabel={t('question.program')} />
+      {!hideCode && (
+        <CodeEditor value={question.code} onChange={(): void => undefined} language={question.language} readOnly ariaLabel={t('question.program')} />
+      )}
       <label className="block text-sm">
         {t('question.expectedOutput')}
         <textarea

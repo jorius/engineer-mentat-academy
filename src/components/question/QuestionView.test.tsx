@@ -1,8 +1,9 @@
 // packages
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import type { JSX } from 'react';
 
 // components
 import { QuestionView } from './QuestionView';
@@ -16,7 +17,10 @@ import { PreferencesProvider } from '../../hooks/usePreferences';
 import { ProgressProvider } from '../../hooks/useProgress';
 
 // engine
+import { createPreferencesStore } from '../../engine/preferences';
+import type { MaxAttempts } from '../../engine/preferences';
 import { createProgressStore } from '../../engine/progress';
+import type { ProgressStore } from '../../engine/progress';
 import { createStaticGrader } from '../../engine/staticGrader';
 import { executeSource } from '../../engine/runner/execute';
 import type { Question } from '../../engine/question';
@@ -34,11 +38,31 @@ const single: Question = {
   level: 'junior',
   kind: 'single',
   prompt: 'Pick **B**',
-  options: [{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }],
+  options: [{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }, { id: 'c', text: 'C' }],
   answer: 'b',
   tags: [],
   source: 'notion',
   explanation: 'Because B.',
+};
+
+const single2: Question = { ...single, id: 'javascript-test-single-2' };
+
+const multi: Question = {
+  ...single,
+  id: 'javascript-test-multi',
+  kind: 'multi',
+  prompt: 'Pick A and B',
+  answer: ['a', 'b'],
+};
+
+const predict: Question = {
+  ...single,
+  id: 'javascript-test-predict',
+  kind: 'predict',
+  prompt: 'What prints?',
+  language: 'javascript',
+  code: 'console.log(1);',
+  answer: '1',
 };
 
 const code: Question = {
@@ -52,39 +76,66 @@ const code: Question = {
   solution: 'export function solution() { return 1; }',
 };
 
-const single2: Question = { ...single, id: 'javascript-test-single-2' };
+const open: Question = { ...single, id: 'javascript-test-open', kind: 'open', modelAnswer: 'Model.', rubric: ['one', 'two'] };
 
-function setup(question: Question, onNext = vi.fn()): { store: ReturnType<typeof createProgressStore>; onNext: typeof onNext } {
-  const store = createProgressStore(null);
-  const grader = createStaticGrader({
+type SetupOptions = { maxAttempts?: MaxAttempts; onNext?: (() => void) | null; grader?: Grader; store?: ProgressStore };
+
+function staticGrader(): Grader {
+  return createStaticGrader({
     runJs: (r) => executeSource(r.source, r.tests, r.language),
     runSql: async () => ({ status: 'error', columns: [], rows: [], error: 'not in test' }),
   });
-  render(
+}
+
+function tree(question: Question, options: SetupOptions, store: ProgressStore, onNext: (() => void) | undefined): JSX.Element {
+  const preferences = createPreferencesStore(null);
+  preferences.set({ maxAttempts: options.maxAttempts ?? 3 });
+  return (
     <MemoryRouter>
-      <PreferencesProvider>
+      <PreferencesProvider store={preferences}>
         <ThemeProvider>
           <ProgressProvider store={store}>
-            <GraderProvider grader={grader}>
+            <GraderProvider grader={options.grader ?? staticGrader()}>
               <QuestionView question={question} onNext={onNext} />
             </GraderProvider>
           </ProgressProvider>
         </ThemeProvider>
       </PreferencesProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
-  return { store, onNext };
+}
+
+function setup(question: Question, options: SetupOptions = {}): { store: ProgressStore; onNext: ReturnType<typeof vi.fn>; container: HTMLElement } {
+  const store = options.store ?? createProgressStore(null);
+  const onNext = vi.fn();
+  const { container } = render(tree(question, options, store, options.onNext === null ? undefined : (options.onNext ?? onNext)));
+  return { store, onNext, container };
+}
+
+function actionBar(): HTMLElement {
+  return screen.getByRole('group', { name: /answer actions/i });
+}
+
+function button(name: RegExp): HTMLElement {
+  return within(actionBar()).getByRole('button', { name });
 }
 
 describe('QuestionView', () => {
-  it('grades a single choice, shows the explanation and records progress', async () => {
-    const user = userEvent.setup();
-    const { store } = setup(single);
-    await user.click(screen.getByRole('radio', { name: 'B' }));
-    await user.click(screen.getByRole('button', { name: /submit/i }));
-    expect(within(await screen.findByRole('status')).getByText(/correct/i)).toBeInTheDocument();
-    expect(screen.getByText('Because B.')).toBeInTheDocument();
-    expect(store.get('javascript-test-single')).toMatchObject({ attempts: 1, lastScore: 1 });
+  afterEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  it('lays out the panes in a two-column grid over a sticky action bar', () => {
+    const { container } = setup(single);
+    expect(container.querySelector('.grid.md\\:grid-cols-2')).not.toBeNull();
+    expect(actionBar()).toHaveClass('sticky', 'bottom-0');
+    expect(within(actionBar()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Show answer', 'Submit', 'Next →']);
+    expect(within(actionBar()).getByText('3 attempts left')).toBeInTheDocument();
+  });
+
+  it('hides Next when the caller passes no onNext and offers Reset only for editable answers', () => {
+    setup(code, { onNext: null });
+    expect(within(actionBar()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Reset', 'Show answer', 'Submit']);
   });
 
   it('shows the option letter before each option', () => {
@@ -93,115 +144,211 @@ describe('QuestionView', () => {
     expect(screen.getByText('b)')).toBeVisible();
   });
 
-  it('shows feedback for a wrong answer and lets the user continue', async () => {
+  it('locks a wrong pick without revealing the key, then records 1 once when solved on a retry', async () => {
     const user = userEvent.setup();
-    const { onNext } = setup(single);
+    const { store, onNext } = setup(single);
     await user.click(screen.getByRole('radio', { name: 'A' }));
-    await user.click(screen.getByRole('button', { name: /submit/i }));
+    await user.click(button(/submit/i));
+
+    expect(await screen.findByText('Not yet. Try again, or show the answer.')).toBeInTheDocument();
+    expect(screen.queryByText(/correct answer/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Because B.')).not.toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'A' })).toHaveAttribute('aria-disabled', 'true');
+    expect(within(actionBar()).getByText('Attempt 2 of 3')).toBeInTheDocument();
+    expect(button(/next/i)).toBeDisabled();
+    expect(store.get(single.id)).toBeUndefined();
+
+    await user.click(screen.getByRole('radio', { name: 'B' }));
+    await user.click(button(/submit/i));
+    expect(await screen.findByText('Because B.')).toBeInTheDocument();
+    expect(screen.getByText(/correct · 100%/i)).toBeInTheDocument();
+    expect(within(actionBar()).getByText('Solved · attempt 2 of 3')).toBeInTheDocument();
+    expect(store.get(single.id)).toMatchObject({ attempts: 1, lastScore: 1 });
+    expect(button(/submit/i)).toBeDisabled();
+
+    await user.click(button(/next/i));
+    expect(onNext).toHaveBeenCalledTimes(1);
+    expect(store.get(single.id)?.attempts).toBe(1);
+  });
+
+  it('records 0 once and reveals the correct option when attempts run out', async () => {
+    const user = userEvent.setup();
+    const { store } = setup(single, { maxAttempts: 2 });
+    await user.click(screen.getByRole('radio', { name: 'A' }));
+    await user.click(button(/submit/i));
+    await screen.findByText('Not yet. Try again, or show the answer.');
+    await user.click(screen.getByRole('radio', { name: 'C' }));
+    await user.click(button(/submit/i));
+
     expect(await screen.findByText('Correct answer: B')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /next/i }));
+    expect(screen.getByRole('radio', { name: 'B' })).toHaveTextContent('✓');
+    expect(screen.getByText('Because B.')).toBeInTheDocument();
+    expect(within(actionBar()).getByText('Out of attempts')).toBeInTheDocument();
+    expect(store.get(single.id)).toMatchObject({ attempts: 1, lastScore: 0 });
+  });
+
+  it('show answer records 0, reveals the correct option and opens the explanation', async () => {
+    const user = userEvent.setup();
+    const { store } = setup(single);
+    await user.click(button(/show answer/i));
+    expect(screen.getByRole('radio', { name: 'B' })).toHaveTextContent('✓');
+    expect(screen.getByText('Because B.')).toBeInTheDocument();
+    expect(within(actionBar()).getByText('Answer shown')).toBeInTheDocument();
+    expect(button(/show answer/i)).toBeDisabled();
+    expect(button(/next/i)).toBeEnabled();
+    expect(store.get(single.id)).toMatchObject({ attempts: 1, lastScore: 0 });
+  });
+
+  it('keeps multi-choice selections editable after a wrong submit without naming the missing options', async () => {
+    const user = userEvent.setup();
+    const { store } = setup(multi);
+    await user.click(screen.getByRole('checkbox', { name: 'A' }));
+    await user.click(button(/submit/i));
+    expect(await screen.findByText('Not yet. Try again, or show the answer.')).toBeInTheDocument();
+    expect(screen.queryByText(/missing/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'A' })).toHaveAttribute('aria-checked', 'true');
+    await user.click(screen.getByRole('checkbox', { name: 'B' }));
+    await user.click(button(/submit/i));
+    expect(await screen.findByText('Because B.')).toBeInTheDocument();
+    expect(store.get(multi.id)?.lastScore).toBe(1);
+  });
+
+  it('shows the failing tests of a wrong code submit and keeps the attempt open', async () => {
+    const user = userEvent.setup();
+    const { store } = setup(code);
+    await user.click(button(/submit/i));
+    expect(await screen.findByText(/one: expected 1, got 0/)).toBeInTheDocument();
+    expect(screen.getByText('Not yet. Try again, or show the answer.')).toBeInTheDocument();
+    expect(store.get(code.id)).toBeUndefined();
+  });
+
+  it('show answer fills the code editor with the reference solution, read-only', async () => {
+    const user = userEvent.setup();
+    const { store } = setup(code);
+    await user.click(button(/show answer/i));
+    const editor = screen.getByLabelText('Solution');
+    expect(editor).toHaveTextContent('return 1;');
+    expect(editor.getAttribute('aria-readonly')).toBe('true');
+    expect(button(/reset/i)).toBeDisabled();
+    expect(store.get(code.id)?.lastScore).toBe(0);
+  });
+
+  it('reset clears a predict answer and keeps the attempts used', async () => {
+    const user = userEvent.setup();
+    setup(predict);
+    expect(screen.getByLabelText('Program')).toHaveTextContent('console.log(1);');
+    await user.type(screen.getByLabelText(/expected output/i), '2');
+    await user.click(button(/submit/i));
+    expect(await screen.findByText(/Line 1: expected "1", got "2"/)).toBeInTheDocument();
+    await user.click(button(/reset/i));
+    expect(screen.getByLabelText(/expected output/i)).toHaveValue('');
+    expect(within(actionBar()).getByText('Attempt 2 of 3')).toBeInTheDocument();
+    expect(screen.queryByText('Not yet. Try again, or show the answer.')).not.toBeInTheDocument();
+  });
+
+  it('submits with Ctrl+Enter from inside the answer textarea', async () => {
+    const user = userEvent.setup();
+    const { store } = setup(predict);
+    await user.type(screen.getByLabelText(/expected output/i), '1');
+    await user.keyboard('{Control>}{Enter}{/Control}');
+    expect(await screen.findByText('Because B.')).toBeInTheDocument();
+    expect(store.get(predict.id)?.lastScore).toBe(1);
+  });
+
+  it('N moves on only once resolved, and letters typed into an answer never trigger shortcuts', async () => {
+    const user = userEvent.setup();
+    const { store, onNext } = setup(predict);
+    await user.type(screen.getByLabelText(/expected output/i), 'nm');
+    expect(store.get(predict.id)?.flagged).toBeUndefined();
+    await user.click(screen.getByText('What prints?'));
+    await user.keyboard('n');
+    expect(onNext).not.toHaveBeenCalled();
+    await user.click(button(/show answer/i));
+    await user.keyboard('n');
+    expect(onNext).toHaveBeenCalledTimes(1);
+    await user.keyboard('{Control>}n{/Control}');
     expect(onNext).toHaveBeenCalledTimes(1);
   });
 
-  it('toggles the flag', async () => {
+  it('M and the header button toggle Mark for review', async () => {
     const user = userEvent.setup();
     const { store } = setup(single);
-    await user.click(screen.getByRole('button', { name: /flag/i }));
-    expect(store.get('javascript-test-single')?.flagged).toBe(true);
+    const mark = screen.getByRole('button', { name: /mark for review/i });
+    expect(mark).toHaveAttribute('aria-pressed', 'false');
+    expect(mark).toHaveAttribute('title', expect.stringMatching(/show up in review/i));
+    await user.click(mark);
+    expect(store.get(single.id)?.flagged).toBe(true);
+    expect(screen.getByRole('button', { name: /marked/i })).toHaveAttribute('aria-pressed', 'true');
+    await user.keyboard('m');
+    expect(store.get(single.id)?.flagged).toBe(false);
   });
 
-  it('runs a code exercise through the grader', async () => {
+  it('toggles the notes drawer, persists notes on blur and closes with Esc', async () => {
     const user = userEvent.setup();
-    const { store } = setup(code);
-    await user.click(screen.getByRole('button', { name: /submit/i }));
-    expect(await screen.findByText(/one: expected 1, got 0/)).toBeInTheDocument();
-    expect(store.get('javascript-test-code')?.lastScore).toBe(0);
+    const { store } = setup(single);
+    const toggle = screen.getByRole('button', { name: /my notes/i });
+    expect(screen.queryByRole('textbox', { name: /my notes/i })).not.toBeInTheDocument();
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await user.type(screen.getByRole('textbox', { name: /my notes/i }), 'check phase');
+    await user.click(screen.getByText('Pick'));
+    expect(store.get(single.id)?.notes).toBe('check phase');
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('textbox', { name: /my notes/i })).not.toBeInTheDocument();
+    await user.click(toggle);
+    expect(screen.getByRole('textbox', { name: /my notes/i })).toHaveValue('check phase');
+  });
+
+  it('copies the permalink and shows a Copied toast', async () => {
+    const user = userEvent.setup();
+    setup(single);
+    const link = screen.getByRole('link', { name: 'permalink' });
+    expect(link).toHaveAttribute('href', '/q/javascript-test-single');
+    await user.click(link);
+    expect(await screen.findByText('Copied')).toHaveAttribute('role', 'status');
+    expect(await navigator.clipboard.readText()).toMatch(/\/q\/javascript-test-single$/);
   });
 
   it('resets answer state when the question changes', async () => {
     const user = userEvent.setup();
     const store = createProgressStore(null);
-    const grader = createStaticGrader({
-      runJs: (r) => executeSource(r.source, r.tests, r.language),
-      runSql: async () => ({ status: 'error', columns: [], rows: [], error: 'not in test' }),
-    });
-    const { rerender } = render(
-      <MemoryRouter>
-        <PreferencesProvider>
-          <ThemeProvider>
-            <ProgressProvider store={store}>
-              <GraderProvider grader={grader}>
-                <QuestionView question={single} />
-              </GraderProvider>
-            </ProgressProvider>
-          </ThemeProvider>
-        </PreferencesProvider>
-      </MemoryRouter>,
-    );
+    const { rerender } = render(tree(single, {}, store, undefined));
+    await user.click(screen.getByRole('radio', { name: 'A' }));
+    await user.click(button(/submit/i));
+    await screen.findByText('Not yet. Try again, or show the answer.');
     await user.click(screen.getByRole('radio', { name: 'B' }));
-    rerender(
-      <MemoryRouter>
-        <PreferencesProvider>
-          <ThemeProvider>
-            <ProgressProvider store={store}>
-              <GraderProvider grader={grader}>
-                <QuestionView question={single2} />
-              </GraderProvider>
-            </ProgressProvider>
-          </ThemeProvider>
-        </PreferencesProvider>
-      </MemoryRouter>,
-    );
-    expect(screen.getAllByRole('radio').every((radio) => !(radio as HTMLInputElement).checked)).toBe(true);
-    expect(screen.getByRole('button', { name: /submit/i })).toBeDisabled();
+    rerender(tree(single2, {}, store, undefined));
+    expect(screen.getAllByRole('radio').every((radio) => radio.getAttribute('aria-checked') === 'false' && radio.getAttribute('aria-disabled') === 'false')).toBe(true);
+    expect(within(actionBar()).getByText('3 attempts left')).toBeInTheDocument();
+    expect(button(/submit/i)).toBeDisabled();
   });
 
-  it('submits the typed text with an open answer', async () => {
+  it('runs an open answer through reveal and self-score, with no attempts pill', async () => {
     const user = userEvent.setup();
-    const store = createProgressStore(null);
-    const grade = vi.fn<Grader['grade']>(async () => ({ score: 1, verdict: 'self', feedback: [] }));
-    const open: Question = { ...single, id: 'javascript-test-open', kind: 'open', modelAnswer: 'Model.', rubric: ['one', 'two'] };
-    render(
-      <MemoryRouter>
-        <PreferencesProvider>
-          <ThemeProvider>
-            <ProgressProvider store={store}>
-              <GraderProvider grader={{ grade }}>
-                <QuestionView question={open} />
-              </GraderProvider>
-            </ProgressProvider>
-          </ThemeProvider>
-        </PreferencesProvider>
-      </MemoryRouter>,
-    );
+    const grade = vi.fn<Grader['grade']>(async () => ({ score: 0.5, verdict: 'self', feedback: [] }));
+    const { store } = setup(open, { grader: { grade } });
+    expect(within(actionBar()).queryByText(/attempt/i)).not.toBeInTheDocument();
     await user.type(screen.getByPlaceholderText(/say it out loud/i), 'Closures capture bindings');
-    await user.click(screen.getByRole('button', { name: /reveal model answer/i }));
+    await user.click(button(/reveal model answer/i));
+    expect(screen.getByText('Model.')).toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: 'one' }));
-    await user.click(screen.getByRole('button', { name: /submit self-score/i }));
+    await user.click(button(/submit self-score/i));
     expect(grade).toHaveBeenCalledWith(open, { kind: 'open', checked: [true, false], text: 'Closures capture bindings' });
+    expect(await within(actionBar()).findByText('Self-scored')).toBeInTheDocument();
+    expect(screen.getByText('Because B.')).toBeInTheDocument();
+    expect(store.get(open.id)).toMatchObject({ attempts: 1, lastScore: 0.5 });
   });
 
-  it('shows an error when grading fails', async () => {
+  it('shows an error when grading fails and leaves the attempt untouched', async () => {
     const user = userEvent.setup();
-    const store = createProgressStore(null);
     const grader: Grader = { grade: async () => Promise.reject(new Error('worker died')) };
-    render(
-      <MemoryRouter>
-        <PreferencesProvider>
-          <ThemeProvider>
-            <ProgressProvider store={store}>
-              <GraderProvider grader={grader}>
-                <QuestionView question={single} />
-              </GraderProvider>
-            </ProgressProvider>
-          </ThemeProvider>
-        </PreferencesProvider>
-      </MemoryRouter>,
-    );
+    const { store } = setup(single, { grader });
     await user.click(screen.getByRole('radio', { name: 'B' }));
-    await user.click(screen.getByRole('button', { name: /submit/i }));
+    await user.click(button(/submit/i));
     expect(await screen.findByRole('alert')).toHaveTextContent(/worker died/);
     expect(store.get(single.id)).toBeUndefined();
+    expect(within(actionBar()).getByText('3 attempts left')).toBeInTheDocument();
+    expect(button(/submit/i)).toBeEnabled();
   });
 
   it('shows the active language but grades the canonical English question', async () => {
@@ -212,23 +359,11 @@ describe('QuestionView', () => {
       throw new Error('seed question missing');
     }
     const grade = vi.fn<Grader['grade']>(async () => ({ score: 1, verdict: 'pass', feedback: [] }));
-    render(
-      <MemoryRouter>
-        <PreferencesProvider>
-          <ThemeProvider>
-            <ProgressProvider store={createProgressStore(null)}>
-              <GraderProvider grader={{ grade }}>
-                <QuestionView question={canonical} />
-              </GraderProvider>
-            </ProgressProvider>
-          </ThemeProvider>
-        </PreferencesProvider>
-      </MemoryRouter>,
-    );
+    setup(canonical, { grader: { grade } });
     expect(screen.getByText('¿Qué se imprime?')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'JavaScript · Closures (clausuras)' })).toBeInTheDocument();
     await user.click(screen.getByRole('radio', { name: '1' }));
-    await user.click(screen.getByRole('button', { name: /enviar|submit/i }));
+    await user.click(within(screen.getByRole('group', { name: /acciones de respuesta/i })).getByRole('button', { name: /enviar/i }));
     expect(grade).toHaveBeenCalledWith(canonical, { kind: 'single', optionId: 'a' });
   });
 });
