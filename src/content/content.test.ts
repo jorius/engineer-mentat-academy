@@ -30,6 +30,9 @@ describe('question bank', () => {
     expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true);
     expect(findTopic(question.domain, question.subject, question.topic), `unknown taxonomy path ${question.domain}/${question.subject}/${question.topic}`).toBeDefined();
     expect(question.id.startsWith(`${question.subject}-`), 'id must start with the subject').toBe(true);
+    if (question.level === 'senior') {
+      expect(question.explanation, 'senior questions need a Say this out loud line').toContain('**Say this out loud:**');
+    }
 
     if (question.kind === 'single') {
       expect(question.options.map((o) => o.id)).toContain(question.answer);

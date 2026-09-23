@@ -57,7 +57,7 @@ export function solution() {
     tags: ['this', 'call', 'spread'],
     source: 'notion',
     explanation:
-      '`this` is bound by the call site, not by where the function was defined. `secondSubject.greet()` or `firstSubject.greet.call(secondSubject)` both work; `bind` returns a new function. Arrow functions would ignore all of these because they capture `this` lexically.',
+      '`this` is bound by the call site, not by where the function was defined. `secondSubject.greet()` or `firstSubject.greet.call(secondSubject)` both work; `bind` returns a new function. Arrow functions would ignore all of these because they capture `this` lexically.\n\n**Say this out loud:** "`this` is decided by the call site, not by where the function was defined, so a spread copy shares the function but I still have to call it through the right receiver, with a method call or `call`."',
   },
   {
     id: 'javascript-closure-counter-independence',
@@ -144,7 +144,8 @@ export function solution(orders: Order[]): boolean {
     ],
     tags: ['promises', 'resilience'],
     source: 'notion',
-    explanation: 'Senior signal: choosing the combinator by failure semantics, then adding timeouts so the slowest dependency bounds latency.',
+    explanation:
+      'Senior signal: choosing the combinator by failure semantics, then adding timeouts so the slowest dependency bounds latency.\n\n**Say this out loud:** "I pick the combinator by failure semantics: `all` fails fast, `allSettled` waits for every result, `any` takes the first success and `race` the first settlement, and I add a timeout so one slow dependency cannot set my latency."',
   },
   {
     id: 'javascript-equality-coercion-epam',
@@ -1055,5 +1056,519 @@ console.log(null == 0, null >= 0);`,
     source: 'epam-pdf',
     explanation:
       'When an object meets an operator it is converted with **ToPrimitive** and a hint: `+` and `==` use the *default* hint (`valueOf` first), template literals and `String()` use the *string* hint (`toString` first). `Symbol.toPrimitive` overrides both.\n\n- `==` then compares primitives, so `price == 42` is `true`; `===` never converts, so different types are simply unequal.\n- `[] == false`: `false` becomes `0`, `[]` becomes `""` then `0`, so it is `true`, while `!![]` is `true` because every object is truthy. The same value is "equal to false" and truthy.\n- `null == 0` is `false` because `==` special-cases `null`: it only equals `undefined`. But relational operators convert with ToNumber, so `null >= 0` is `true`.\n\nThis inconsistency is the argument for `===` everywhere, with one accepted exception: `x == null` as a deliberate check for both `null` and `undefined`.\n\n**Say this out loud:** "`===` compares without conversion; `==` runs the abstract equality algorithm with ToPrimitive and ToNumber, and the only `==` I allow in code review is `x == null`."',
+  },
+  {
+    id: 'javascript-async-operations-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'async',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'How does JavaScript handle asynchronous operations? Walk me through the options and when you would pick each.',
+    modelAnswer:
+      'JavaScript runs your code on a single thread, so asynchrony comes from the host (the browser, or libuv in Node) doing the waiting for timers, network and file I/O, then queuing a callback when the work finishes; the event loop runs that callback once the call stack is empty. The oldest pattern is callbacks, which work but nest badly, make error handling manual (Node\'s error-first convention) and invert control, because you hand your continuation to someone else\'s code. Promises represent the eventual result as a value: they settle once, compose with `then` chains and combinators like `Promise.all` and `Promise.allSettled`, and propagate errors to a single `catch`. `async`/`await` is syntax over promises: `await` suspends the function and resumes it as a microtask, so the code reads top to bottom and `try`/`catch` works again. The traps I watch for are accidental serialization (awaiting independent calls one after another instead of using `Promise.all`), `forEach` with an async callback (nothing awaits it), unhandled rejections, and missing timeouts or cancellation with `AbortController`. None of these makes CPU-heavy work asynchronous; that needs a Web Worker or a worker thread.',
+    rubric: [
+      'Explains the mechanism: one JS thread, host APIs do the waiting, the event loop runs the queued continuation',
+      'Compares callbacks, promises and async/await with a concrete drawback of callbacks (nesting, inversion of control, manual errors)',
+      'Names a composition tool (Promise.all, allSettled, race, any) and the serial-await pitfall',
+      'Covers error handling and cancellation or timeouts (try/catch, unhandled rejections, AbortController)',
+      'Notes that CPU-bound work needs workers, not async',
+    ],
+    tags: ['epam-25', 'async', 'callbacks', 'promises', 'async-await'],
+    source: 'epam-pdf',
+    explanation:
+      'EPAM\'s reference answer lists callbacks, promises and async/await. A senior answer starts one level lower, with **who does the waiting** (the host, not the JavaScript thread), treats the three styles as an evolution of the same continuation idea, and finishes with production concerns: parallelism, error propagation, cancellation, and I/O-bound versus CPU-bound work. Companion exercises: `javascript-promisify-callback-epam` and `javascript-async-foreach-fix-epam`.\n\n**Say this out loud:** "JavaScript never waits on the main thread: the host does the I/O and queues a continuation. Callbacks, promises and async/await are three ways of writing that continuation, and async/await wins because errors and control flow read like synchronous code."',
+  },
+  {
+    id: 'javascript-equality-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'coercion-and-equality',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'What is the difference between `==` and `===`? When, if ever, would you allow `==` in a code review?',
+    modelAnswer:
+      '`===` is strict equality: if the types differ it returns `false` without converting anything, and for objects it compares references. `==` runs the Abstract Equality algorithm, which coerces: strings and booleans become numbers, objects are reduced with ToPrimitive (`valueOf`, then `toString`, or `Symbol.toPrimitive`), and `null` and `undefined` are equal only to each other. That produces surprises like `\'\' == 0`, `\'0\' == false` and `[] == false` all being `true`, while `null == 0` is `false`. Neither operator treats `NaN` as equal to itself; `Object.is` implements SameValue, so it is the tool when you need `NaN` equal to `NaN` or `+0` distinct from `-0`. My rule is `===` everywhere, enforced with ESLint\'s `eqeqeq`, with one deliberate exception: `value == null` as a concise check for both `null` and `undefined`, which the rule\'s `null: \'ignore\'` option allows. For objects neither operator compares contents, so structural equality needs a deep-equal helper.',
+    rubric: [
+      'States that === never coerces while == applies abstract equality with type conversion',
+      'Gives at least one concrete coercion surprise (\'\' == 0, [] == false, or null == 0 being false)',
+      'Mentions NaN and Object.is (SameValue) as the edge beyond both operators',
+      'Gives a team rule: === by default, x == null as the only accepted exception, enforced by lint',
+    ],
+    tags: ['epam-25', 'coercion', 'equality', 'object-is'],
+    source: 'epam-pdf',
+    explanation:
+      'The EPAM answer stops at "`==` coerces, `===` does not". Interviewers push for the **algorithm** (ToNumber, ToPrimitive, the `null`/`undefined` special case), for **`NaN` and `Object.is`**, and for a **policy** you would actually enforce. Companion exercises: `javascript-equality-coercion-epam` and `javascript-coercion-to-primitive-epam`.\n\n**Say this out loud:** "`===` compares type and value with no conversion; `==` runs a coercion algorithm with enough edge cases that I ban it by lint except for `x == null`, and I reach for `Object.is` when `NaN` or signed zero matter."',
+  },
+  {
+    id: 'javascript-closures-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'closures',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'Can you explain closures? Give me a real use case and a way closures cause bugs.',
+    modelAnswer:
+      'A closure is a function together with the lexical environment it was created in: it keeps references to the outer variables it uses, so they stay alive after the outer function returns. It captures bindings, not values, so if the variable changes later the closure sees the new value. Real uses are everywhere: private state through the module pattern or factories (a counter whose state is unreachable from outside), partial application and function factories, memoization caches, and every callback or event handler that needs context. The classic bug is `var` in a loop, where every callback shares one function-scoped binding; `let` fixes it because each iteration gets a fresh binding. In React the same mechanism produces stale closures: an effect or interval callback captures the state from the render that created it, and you fix it with a correct dependency array, a functional update or a ref. Closures can also leak memory when a long-lived callback, such as a listener that is never removed, keeps a large object reachable, because whatever a closure references lives as long as the closure does.',
+    rubric: [
+      'Defines a closure as a function plus its lexical environment, capturing bindings rather than values',
+      'Gives a practical use (private state, factories, memoization, callbacks)',
+      'Explains the var-in-a-loop bug and why let fixes it',
+      'Mentions stale closures (React effects or intervals) or memory retention by long-lived listeners',
+    ],
+    tags: ['epam-25', 'closures', 'encapsulation', 'stale-closure', 'memory'],
+    source: 'epam-pdf',
+    explanation:
+      'EPAM\'s reference answer describes access to outer scopes. The senior layer is that closures capture **live bindings**, which explains both the `var` loop bug and React\'s stale closures, plus the **lifetime** consequence: whatever a closure references stays reachable. Companion exercises: `javascript-stale-closure-getter-epam` and `javascript-closure-counter-independence`.\n\n**Say this out loud:** "A closure is a function plus the scope it was created in; it captures variables by reference, which is what makes private state possible and also what causes stale-closure bugs when the captured binding is not the one you think."',
+  },
+  {
+    id: 'javascript-null-undefined-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'fundamentals',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'What is the difference between `null` and `undefined`, and how do you handle both in an API or a codebase?',
+    modelAnswer:
+      '`undefined` is the language\'s default for "no value yet": an unassigned variable, a missing property, a missing argument and a function without `return` all produce it. `null` is an explicit value a programmer assigns to say "intentionally empty". They behave differently: `typeof undefined` is `\'undefined\'` but `typeof null` is `\'object\'`, a historical bug; `Number(undefined)` is `NaN` while `Number(null)` is `0`; default parameters and destructuring defaults apply only to `undefined`, not `null`; and `JSON.stringify` drops properties whose value is `undefined` but keeps `null`. They are loosely equal to each other and to nothing else, which is why `x == null` checks both. Modern operators treat them together: `??` falls back only on `null` or `undefined` (unlike `||`, which also swallows `0` and `\'\'`), and `?.` short-circuits on either. In an API I pick one convention, usually `null` for "known to be empty" and an absent field for "not provided", because that maps cleanly to JSON and to PATCH semantics, where omitting a field and clearing it mean different things.',
+    rubric: [
+      'Distinguishes the engine default (undefined) from the intentional empty value (null)',
+      'Names concrete behavioral differences (typeof, Number conversion, defaults, JSON.stringify)',
+      'Uses ?? and ?. correctly and contrasts ?? with ||',
+      'Proposes an API convention, such as absent versus null in PATCH payloads',
+    ],
+    tags: ['epam-25', 'null', 'undefined', 'nullish', 'api-design'],
+    source: 'epam-pdf',
+    explanation:
+      'The EPAM answer is the definition. A senior answer adds the **observable differences** that cause bugs (defaults ignore `null`, JSON drops `undefined`, `typeof null`) and a **convention** that survives serialization boundaries. Companion exercise: `javascript-null-vs-undefined-epam`.\n\n**Say this out loud:** "`undefined` means nobody set it, `null` means someone set it to empty; defaults and JSON treat them differently, so I use `??` to handle both and keep a clear convention at the API boundary, like absent versus `null` in a PATCH."',
+  },
+  {
+    id: 'javascript-event-loop-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'event-loop',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'How does the JavaScript event loop work? Be precise about microtasks and macrotasks.',
+    modelAnswer:
+      'JavaScript runs on one call stack per thread; the event loop is the host\'s scheduler that decides what runs when that stack is empty. Completed timers, I/O and UI events queue **tasks** (macrotasks); the loop takes one task, runs it to completion, then drains the **microtask** queue completely, which holds promise reactions, `await` continuations and `queueMicrotask` callbacks. In the browser, rendering (style, layout, paint, plus `requestAnimationFrame` callbacks) can happen between tasks, never in the middle of one. That ordering explains why a resolved promise\'s `then` runs before a `setTimeout(fn, 0)`, and why code after `await` resumes asynchronously even when the promise was already resolved. It also explains the failure modes: a long synchronous task freezes the UI and delays every timer, and a microtask that keeps scheduling microtasks starves both rendering and tasks. Node adds its own phases (timers, poll, check for `setImmediate`, close callbacks) and a `process.nextTick` queue that runs before promise microtasks. The practical rules are to keep tasks short, chunk long work or move CPU work to a worker, and never rely on timer precision.',
+    rubric: [
+      'Explains one call stack, run-to-completion, and the loop picking work when the stack is empty',
+      'Distinguishes microtasks (promises, await, queueMicrotask) from tasks (timers, I/O, events) and says microtasks fully drain after each task',
+      'Mentions rendering between tasks or requestAnimationFrame in the browser',
+      'Names a failure mode: long tasks blocking, microtask starvation, or delayed timers',
+      'Bonus: Node phases, setImmediate and process.nextTick',
+    ],
+    tags: ['epam-25', 'event-loop', 'microtasks', 'macrotasks', 'rendering'],
+    source: 'epam-pdf',
+    explanation:
+      'EPAM\'s reference answer describes a single "callback queue". That is the junior model; the senior model has **two queues with different drain rules** plus **rendering opportunities**, and it predicts real output. Companion exercises: `javascript-event-loop-async-await-epam` and `javascript-event-loop-order-basic`.\n\n**Say this out loud:** "After every task the engine drains the entire microtask queue before it renders or takes the next task, so promise callbacks beat timers, and both a long task and an endless chain of microtasks will freeze the page."',
+  },
+  {
+    id: 'javascript-var-let-const-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'hoisting-and-scope',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'What is the difference between `var`, `let` and `const`, and what do you use by default?',
+    modelAnswer:
+      '`var` is function-scoped (or global), is hoisted and initialized to `undefined`, can be redeclared, and at the top level of a classic script it becomes a property of the global object. `let` and `const` are block-scoped and are hoisted too, but they stay uninitialized in the temporal dead zone until the declaration runs, so touching them early throws a `ReferenceError` instead of silently reading `undefined`. `let` can be reassigned and `const` cannot, but `const` makes the **binding** immutable, not the value, so a `const` object or array can still be mutated. In loops, `let` creates a fresh binding per iteration, which is why closures over a `let` loop variable see their own iteration\'s value while `var` shares one binding. Neither `let` nor `const` can be redeclared in the same scope. My default is `const` everywhere, `let` only when a variable is genuinely reassigned, and no `var`, enforced with `prefer-const` and `no-var`, because it makes reassignment visible to the reader.',
+    rubric: [
+      'Contrasts function scope (var) with block scope (let and const)',
+      'Explains the hoisting difference: var initialized to undefined versus the TDZ for let and const',
+      'States that const prevents reassignment, not mutation',
+      'Explains per-iteration loop bindings with let',
+      'Gives a default policy: const, then let, never var',
+    ],
+    tags: ['epam-25', 'var', 'let', 'const', 'block-scope', 'tdz'],
+    source: 'epam-pdf',
+    explanation:
+      'The EPAM answer covers scope and redeclaration. Interviewers follow up on the **TDZ**, **`const` versus immutability** and the **loop binding** behavior, because that is where the bugs live. Companion exercises: `javascript-var-let-const-loop-epam` and `javascript-hoisting-tdz-epam`.\n\n**Say this out loud:** "`var` is function-scoped and silently `undefined` before its line; `let` and `const` are block-scoped and throw in the temporal dead zone. I default to `const`, knowing it freezes the binding, not the object."',
+  },
+  {
+    id: 'javascript-prototypal-inheritance-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'prototypes',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'How does prototypal inheritance work in JavaScript, and how do ES classes relate to it?',
+    modelAnswer:
+      'Every object has an internal `[[Prototype]]` link to another object or to `null`. When you read a property, the engine checks the object\'s own properties first and then walks that chain until it finds the key or reaches `null`; a write, by contrast, creates or updates an own property on the target, which shadows the inherited one (unless an inherited setter or a non-writable property intercepts it). Functions have a `prototype` property, and `new F()` creates an object whose `[[Prototype]]` is `F.prototype`, runs `F` with `this` bound to it and returns it. ES classes are syntax over the same model: methods live on `Class.prototype`, `extends` links `Child.prototype` to `Parent.prototype` and also links the constructors so static members inherit, and `super` walks that chain. Because methods are shared through the prototype, putting mutable state such as an array on the prototype shares it across every instance, a classic bug. You can create links directly with `Object.create(proto)` and inspect them with `Object.getPrototypeOf`, while changing a live object\'s prototype with `Object.setPrototypeOf` is slow and best avoided. In practice I prefer composition over deep inheritance chains, but the chain is what explains `instanceof`, method lookup and `Object.hasOwn` versus `in`.',
+    rubric: [
+      'Describes the [[Prototype]] link and lookup walking the chain up to null',
+      'Explains that writes create own properties that shadow, and the shared mutable state on a prototype bug',
+      'Explains what new does with F.prototype',
+      'Relates class, extends and super to the same prototype mechanics',
+      'Mentions Object.create or Object.getPrototypeOf, or prefers composition over deep hierarchies',
+    ],
+    tags: ['epam-25', 'prototype-chain', 'classes', 'inheritance'],
+    source: 'epam-pdf',
+    explanation:
+      'EPAM\'s reference answer describes the chain. The senior layer is the **read versus write asymmetry** (lookup walks the chain, assignment shadows), what **`new`** does step by step, and that **classes are the same mechanism**. Companion exercises: `javascript-prototype-shared-state-epam` and `javascript-static-vs-instance-epam`.\n\n**Say this out loud:** "Reads walk the prototype chain and writes land on the object itself; classes are just a nicer way to wire the same chain, which is why mutable state on a prototype leaks across every instance."',
+  },
+  {
+    id: 'javascript-this-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'this-binding',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'What is the purpose of the `this` keyword, and how is its value determined?',
+    modelAnswer:
+      '`this` gives a function access to the object it is operating on, so one method implementation can serve many objects. For regular functions its value is decided at call time by the call site, not where the function was defined, with a precedence: `new` binds the freshly created object; `call`, `apply` or `bind` bind the object you pass; a method call `obj.fn()` binds `obj`; and a plain call `fn()` gives `undefined` in strict code (including modules and classes) or the global object in sloppy mode. Arrow functions have no `this` of their own and use the `this` of the enclosing scope, which is why they suit callbacks inside methods and why they are wrong as object-literal methods. The classic bug is losing the receiver: passing `obj.method` as a callback or destructuring it calls it as a plain function, so `this` is `undefined`. Fixes are `bind` in the constructor, an arrow wrapper at the call site, or class fields holding arrow functions. In a DOM listener registered as a regular function, `this` is the element the listener is attached to, the same as `event.currentTarget`. `bind` is also permanent: a bound function ignores later `call` or `bind`, although `new` still overrides it.',
+    rubric: [
+      'States that this is determined by the call site for regular functions',
+      'Lists the binding rules in precedence order (new, explicit, method call, default with undefined in strict code)',
+      'Explains that arrow functions inherit a lexical this',
+      'Describes the lost-receiver bug (passing a method as a callback) and a fix',
+    ],
+    tags: ['epam-25', 'this', 'call-site', 'bind', 'arrow-functions', 'strict-mode'],
+    source: 'epam-pdf',
+    explanation:
+      'EPAM\'s reference answer lists contexts (method, alone, function, event) and says a plain function gets the global object, which is **wrong in strict mode, modules and classes**, where a plain call gives `undefined`. A senior answer states the rules in precedence order and names the lost-receiver bug. Companion exercises: `javascript-this-call-site-epam` and `javascript-this-spread-greet`.\n\n**Say this out loud:** "For regular functions `this` is decided by how the function is called: `new`, then `call`/`apply`/`bind`, then the object before the dot, otherwise `undefined` in strict code; arrow functions skip all of that and use the surrounding `this`."',
+  },
+  {
+    id: 'javascript-hoisting-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'hoisting-and-scope',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'Can you explain how hoisting works? What actually happens, and where does it bite?',
+    modelAnswer:
+      'Nothing is physically moved. Before running a scope, the engine creates bindings for every declaration in it, and hoisting is the observable result of that setup phase. Function declarations are fully initialized up front, so you can call them before their line. `var` bindings are created and initialized to `undefined`, so reading one early gives `undefined` instead of an error. `let`, `const` and `class` bindings are also created up front but stay uninitialized in the temporal dead zone until their declaration runs, so an early read throws a `ReferenceError`; the TDZ even shadows an outer variable of the same name for the whole block. Function expressions and arrow functions assigned to variables follow the variable\'s rules, so calling one early throws `TypeError: x is not a function` with `var`, or a `ReferenceError` with `let` or `const`. ES module imports are hoisted too: they are resolved and linked before any module code runs. Where it bites is code that relies on `var` reading `undefined`, circular module imports hitting a TDZ, and a local `let` that shadows an outer name, making earlier lines in the block throw.',
+    rubric: [
+      'Explains hoisting as bindings created during scope setup, not code being moved',
+      'Differentiates function declarations, var (undefined) and let/const/class (TDZ)',
+      'Explains that function expressions and arrows follow variable hoisting (TypeError versus ReferenceError)',
+      'Gives a real bite: TDZ shadowing, circular imports, or reliance on var being undefined',
+    ],
+    tags: ['epam-25', 'hoisting', 'tdz', 'function-declarations'],
+    source: 'epam-pdf',
+    explanation:
+      'EPAM\'s reference answer says declarations are "moved to the top". Interviewers probing seniority want the **creation-phase** explanation and the **TDZ**, including its shadowing effect and the different errors for early calls. Companion exercises: `javascript-hoisting-tdz-epam` and `javascript-var-let-const-loop-epam`.\n\n**Say this out loud:** "Hoisting is the engine creating a scope\'s bindings before running it: function declarations are ready to call, `var` starts as `undefined`, and `let`, `const` and `class` sit in the temporal dead zone and throw until their line runs."',
+  },
+  {
+    id: 'javascript-method-vs-function-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'this-binding',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'What is the difference between a method and a function in JavaScript? Is there a real technical difference?',
+    modelAnswer:
+      'Every method is a function; "method" describes how the function is reached and called: as a property of an object, called through that object, so `this` is that object. The same function value can be both: `const f = obj.greet; f()` calls it as a plain function and `this` is no longer `obj`. There are real differences for **method definitions** in object literals and classes (`greet() {}`): they have a home object so `super` works inside them, they are not constructors so `new obj.greet()` throws, and class methods are non-enumerable and always strict. A property holding an arrow function looks like a method but does not behave like one: it captures `this` lexically and ignores the receiver. In classes, prototype methods are shared by all instances, while arrow-function class fields create a new function per instance, trading memory for a pre-bound `this`. So the practical distinction is about the receiver, and a senior chooses the form based on whether `this` must follow the call site or be fixed.',
+    rubric: [
+      'States that methods are functions accessed as object properties and called with a receiver',
+      'Shows the same function losing its receiver when extracted and called plainly',
+      'Mentions method-definition specifics (super, not constructible, non-enumerable in classes)',
+      'Contrasts prototype methods with arrow-function class fields (shared versus per instance, bound this)',
+    ],
+    tags: ['epam-25', 'methods', 'this', 'classes'],
+    source: 'epam-pdf',
+    explanation:
+      'The EPAM answer ("a method is a function assigned to an object property") is correct but shallow. The senior version is that the difference lives in **the call**, not the function, plus the concrete semantics of **method definitions** and the prototype-versus-field trade-off in classes. Companion exercise: `javascript-method-vs-function-epam`.\n\n**Say this out loud:** "A method is just a function called through an object, so `this` is that object; pull it off the object and it is a plain function again, which is why I choose between prototype methods and arrow class fields deliberately."',
+  },
+  {
+    id: 'javascript-promises-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'async',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'Can you explain promises? How do they work under the hood, and what are the common mistakes?',
+    modelAnswer:
+      'A promise is an object that stands for a value that will be available later; it starts pending and settles exactly once, either fulfilled with a value or rejected with a reason, and then never changes. The executor passed to `new Promise` runs synchronously; only the reactions registered with `then`, `catch` and `finally` run asynchronously, always as microtasks, even if the promise is already settled. `then` returns a new promise that adopts whatever the handler produces: a plain value fulfills it, a thrown error rejects it, and a returned promise or thenable is followed, which is how chains flatten. A rejection skips fulfillment handlers until a `catch` (or a `then` with a second argument) handles it, and a handler that returns normally recovers the chain. For concurrency, `Promise.all` fails fast, `allSettled` waits for every result, `race` takes the first to settle and `any` takes the first fulfillment. Common mistakes are forgetting to `return` inside a `then` (the chain continues with `undefined` and errors escape), wrapping an existing promise in `new Promise` (the explicit-construction anti-pattern), leaving rejections unhandled, and assuming a promise can be cancelled; it cannot, so you cancel the underlying work with `AbortController`.',
+    rubric: [
+      'Describes the states (pending, fulfilled, rejected) and that a promise settles once',
+      'Explains that then returns a new promise shaped by the handler (value, throw, returned promise) and runs as a microtask',
+      'Explains error propagation and recovery through a chain',
+      'Compares the combinators (all, allSettled, race, any)',
+      'Names common mistakes: missing return, constructor anti-pattern, unhandled rejection, no cancellation',
+    ],
+    tags: ['epam-25', 'promises', 'error-handling', 'microtasks'],
+    source: 'epam-pdf',
+    explanation:
+      'EPAM\'s answer covers the three states. A senior answer adds **chaining semantics** (what the handler returns decides the next promise), **microtask timing**, **combinator choice** by failure behavior, and the mistakes you catch in review. Companion exercises: `javascript-promise-chain-recovery-epam` and `javascript-promise-combinators-choice`.\n\n**Say this out loud:** "A promise settles once, and every `then` returns a new promise shaped by what its handler returns or throws; that one rule explains chaining, error propagation and recovery."',
+  },
+  {
+    id: 'javascript-sync-vs-async-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'event-loop',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'What is the difference between synchronous and asynchronous programming in JavaScript, and how do you decide which one a piece of work needs?',
+    modelAnswer:
+      'Synchronous code runs to completion on the call stack: each statement finishes before the next begins, and while it runs nothing else on that thread can, including rendering and event handlers. Asynchronous code starts an operation, returns immediately and continues later through a callback, a promise reaction or an `await` continuation scheduled by the event loop. The key point is that async does not mean parallel: the waiting happens in the host (network stack, timers, OS I/O), but the JavaScript itself still runs on one thread, one piece at a time. A promise executor runs synchronously and only its reactions are deferred, and an `async` function runs synchronously until its first `await`. So async is the right tool for I/O-bound work, where you would otherwise block while waiting, and it does nothing for CPU-bound work: a tight loop inside an `async` function still freezes the page or the Node process. For CPU work the options are chunking it across tasks, Web Workers or `worker_threads`, or moving it to a backend job. The cost of async is harder control flow, ordering and error handling, so I keep pure computation synchronous and make only the I/O boundary async.',
+    rubric: [
+      'Defines synchronous as blocking run-to-completion and asynchronous as a deferred continuation via the event loop',
+      'States that async is not parallelism: one JS thread, the host does the waiting',
+      'Knows what runs synchronously inside async code (promise executor, async function until its first await)',
+      'Distinguishes I/O-bound work (async helps) from CPU-bound work (needs workers or chunking)',
+    ],
+    tags: ['epam-25', 'sync-vs-async', 'concurrency', 'workers'],
+    source: 'epam-pdf',
+    explanation:
+      'The EPAM answer explains blocking versus non-blocking. The senior distinction is **concurrency without parallelism** and the **I/O-bound versus CPU-bound** decision, including the myth that marking a function `async` stops it from blocking. Companion exercise: `javascript-promise-executor-sync-epam`.\n\n**Say this out loud:** "Async in JavaScript is concurrency, not parallelism: it frees the thread while the host waits on I/O, but CPU work still blocks unless I chunk it or move it to a worker."',
+  },
+  {
+    id: 'javascript-event-delegation-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'event-delegation',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'Explain event delegation. How would you implement it correctly, and what are its limits?',
+    modelAnswer:
+      'Event delegation attaches one listener to a common ancestor instead of one per child, relying on the fact that most events bubble from the target up through its ancestors. Inside the handler you find the logical target with `event.target.closest(\'[data-action]\')` and check that the match is inside the container with `container.contains(match)`, because `event.target` is often a nested element such as an icon inside the button. The benefits are fewer listeners and less memory, automatic support for elements added later, and no adding and removing of listeners when a list re-renders. The limits: some events do not bubble (`focus`, `blur`, `mouseenter`, `mouseleave`), so you use `focusin`, `focusout`, `mouseover` and `mouseout` or a capture-phase listener; a descendant calling `stopPropagation` hides the event from the delegate; and high-frequency events like `mousemove` on a large ancestor run the handler for everything. Inside shadow DOM, events are retargeted to the host, so you inspect `event.composedPath()`. React itself relies on delegation: it attaches listeners at the root container and dispatches its synthetic events through its own tree.',
+    rubric: [
+      'Explains bubbling as the mechanism and one listener on an ancestor',
+      'Uses event.target.closest plus a containment check rather than comparing event.target directly',
+      'States the benefits: dynamic elements, fewer listeners, no re-binding',
+      'Names limits: non-bubbling events and their alternatives, stopPropagation, high-frequency events',
+      'Bonus: React\'s root-level delegation or shadow DOM retargeting',
+    ],
+    tags: ['epam-25', 'event-delegation', 'bubbling', 'dom'],
+    source: 'epam-pdf',
+    explanation:
+      'EPAM\'s answer explains delegation and bubbling. The senior details are **`closest` plus containment** for nested targets, the **events that do not bubble**, and how **`stopPropagation`** silently breaks delegates. Companion exercise: `javascript-event-delegation-closest-epam`.\n\n**Say this out loud:** "I put one listener on the container and resolve the real target with `event.target.closest(selector)`, which handles nested markup and elements added later; for focus I listen to `focusin`, because `focus` does not bubble."',
+  },
+  {
+    id: 'javascript-array-map-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'array-methods',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'What is `Array.prototype.map` for, and what would you flag in a code review about how it is used?',
+    modelAnswer:
+      '`map` creates a new array of the same length by calling a callback on each element and collecting the return values, so it expresses a one-to-one transformation without mutating the source array. The callback receives `(element, index, array)`, which is why `[\'1\', \'2\', \'3\'].map(parseInt)` returns `[1, NaN, NaN]`: `parseInt` treats the index as a radix. It skips holes in sparse arrays and keeps them as holes in the result, and the result is shallow, so mutating objects inside the callback still changes the originals. In review I flag `map` used only for side effects with the result thrown away (that is `forEach` or `for...of`), braced callbacks that forget to `return` and produce `undefined`s, `map` followed by `flat` where `flatMap` states the intent, and `async` callbacks, which produce an array of promises that must go through `Promise.all`. `map` is only as pure as its callback; the method itself just guarantees it does not modify the array. In React, `map` renders lists, and each element needs a stable `key` that is not the index when items can be reordered.',
+    rubric: [
+      'Defines map as a one-to-one transformation returning a new array without mutating the source',
+      'Knows the callback signature and the parseInt pitfall',
+      'Flags misuse: side-effect-only map, missing return, async callbacks needing Promise.all',
+      'Notes that purity depends on the callback and the result is shallow; bonus: stable keys in React lists',
+    ],
+    tags: ['epam-25', 'map', 'immutability', 'code-review'],
+    source: 'epam-pdf',
+    explanation:
+      'The EPAM answer calls `map` pure. Precisely: `map` does not mutate the array, but it is only as pure as its callback, and the result is a **shallow** new array. Seniors are expected to know the callback-signature traps and to catch misuse in review. Companion exercise: `javascript-map-parseint-epam`.\n\n**Say this out loud:** "`map` is for one-to-one transformations that return a new array; if I am ignoring the result I want `forEach`, and if the callback is async I need `Promise.all` around it."',
+  },
+  {
+    id: 'javascript-functional-programming-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'functional',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'Can you explain functional programming and how you apply it in JavaScript day to day?',
+    modelAnswer:
+      'Functional programming builds programs from pure functions, where the same inputs always give the same output with no side effects, and treats data as immutable, producing new values instead of changing existing ones. JavaScript supports it because functions are first-class values that can be passed, returned and stored, which enables higher-order functions like `map`, `filter` and `reduce`, closures, currying, partial application and composition with `pipe` or `compose`. The payoff is code that is easier to test and reason about: a pure function needs no mocks, can be memoized safely, and makes state changes explicit. Day to day I apply it pragmatically, with a functional core of pure transformations and business rules and an imperative shell at the edges for I/O, logging, and DOM or database access. React and Redux are built on these ideas: components as functions of props and state, reducers as pure `(state, action) => newState`, and immutable updates so reference equality can detect change. The costs are allocations from copying, which rarely matter but can in hot loops, and point-free or heavily curried code that hurts readability for the team, so I keep it idiomatic rather than dogmatic.',
+    rubric: [
+      'Defines pure functions and immutability as the core principles',
+      'Names first-class and higher-order functions, composition, currying or closures in JavaScript',
+      'Explains the benefits: testability, predictability, safe memoization',
+      'Describes pragmatic application: functional core with an imperative shell, reducers, React components',
+      'Acknowledges trade-offs: copying cost and the readability of point-free code',
+    ],
+    tags: ['epam-25', 'pure-functions', 'higher-order-functions', 'composition', 'immutability'],
+    source: 'epam-pdf',
+    explanation:
+      'The EPAM answer lists first-class, higher-order and pure functions. A senior shows **where** they apply it (a pure core, reducers, React components) and **where they stop** (I/O at the edges, readability over cleverness). Companion exercises: `javascript-pipe-functional-epam` and `javascript-memoize-cache-key-epam`.\n\n**Say this out loud:** "I keep business logic as pure functions over immutable data and push side effects to the edges; that makes the core trivial to test, and it is exactly the model reducers and React components already use."',
+  },
+  {
+    id: 'javascript-arrow-vs-regular-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'es-features',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'What is the difference between an arrow function and a regular function, and when do you choose each?',
+    modelAnswer:
+      'Arrow functions are more than short syntax: they have no own `this`, `arguments`, `super` or `new.target`, and resolve all of these lexically from the enclosing scope. That makes them ideal for callbacks inside methods, such as a `setTimeout` or `array.map` callback in a class, where a regular function would lose `this`. They also cannot be constructors (`new` throws), have no `prototype` property, and `call`, `apply` and `bind` cannot change their `this`. Regular functions get `this` from the call site, have `arguments`, can be constructors, and function declarations are hoisted so they can be called before their line. So I use regular functions or method shorthand for object and class methods that need the receiver and for constructors, and arrows for callbacks and small expressions. Two gotchas: an arrow used as an object-literal method sees the outer `this`, not the object, and returning an object literal needs parentheses, `() => ({ a: 1 })`, because a brace starts a function body. In classes, arrow-function fields give a per-instance, pre-bound function, handy for event handlers but not shared on the prototype.',
+    rubric: [
+      'States that arrows have a lexical this and no own arguments, super or new.target',
+      'Notes arrows cannot be constructors, have no prototype, and ignore call/apply/bind for this',
+      'Gives usage guidance: arrows for callbacks, regular or method syntax for methods and constructors',
+      'Names a gotcha: arrow as an object method, object literal needing parentheses, or per-instance class fields',
+    ],
+    tags: ['epam-25', 'arrow-functions', 'this', 'arguments', 'constructors'],
+    source: 'epam-pdf',
+    explanation:
+      'EPAM\'s answer lists the differences. The senior value is turning them into a **decision rule** and knowing the **gotchas** that show up in real code. Companion exercises: `javascript-arrow-vs-regular-epam` and `javascript-arrow-object-literal-epam`.\n\n**Say this out loud:** "Arrow functions take `this` and `arguments` from where they are written, so I use them for callbacks and regular methods where the receiver matters; an arrow can never be a constructor or a correct object-literal method."',
+  },
+  {
+    id: 'javascript-destructuring-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'es-features',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'Can you explain destructuring, including the parts people get wrong?',
+    modelAnswer:
+      'Destructuring unpacks values from arrays by position and from objects by property name into variables, in declarations, assignments and function parameters. Array destructuring works on any iterable and supports skipping (`const [, second] = arr`), rest (`[first, ...rest]`) and swaps (`[a, b] = [b, a]`). Object destructuring supports renaming (`{ id: userId }`), defaults (`{ page = 1 }`), nesting and rest (`{ password, ...safe }`), which is a neat way to omit fields immutably. The gotchas: defaults apply only when the value is `undefined`, not `null`; destructuring `null` or `undefined` itself throws a `TypeError`, so parameters usually get a default like `function f({ a } = {})`; nested patterns throw when an intermediate object is missing; and assigning to existing variables with object syntax needs parentheses, `({ a } = obj);`, because a leading brace is parsed as a block. Destructuring copies values, so objects are still shared references. Applied to an options object in parameters, it gives named arguments, self-documenting defaults and freedom from argument order.',
+    rubric: [
+      'Covers array (positional, any iterable) and object (by name) destructuring with rename, defaults and rest',
+      'States that defaults apply only for undefined, not null',
+      'Knows destructuring null or undefined throws, and the parameter default = {} fix',
+      'Mentions the parenthesized assignment gotcha or that nested objects are still shared references',
+      'Applies it to options-object parameters as named arguments',
+    ],
+    tags: ['epam-25', 'destructuring', 'default-values', 'parameters'],
+    source: 'epam-pdf',
+    explanation:
+      'EPAM\'s answer shows the basic syntax. Interviewers check the **edge semantics**: defaults and `null`, destructuring `undefined`, the block-versus-object brace ambiguity, and that nothing is deep-copied. Companion exercise: `javascript-destructuring-defaults-epam`.\n\n**Say this out loud:** "Destructuring defaults only kick in for `undefined`, and destructuring `undefined` itself throws, so for option parameters I write `function f({ timeout = 1000 } = {})`."',
+  },
+  {
+    id: 'javascript-spread-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'references-and-copies',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'Describe the purpose of the spread operator. Where does it help, and where does it mislead people?',
+    modelAnswer:
+      'Spread expands an iterable into individual elements in array literals and call arguments (`[...a, ...b]`, `Math.max(...nums)`), and copies an object\'s own enumerable properties into a new object literal (`{ ...defaults, ...overrides }`, where later keys win). Its main job is immutable updates: copying arrays and objects, merging configuration, and the reducer and React state pattern `{ ...state, user: { ...state.user, name } }`. It misleads because it is a **shallow** copy: nested objects and arrays are shared, so mutating `copy.user.name` also changes the original; a real deep copy needs `structuredClone` or an explicit spread at every level. Object spread only takes own enumerable properties, so prototype methods and class identity are lost (a spread class instance becomes a plain object), getters are invoked and their current values copied, and symbol keys are included. Array spread requires an iterable, so spreading a plain object into an array throws, while spreading `null` or `undefined` into an object literal is silently ignored. Spreading a very large array into a function call can exceed the engine\'s argument limit, and spreading inside a loop to grow an array is quadratic. Rest syntax looks the same but does the opposite, collecting values into an array or object.',
+    rubric: [
+      'Explains spread for iterables in arrays and calls, and for own enumerable properties in objects, with later keys winning',
+      'States it is a shallow copy, gives the nested mutation bug and a deep-copy alternative',
+      'Notes lost prototypes and class identity, or getter evaluation, in object spread',
+      'Mentions limits (argument limits, quadratic spreads in loops) or distinguishes rest from spread',
+    ],
+    tags: ['epam-25', 'spread', 'shallow-copy', 'structuredClone', 'immutability'],
+    source: 'epam-pdf',
+    explanation:
+      'EPAM\'s answer defines spread. A senior answer is about **copy semantics**: shallow, own enumerable properties only, prototype lost. That is where production bugs come from, especially in state updates. Companion exercise: `javascript-spread-shallow-epam`.\n\n**Say this out loud:** "Spread makes a shallow copy of own enumerable properties, so it is perfect for immutable top-level updates, but nested objects are still shared; for a real deep copy I use `structuredClone`."',
+  },
+  {
+    id: 'javascript-static-vs-instance-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'prototypes',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'Describe the difference between a static method and an instance method, and when you would design something as static.',
+    modelAnswer:
+      'An instance method lives on `Class.prototype`, is shared by all instances and is called on an instance, so `this` is that instance and it can read and change its state. A static method lives on the constructor itself and is called as `Class.method()`; its `this` is the class (or the subclass it was called through), and calling it on an instance fails because instances do not inherit from the constructor. Static members are inherited by subclasses because `extends` also links the constructors, so `this` inside a static method can be a subclass, which is how `static create() { return new this(); }` builds the right type. Typical static uses are factories and named constructors (`Array.from`, `Date.now()`, `User.fromJson`), parsing or validation helpers tied to the type, and class-level constants or caches, including `static #private` fields. I avoid static for anything that needs per-instance state, and I am wary of static mutable state, because it is effectively a global shared across the app and across tests. If a static method never touches the class, a plain module-level function is often simpler and easier to tree-shake.',
+    rubric: [
+      'Places instance methods on the prototype with this as the instance, and static methods on the constructor with this as the class',
+      'Knows static methods are not callable on instances and are inherited by subclasses',
+      'Gives good static use cases: factories or named constructors, parsing helpers, constants',
+      'Warns that static mutable state is global state, or prefers module functions when no class access is needed',
+    ],
+    tags: ['epam-25', 'classes', 'static', 'factory'],
+    source: 'epam-pdf',
+    explanation:
+      'EPAM\'s answer says where each method is called. The senior additions are **where each one lives** (prototype versus constructor), **static inheritance** with `this` pointing at the subclass, and the **design judgment** about factories versus hidden global state. Companion exercise: `javascript-static-vs-instance-epam`.\n\n**Say this out loud:** "Instance methods live on the prototype and work with one object\'s state; static methods live on the class, which makes them right for factories like `User.fromJson` and wrong for anything that quietly stores shared mutable state."',
+  },
+  {
+    id: 'javascript-expression-vs-statement-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'fundamentals',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'What is the difference between an expression and a statement in JavaScript, and why does it matter in real code?',
+    modelAnswer:
+      'An expression is any piece of code that produces a value: `2 + 2`, `user.name`, a function call, `a ? b : c`, an arrow function or an assignment. A statement performs an action and does not produce a value you can use: `if`, `for`, `while`, `return`, declarations with `let`, `const` or `function`, and blocks. Anywhere JavaScript expects a value you can put an expression but not a statement, which is why you cannot write an `if` inside a template literal or a JSX `{}` and use a ternary, `&&` or a mapped array instead. The same syntax can be either depending on position: `function f() {}` at the start of a statement is a hoisted declaration, while in expression position it is a function expression that is not hoisted. Braces are the classic trap: the arrow body in `() => { a: 1 }` is a block containing a label, so it returns `undefined` and you need `() => ({ a: 1 })`, and a statement that starts with `{` cannot be an object destructuring assignment without parentheses. Automatic semicolon insertion depends on the same grammar: `return` followed by a newline ends the statement, so the value on the next line is never returned. Knowing the distinction explains JSX rules, IIFE syntax and a whole family of "why is this undefined" bugs.',
+    rubric: [
+      'Defines expressions as producing values and statements as performing actions',
+      'Explains why JSX and template literals accept only expressions (ternary or && instead of if)',
+      'Shows position-dependent parsing: declaration versus function expression, or braces as block versus object literal',
+      'Names a real bug: arrow returning an object literal, return followed by a newline, or destructuring assignment parentheses',
+    ],
+    tags: ['epam-25', 'expression-vs-statement', 'jsx', 'asi', 'parsing'],
+    source: 'epam-pdf',
+    explanation:
+      'EPAM\'s answer gives definitions. Seniors are expected to connect the distinction to **parsing**: the same characters mean different things in statement and expression position, which explains the object-literal arrow bug, ASI after `return`, and JSX\'s `{}` rule. Companion exercise: `javascript-arrow-object-literal-epam`.\n\n**Say this out loud:** "Expressions produce values and statements do things; JSX braces and template literals only take expressions, and a leading `{` is parsed as a block in statement position, which is why an arrow returning an object needs parentheses."',
+  },
+  {
+    id: 'javascript-immutability-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'functional',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'Can you explain immutability in JavaScript, how you achieve it, and why it matters?',
+    modelAnswer:
+      'Immutability means a value is never changed after it is created; to "change" it you create a new value. Primitives are already immutable, but objects and arrays are mutable and shared by reference, so anyone holding a reference can change them for everyone. You get immutability through discipline and tools: non-mutating operations such as spread, `map` and `filter`, and the ES2023 copying methods `toSorted`, `toReversed`, `toSpliced` and `with`; `Object.freeze` for a runtime guarantee, remembering it is shallow and that writes to a frozen object only throw in strict mode (sloppy code ignores them silently); TypeScript `readonly` and `as const` for compile-time guarantees; and Immer, which Redux Toolkit uses to turn "mutating" code into immutable updates. It matters because it makes change detection cheap and reliable: React state, `React.memo` and Redux selectors compare by reference, so mutating state in place means nothing re-renders or a memoized value goes stale. It also removes bugs caused by shared mutable state, makes undo and time travel easy, and makes functions safe to memoize. The cost is extra allocation and copying, which structural sharing keeps small, and very hot paths may still mutate local data that never escapes.',
+    rubric: [
+      'Defines immutability and notes primitives are immutable while objects and arrays are shared references',
+      'Names techniques: spread and non-mutating methods (toSorted and friends), shallow Object.freeze, readonly or as const, Immer',
+      'Explains why it matters for reference-equality change detection in React and Redux',
+      'Mentions other benefits (fewer shared-state bugs, undo, safe memoization) and the copying cost or structural sharing',
+    ],
+    tags: ['epam-25', 'immutability', 'object-freeze', 'react', 'redux'],
+    source: 'epam-pdf',
+    explanation:
+      'EPAM\'s answer is one line. A senior connects immutability to **reference equality**, which is what makes React and Redux change detection work, and knows the **limits of each tool**: `freeze` is shallow and only throws in strict mode, `readonly` disappears at runtime. Companion exercise: `javascript-immutability-freeze-epam`.\n\n**Say this out loud:** "React and Redux detect change by reference, so I never mutate state; I create new objects with spread or the `toSorted`-style methods, or let Immer do it, and I remember that `Object.freeze` is shallow."',
+  },
+  {
+    id: 'javascript-strict-mode-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'es-features',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'Can you explain strict mode? What does it change, and do you still need `\'use strict\'` today?',
+    modelAnswer:
+      'Strict mode is an opt-in, restricted variant of JavaScript that turns silent failures into errors and removes some confusing features. The key changes: assigning to an undeclared variable throws a `ReferenceError` instead of creating a global; writing to a non-writable or getter-only property, or adding a property to a frozen or non-extensible object, throws a `TypeError`; `this` in a plain function call is `undefined` instead of the global object; `with` is banned; duplicate parameter names and `delete` of a plain variable are syntax errors; `arguments` no longer aliases the named parameters; and `eval` gets its own scope so it cannot inject variables. These restrictions also make code easier for engines to optimize. You enable it with `\'use strict\'` at the top of a script or function, but ES modules and class bodies are always strict, so in modern codebases built on modules you rarely write the directive. It still matters in classic scripts and older CommonJS files that never emitted it, and a function with default, destructured or rest parameters cannot even contain the directive itself. In debugging, it is what explains why `this` is `undefined` in a detached method and why a write to a frozen object throws in one file but silently does nothing in another.',
+    rubric: [
+      'Explains that strict mode turns silent errors into thrown errors and removes unsafe features',
+      'Lists concrete changes: undeclared assignment, read-only writes throw, this undefined in plain calls, with banned',
+      'States that ES modules and classes are automatically strict',
+      'Explains where it still matters (classic scripts, legacy CommonJS) or its effect on debugging this and frozen writes',
+    ],
+    tags: ['epam-25', 'strict-mode', 'modules', 'classes'],
+    source: 'epam-pdf',
+    explanation:
+      'EPAM\'s answer is the definition. The senior answer names **specific behavior changes** and knows that **modules and classes are strict by default**, which is why most modern code is strict without the directive. Companion exercises: `javascript-strict-mode-epam` and `javascript-immutability-freeze-epam`.\n\n**Say this out loud:** "Strict mode turns silent failures into errors, like writes to frozen objects and accidental globals, and makes `this` `undefined` in plain calls; ES modules and classes are always strict, so modern code gets it for free."',
+  },
+  {
+    id: 'javascript-set-explain',
+    domain: 'languages',
+    subject: 'javascript',
+    topic: 'es-features',
+    level: 'senior',
+    kind: 'open',
+    prompt:
+      'What is the purpose of the `Set` object, and how would you use it in production code?',
+    modelAnswer:
+      'A `Set` is a collection of unique values of any type, iterated in insertion order, with `add`, `has`, `delete` and `size`. Uniqueness uses SameValueZero: like `===` except that `NaN` equals `NaN` (and `+0` and `-0` count as the same value), and objects are compared by reference, so two structurally equal objects are two entries. Its value is performance and intent: `has` is roughly constant time versus a linear `array.includes`, so it is the right tool for membership checks inside loops, deduplication (`[...new Set(ids)]`) and tracking visited nodes. Modern engines also ship set-algebra methods, `union`, `intersection`, `difference`, `symmetricDifference` and `isSubsetOf`, which used to need manual filtering. The gotchas: a `Set` does not deduplicate objects by content, so you dedupe records by a key with a `Map` keyed by id; `JSON.stringify` turns a `Set` into `{}`, so you convert it to an array at API boundaries; and there is no index access. `WeakSet` holds objects weakly, which is useful for tagging objects, such as marking which ones were already processed, without keeping them alive.',
+    rubric: [
+      'Defines a Set as unique values in insertion order with add, has, delete and size',
+      'Explains SameValueZero: NaN equals itself, objects compare by reference',
+      'Uses it for constant-time membership and deduplication instead of array.includes',
+      'Names a gotcha or extension: object dedupe needs a key, JSON serializes it to {}, WeakSet, or the set-algebra methods',
+    ],
+    tags: ['epam-25', 'set', 'same-value-zero', 'performance'],
+    source: 'epam-pdf',
+    explanation:
+      'EPAM\'s answer defines uniqueness. A senior knows **how** uniqueness is decided (SameValueZero, reference identity), **why** a `Set` beats an array for membership, and the **serialization gotcha** at API boundaries. Companion exercise: `javascript-set-semantics-epam`.\n\n**Say this out loud:** "A `Set` gives me constant-time membership and deduplication by SameValueZero, which means objects are unique by reference, so to dedupe records I key a `Map` by id, and I convert to an array before `JSON.stringify`."',
   },
 ];
