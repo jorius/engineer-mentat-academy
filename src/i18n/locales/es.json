@@ -101,6 +101,10 @@
     "indentWith": "Indentar con",
     "spaces": "Espacios",
     "tabs": "Tabulaciones",
+    "editorFonts": {
+      "jetbrains": "JetBrains Mono (si está instalada)",
+      "fira": "Fira Code (si está instalada)"
+    },
     "systemMonospace": "Monoespaciada del sistema",
     "preview": "Vista previa",
     "editorPreview": "Vista previa del editor",

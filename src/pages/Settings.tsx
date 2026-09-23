@@ -24,10 +24,11 @@ const ACCENT_SWATCH_CLASSES: Record<Accent, string> = {
   rose: 'bg-rose-500',
 };
 
-// Font names are product names and stay as-is; only the generic system entry is translated.
-const EDITOR_FONTS: readonly { value: EditorFont; label?: string }[] = [
-  { value: 'jetbrains', label: 'JetBrains Mono' },
-  { value: 'fira', label: 'Fira Code' },
+// Font names are product names and stay as-is; the "(if installed)" qualifier and the
+// generic system entry are translated.
+const EDITOR_FONTS: readonly { value: EditorFont; labelKey?: string }[] = [
+  { value: 'jetbrains', labelKey: 'settings.editorFonts.jetbrains' },
+  { value: 'fira', labelKey: 'settings.editorFonts.fira' },
   { value: 'system' },
 ];
 
@@ -116,7 +117,7 @@ export function Settings(): JSX.Element {
               onChange={(e): void => preferencesStore.set({ editorFont: e.target.value as EditorFont })}
             >
               {EDITOR_FONTS.map((font) => (
-                <option key={font.value} value={font.value}>{font.label ?? t('settings.systemMonospace')}</option>
+                <option key={font.value} value={font.value}>{font.labelKey !== undefined ? t(font.labelKey) : t('settings.systemMonospace')}</option>
               ))}
             </select>
           </label>
