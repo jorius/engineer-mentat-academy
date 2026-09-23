@@ -45,6 +45,10 @@ const EDITOR_FONT_SIZES: readonly number[] = [12, 13, 14, 15, 16, 17, 18, 19, 20
 
 const MAX_ATTEMPTS_OPTIONS: readonly MaxAttempts[] = [1, 2, 3, 'unlimited'];
 
+// Status lines keep the translation key, not the translated text, so they follow a language
+// change that resolves after the message was set (the full reset switches language).
+type StatusMessage = { key: string; count?: number } | { text: string };
+
 const PREVIEW_CODE = ['function greet(name: string): string {', "  return `Hello, ${name}!`;", '}', '', 'console.log(greet("Mentat"));'].join('\n');
 
 export function Settings(): JSX.Element {
@@ -52,7 +56,7 @@ export function Settings(): JSX.Element {
   const { store, progress } = useProgress();
   const { preferences, store: preferencesStore } = usePreferences();
   const theme = useTheme();
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<StatusMessage | null>(null);
   const [previewCode, setPreviewCode] = useState<string>(PREVIEW_CODE);
   const [confirmText, setConfirmText] = useState<string>('');
 
@@ -74,9 +78,9 @@ export function Settings(): JSX.Element {
     try {
       const text = await file.text();
       store.importJson(text);
-      setMessage(t('settings.imported', { count: Object.keys(store.all()).length }));
+      setMessage({ key: 'settings.imported', count: Object.keys(store.all()).length });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : t('settings.importFailed'));
+      setMessage(error instanceof Error ? { text: error.message } : { key: 'settings.importFailed' });
     } finally {
       event.target.value = '';
     }
@@ -84,7 +88,7 @@ export function Settings(): JSX.Element {
 
   const clearProgress = (): void => {
     store.reset();
-    setMessage(t('settings.cleared'));
+    setMessage({ key: 'settings.cleared' });
     setConfirmText('');
   };
 
@@ -97,8 +101,9 @@ export function Settings(): JSX.Element {
     } catch {
       // ignore blocked storage
     }
-    void i18n.changeLanguage('en');
-    setMessage(t('settings.resetDone'));
+    // No argument: the detector runs again and falls back to the browser language.
+    void i18n.changeLanguage();
+    setMessage({ key: 'settings.resetDone' });
     setConfirmText('');
   };
 
@@ -255,7 +260,9 @@ export function Settings(): JSX.Element {
           <Button variant="danger" disabled={confirmText.trim() !== 'RESET'} onClick={clearProgress}>{t('settings.clearProgress')}</Button>
           <Button variant="danger" disabled={confirmText.trim() !== 'RESET'} onClick={resetEverything}>{t('settings.resetEverything')}</Button>
         </div>
-        {message !== null && <p className="text-sm" role="status">{message}</p>}
+        {message !== null && (
+          <p className="text-sm" role="status">{'text' in message ? message.text : t(message.key, { count: message.count })}</p>
+        )}
       </Card>
     </div>
   );

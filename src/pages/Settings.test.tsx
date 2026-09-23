@@ -163,4 +163,24 @@ describe('Settings', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(/everything was reset/i);
     expect(screen.getByLabelText(/type reset to confirm/i)).toHaveValue('');
   });
+
+  it('lets the language detector pick the language again after a full reset', async () => {
+    const user = userEvent.setup();
+    const changeLanguage = vi.spyOn(i18n, 'changeLanguage');
+    renderSettings();
+    await user.type(screen.getByLabelText(/type reset to confirm/i), 'RESET');
+    await user.click(screen.getByRole('button', { name: /reset everything/i }));
+    expect(changeLanguage).toHaveBeenCalledWith();
+  });
+
+  it('shows the reset message in the language the reset switched to', async () => {
+    const user = userEvent.setup();
+    await i18n.changeLanguage('es');
+    localStorage.setItem(LANGUAGE_KEY, 'es');
+    renderSettings();
+    await user.type(screen.getByLabelText(/escribe reset para confirmar/i), 'RESET');
+    await user.click(screen.getByRole('button', { name: /restablecer todo/i }));
+    await waitFor(() => expect(i18n.resolvedLanguage).toBe('en'));
+    expect(await screen.findByRole('status')).toHaveTextContent(/everything was reset/i);
+  });
 });
