@@ -43,19 +43,61 @@ describe('Mock', () => {
   it('starts a session with the chosen count and shows a timer', async () => {
     const user = userEvent.setup();
     setup();
-    await user.clear(screen.getByLabelText(/questions/i));
-    await user.type(screen.getByLabelText(/questions/i), '2');
+    const questions = screen.getByRole('spinbutton', { name: 'Questions' });
+    await user.clear(questions);
+    await user.type(questions, '2');
     await user.click(screen.getByRole('button', { name: /start/i }));
     expect(screen.getByText(/1 \/ 2/)).toBeInTheDocument();
-    expect(screen.getByText(/\d+:\d\d/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Time remaining')).toHaveTextContent(/^\d+:\d\d$/);
   });
 
-  it('refuses to start with no level selected', async () => {
+  it('runs an untimed session without a clock', async () => {
     const user = userEvent.setup();
     setup();
+    await user.click(screen.getByRole('radio', { name: 'Untimed' }));
+    expect(screen.getByRole('radio', { name: 'Untimed' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Timed' })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByText(/^10 questions, untimed, from all domains · all levels · \d+ available$/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /start/i }));
+    expect(screen.getByText(/1 \/ 10/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Time remaining')).not.toBeInTheDocument();
+  });
+
+  it('steps the format and shows the time per question', async () => {
+    const user = userEvent.setup();
+    setup();
+    expect(screen.getByText('3 min each')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Increase Questions' }));
+    await user.click(screen.getByRole('button', { name: 'Increase Questions' }));
+    expect(screen.getByText('2.5 min each')).toBeInTheDocument();
+    expect(screen.getByText(/^12 questions in 30 min from all domains · all levels · \d+ available$/)).toBeInTheDocument();
+  });
+
+  it('treats no level selected as every level and names the chosen scope', async () => {
+    const user = userEvent.setup();
+    setup();
+    const start = screen.getByRole('button', { name: /start/i });
     for (const level of ['junior', 'mid', 'senior']) {
-      await user.click(screen.getByLabelText(new RegExp(`^${level}$`, 'i')));
+      await user.click(screen.getByRole('button', { name: new RegExp(`^${level}`, 'i') }));
     }
+    expect(screen.getByText(/from all domains · all levels/)).toBeInTheDocument();
+    for (const level of ['junior', 'mid', 'senior']) {
+      await user.click(screen.getByRole('button', { name: new RegExp(`^${level}`, 'i') }));
+    }
+    expect(start).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: /^runtimes/i }));
+    await user.click(screen.getByRole('button', { name: /^senior/i }));
+    expect(screen.getByText(/from Runtimes · Senior · \d+ available$/)).toBeInTheDocument();
+    expect(start).toBeEnabled();
+  });
+
+  it('disables Start when nothing matches the scope', async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(screen.getByRole('button', { name: /^runtimes/i }));
+    await user.click(screen.getByRole('button', { name: /^junior/i }));
+    await user.click(screen.getByRole('button', { name: /^write code/i }));
+    expect(screen.getByText(/· 0 available$/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /start/i })).toBeDisabled();
   });
 
@@ -66,17 +108,20 @@ describe('Mock', () => {
     store.record('javascript-closure-counter-independence', 1);
     setup(store);
 
-    await user.clear(screen.getByLabelText(/questions/i));
-    await user.type(screen.getByLabelText(/questions/i), '999');
-    await user.clear(screen.getByLabelText(/minutes/i));
-    await user.type(screen.getByLabelText(/minutes/i), '1');
+    const questions = screen.getByRole('spinbutton', { name: 'Questions' });
+    await user.clear(questions);
+    await user.type(questions, '999');
+    const minutes = screen.getByRole('spinbutton', { name: 'Minutes' });
+    await user.clear(minutes);
+    await user.type(minutes, '5');
     await user.click(screen.getByRole('button', { name: /start/i }));
 
     await act(async () => {
-      vi.advanceTimersByTime(61_000);
+      vi.advanceTimersByTime(301_000);
     });
 
+    expect(screen.getByText('Time is up.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /see results/i }));
-    expect(screen.getByText(/0 of \d+ answered/)).toBeInTheDocument();
+    expect(screen.getByText(/0 of 50 answered/)).toBeInTheDocument();
   });
 });

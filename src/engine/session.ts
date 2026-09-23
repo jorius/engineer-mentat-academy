@@ -1,8 +1,9 @@
 // engine
 import { filterQuestions } from './registry';
-import type { Level, Question } from './question';
+import type { Kind, Level, Question } from './question';
 
-export type MockOptions = { count: number; levels: Level[]; domains: string[] };
+/** A mock's settings; an empty `levels`, `domains` or `kinds` list means all of them. */
+export type MockOptions = { count: number; levels: Level[]; domains: string[]; kinds: Kind[] };
 
 export function shuffle<T>(items: T[], random: () => number = Math.random): T[] {
   const copy = [...items];
@@ -15,8 +16,16 @@ export function shuffle<T>(items: T[], random: () => number = Math.random): T[] 
   return copy;
 }
 
+function allWhenEmpty<T>(values: T[]): T[] | undefined {
+  return values.length === 0 ? undefined : values;
+}
+
+/** Every question a mock with these options can draw from; the setup's "available" count is its length. */
+export function mockPool(list: Question[], options: Omit<MockOptions, 'count'>): Question[] {
+  const matched = filterQuestions(list, { levels: allWhenEmpty(options.levels), kinds: allWhenEmpty(options.kinds) });
+  return options.domains.length === 0 ? matched : matched.filter((question) => options.domains.includes(question.domain));
+}
+
 export function pickMock(list: Question[], options: MockOptions, random: () => number = Math.random): Question[] {
-  const byLevel = filterQuestions(list, { levels: options.levels });
-  const pool = options.domains.length === 0 ? byLevel : byLevel.filter((question) => options.domains.includes(question.domain));
-  return shuffle(pool, random).slice(0, options.count);
+  return shuffle(mockPool(list, options), random).slice(0, options.count);
 }

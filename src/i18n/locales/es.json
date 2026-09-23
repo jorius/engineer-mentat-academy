@@ -18,7 +18,9 @@
     "scoreAttempts_one": "{{percent}}% · {{count}} intento",
     "scoreAttempts_other": "{{percent}}% · {{count}} intentos",
     "questionCount_one": "{{name}}, {{count}} pregunta",
-    "questionCount_other": "{{name}}, {{count}} preguntas"
+    "questionCount_other": "{{name}}, {{count}} preguntas",
+    "decrease": "Disminuir {{label}}",
+    "increase": "Aumentar {{label}}"
   },
   "nav": {
     "brand": "Mentat Academy",
@@ -84,8 +86,18 @@
     "questions": "Preguntas",
     "minutes": "Minutos",
     "timeRemaining": "Tiempo restante",
-    "levels": "Niveles",
-    "domains": "Dominios (si no eliges ninguno, se incluyen todos)",
+    "domains": "Dominios",
+    "format": "Formato",
+    "scope": "Alcance",
+    "timer": "Temporizador",
+    "timed": "Con tiempo",
+    "untimed": "Sin tiempo",
+    "perQuestion": "{{minutes}} min por pregunta",
+    "available": "{{count}} disponibles",
+    "summary": "{{count}} preguntas en {{minutes}} min de {{scope}} · {{levels}} · {{available}} disponibles",
+    "summaryUntimed": "{{count}} preguntas, sin tiempo, de {{scope}} · {{levels}} · {{available}} disponibles",
+    "allDomains": "todos los dominios",
+    "allLevels": "todos los niveles",
     "start": "Comenzar"
   },
   "review": {

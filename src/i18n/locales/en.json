@@ -18,7 +18,9 @@
     "scoreAttempts_one": "{{percent}}% · {{count}}x",
     "scoreAttempts_other": "{{percent}}% · {{count}}x",
     "questionCount_one": "{{name}}, {{count}} question",
-    "questionCount_other": "{{name}}, {{count}} questions"
+    "questionCount_other": "{{name}}, {{count}} questions",
+    "decrease": "Decrease {{label}}",
+    "increase": "Increase {{label}}"
   },
   "nav": {
     "brand": "Mentat Academy",
@@ -84,8 +86,18 @@
     "questions": "Questions",
     "minutes": "Minutes",
     "timeRemaining": "Time remaining",
-    "levels": "Levels",
-    "domains": "Domains (none selected means all)",
+    "domains": "Domains",
+    "format": "Format",
+    "scope": "Scope",
+    "timer": "Timer",
+    "timed": "Timed",
+    "untimed": "Untimed",
+    "perQuestion": "{{minutes}} min each",
+    "available": "{{count}} available",
+    "summary": "{{count}} questions in {{minutes}} min from {{scope}} · {{levels}} · {{available}} available",
+    "summaryUntimed": "{{count}} questions, untimed, from {{scope}} · {{levels}} · {{available}} available",
+    "allDomains": "all domains",
+    "allLevels": "all levels",
     "start": "Start"
   },
   "review": {
