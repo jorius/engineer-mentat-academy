@@ -44,7 +44,7 @@ describe('Drill page', () => {
   it('shows the first question and the position', () => {
     renderAt('/drill?subject=javascript');
     expect(screen.getByText(/1 \/ \d+/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /submit/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /submit|reveal model answer/i })).toBeInTheDocument();
   });
 
   it('explains when nothing matches', () => {
