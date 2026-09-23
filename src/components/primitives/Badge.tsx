@@ -10,6 +10,10 @@ const tones: Record<Tone, string> = {
   neutral: 'bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200',
 };
 
-export function Badge({ tone = 'neutral', children }: { tone?: Tone; children: string }): JSX.Element {
-  return <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${tones[tone]}`}>{children}</span>;
+export function Badge({ tone = 'neutral', title, children }: { tone?: Tone; title?: string; children: string }): JSX.Element {
+  return (
+    <span title={title} className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${tones[tone]}`}>
+      {children}
+    </span>
+  );
 }

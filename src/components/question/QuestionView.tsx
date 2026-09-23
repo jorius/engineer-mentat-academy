@@ -6,6 +6,7 @@ import type { JSX } from 'react';
 // engine
 import type { Answer, Question } from '../../engine/question';
 import type { GradeResult } from '../../engine/grader';
+import { KIND_LABELS, LEVEL_LABELS } from '../../engine/labels';
 
 // contexts
 import { useGrader } from '../../contexts/GraderContext';
@@ -99,13 +100,16 @@ export function QuestionView({ question, onNext, position }: Props): JSX.Element
 
   return (
     <Card className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-        {position !== undefined && <span>{position.index + 1} / {position.total}</span>}
-        <Badge tone={question.level}>{question.level}</Badge>
-        <Badge>{question.kind}</Badge>
-        <Link to={`/browse/${question.domain}/${question.subject}`} className="underline">{question.subject} · {question.topic}</Link>
-        <Link to={`/q/${question.id}`} className="ml-auto underline">permalink</Link>
-        <Button variant="ghost" onClick={toggleFlag} aria-pressed={flagged}>{flagged ? 'Flagged' : 'Flag'}</Button>
+      <div className="space-y-1">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+          {position !== undefined && <span>{position.index + 1} / {position.total}</span>}
+          <Badge tone={question.level} title={LEVEL_LABELS[question.level].hint}>{LEVEL_LABELS[question.level].label}</Badge>
+          <Badge title={KIND_LABELS[question.kind].hint}>{KIND_LABELS[question.kind].label}</Badge>
+          <Link to={`/browse/${question.domain}/${question.subject}`} className="underline">{question.subject} · {question.topic}</Link>
+          <Link to={`/q/${question.id}`} className="ml-auto underline">permalink</Link>
+          <Button variant="ghost" onClick={toggleFlag} aria-pressed={flagged}>{flagged ? 'Flagged' : 'Flag'}</Button>
+        </div>
+        <p className="text-xs text-zinc-400">{KIND_LABELS[question.kind].hint}</p>
       </div>
       <Markdown text={question.prompt} />
       <AnswerArea key={question.id} question={question} disabled={grading || result !== null} onSubmit={submit} />

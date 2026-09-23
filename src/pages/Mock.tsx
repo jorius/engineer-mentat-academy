@@ -10,6 +10,7 @@ import { DOMAINS } from '../content/taxonomy';
 import { LEVELS } from '../engine/question';
 import { pickMock } from '../engine/session';
 import type { Level, Question } from '../engine/question';
+import { LEVEL_LABELS } from '../engine/labels';
 
 // hooks
 import { useQuestionBank } from '../hooks/useQuestionBank';
@@ -116,7 +117,10 @@ export function Mock(): JSX.Element {
         <fieldset className="flex flex-wrap gap-3 text-sm">
           <legend className="mb-1">Levels</legend>
           {LEVELS.map((level) => (
-            <label key={level} className="flex items-center gap-1"><input type="checkbox" checked={levels.includes(level)} onChange={(): void => toggle(level, levels, setLevels)} aria-label={level} />{level}</label>
+            <label key={level} title={LEVEL_LABELS[level].hint} className="flex items-center gap-1">
+              <input type="checkbox" checked={levels.includes(level)} onChange={(): void => toggle(level, levels, setLevels)} aria-label={level} />
+              {LEVEL_LABELS[level].label}
+            </label>
           ))}
         </fieldset>
         <fieldset className="flex flex-wrap gap-3 text-sm">

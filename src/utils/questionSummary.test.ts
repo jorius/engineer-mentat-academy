@@ -62,7 +62,7 @@ describe('questionSummary', () => {
       answer: '1',
       prompt: '```js\nconsole.log(1);\n```',
     });
-    expect(questionSummary(question)).toBe('Predict: Closures');
+    expect(questionSummary(question)).toBe('Predict output: Closures');
   });
 
   it('falls back to the kind label and raw topic id when the topic is unknown', () => {
@@ -77,6 +77,6 @@ describe('questionSummary', () => {
       solution: 's',
       prompt: '```js\n// nothing but code\n```',
     });
-    expect(questionSummary(question)).toBe('Fix: not-a-real-topic');
+    expect(questionSummary(question)).toBe('Fix the code: not-a-real-topic');
   });
 });

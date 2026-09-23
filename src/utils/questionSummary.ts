@@ -1,5 +1,6 @@
 // engine
 import type { Question } from '../engine/question';
+import { KIND_LABELS } from '../engine/labels';
 
 // content
 import { findTopic } from '../content/taxonomy';
@@ -46,14 +47,10 @@ function truncate(text: string, max: number): string {
   return `${boundary.trimEnd()}${ELLIPSIS}`;
 }
 
-function kindLabel(kind: string): string {
-  return kind.charAt(0).toUpperCase() + kind.slice(1);
-}
-
 function fallbackSummary(question: Question): string {
   const topic = findTopic(question.domain, question.subject, question.topic);
   const topicName = topic?.name ?? question.topic;
-  return `${kindLabel(question.kind)}: ${topicName}`;
+  return `${KIND_LABELS[question.kind].label}: ${topicName}`;
 }
 
 export function questionSummary(question: Question, max = 90): string {

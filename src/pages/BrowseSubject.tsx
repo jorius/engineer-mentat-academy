@@ -10,6 +10,7 @@ import { findDomain, findSubject } from '../content/taxonomy';
 import { filterQuestions } from '../engine/registry';
 import { KINDS, LEVELS } from '../engine/question';
 import type { Kind, Level } from '../engine/question';
+import { KIND_LABELS, LEVEL_LABELS } from '../engine/labels';
 
 // hooks
 import { useQuestionBank } from '../hooks/useQuestionBank';
@@ -52,11 +53,17 @@ export function BrowseSubject(): JSX.Element {
       </div>
       <div className="flex flex-wrap gap-2 text-xs">
         {LEVELS.map((level) => (
-          <label key={level} className="flex items-center gap-1"><input type="checkbox" checked={levels.includes(level)} onChange={(): void => toggle(level, levels, setLevels)} />{level}</label>
+          <label key={level} title={LEVEL_LABELS[level].hint} className="flex items-center gap-1">
+            <input type="checkbox" checked={levels.includes(level)} onChange={(): void => toggle(level, levels, setLevels)} />
+            {LEVEL_LABELS[level].label}
+          </label>
         ))}
         <span className="mx-2 text-zinc-400">|</span>
         {KINDS.map((kind) => (
-          <label key={kind} className="flex items-center gap-1"><input type="checkbox" checked={kinds.includes(kind)} onChange={(): void => toggle(kind, kinds, setKinds)} />{kind}</label>
+          <label key={kind} title={KIND_LABELS[kind].hint} className="flex items-center gap-1">
+            <input type="checkbox" checked={kinds.includes(kind)} onChange={(): void => toggle(kind, kinds, setKinds)} />
+            {KIND_LABELS[kind].label}
+          </label>
         ))}
       </div>
       {subject.topics.map((topic) => {
@@ -71,8 +78,8 @@ export function BrowseSubject(): JSX.Element {
               const entry = progress[q.id];
               return (
                 <Card key={q.id} className="flex flex-wrap items-center gap-2 text-sm">
-                  <Badge tone={q.level}>{q.level}</Badge>
-                  <Badge>{q.kind}</Badge>
+                  <Badge tone={q.level} title={LEVEL_LABELS[q.level].hint}>{LEVEL_LABELS[q.level].label}</Badge>
+                  <Badge title={KIND_LABELS[q.kind].hint}>{KIND_LABELS[q.kind].label}</Badge>
                   <Link to={`/q/${q.id}`} className="underline">{questionSummary(q)}</Link>
                   <span className="ml-auto text-xs text-zinc-500">
                     {entry === undefined || entry.attempts === 0 ? 'unseen' : `${Math.round(entry.lastScore * 100)}% · ${entry.attempts}x`}

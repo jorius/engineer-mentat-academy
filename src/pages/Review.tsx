@@ -8,6 +8,9 @@ import { useQuestionBank } from '../hooks/useQuestionBank';
 import { useProgress } from '../hooks/useProgress';
 import { useDrillQueue } from '../hooks/useDrillQueue';
 
+// engine
+import { KIND_LABELS, LEVEL_LABELS } from '../engine/labels';
+
 // components
 import { QuestionView } from '../components/question/QuestionView';
 import { Badge } from '../components/primitives/Badge';
@@ -63,8 +66,8 @@ export function Review(): JSX.Element {
         const entry = progress[q.id];
         return (
           <Card key={q.id} className="flex flex-wrap items-center gap-2 text-sm">
-            <Badge tone={q.level}>{q.level}</Badge>
-            <Badge>{q.kind}</Badge>
+            <Badge tone={q.level} title={LEVEL_LABELS[q.level].hint}>{LEVEL_LABELS[q.level].label}</Badge>
+            <Badge title={KIND_LABELS[q.kind].hint}>{KIND_LABELS[q.kind].label}</Badge>
             <Link to={`/q/${q.id}`} className="underline">{questionSummary(q)}</Link>
             <span className="ml-auto text-xs text-zinc-500">
               {(entry?.attempts ?? 0) > 0 ? `${Math.round((entry?.lastScore ?? 0) * 100)}%` : 'unattempted'}{entry?.flagged === true ? ' · flagged' : ''}

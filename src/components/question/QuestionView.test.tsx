@@ -1,6 +1,6 @@
 // packages
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -75,7 +75,7 @@ describe('QuestionView', () => {
     const { store } = setup(single);
     await user.click(screen.getByRole('radio', { name: 'B' }));
     await user.click(screen.getByRole('button', { name: /submit/i }));
-    expect(await screen.findByText(/correct/i)).toBeInTheDocument();
+    expect(within(await screen.findByRole('status')).getByText(/correct/i)).toBeInTheDocument();
     expect(screen.getByText('Because B.')).toBeInTheDocument();
     expect(store.get('javascript-test-single')).toMatchObject({ attempts: 1, lastScore: 1 });
   });
