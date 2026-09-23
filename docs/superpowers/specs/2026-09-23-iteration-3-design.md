@@ -72,3 +72,7 @@ Settings ends with a "Danger zone" section (red border, heading `settings.danger
 - **Reset everything** (`settings.resetEverything`): clears progress, preferences (`preferencesStore.reset()`), the theme key `ema:theme` and the language key `ema:lang`, then resets i18n to the detector default and the theme to dark. Same typed confirmation, one shared field for the section.
 - After either action a status line (`settings.cleared` / `settings.resetDone` = "Everything was reset." / "Se restableció todo.") replaces the field and the field empties.
 - `settings.dangerNote`: "These actions only affect this browser and cannot be undone." / "Estas acciones solo afectan a este navegador y no se pueden deshacer."
+
+## 11. Option order (added 2026-09-23, controller finding)
+
+Across the bank the correct single-choice option sits at `a` in 64 of 144 questions and at `d` in 2, and the new subjects are nearly all `a`. Rather than rewrite content, the workbench shuffles the options of `single` and `multi` questions at render time with a deterministic order derived from the question id (a small seeded PRNG in `src/utils/optionOrder.ts`), so the same question always shows the same order and retries, locking and Show answer keep working. The letter badge shows the position (A, B, C…), never the option id; grading, `lockedOptionIds` and `correctOptionIds` keep using ids. Option texts never refer to other options by letter (verified by grep), so shuffling is safe. Tests that assert an order pass a fixed order through an injectable `orderOptions` prop or use ids.
