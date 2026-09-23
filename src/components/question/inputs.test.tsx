@@ -108,9 +108,11 @@ describe('PredictOutput', () => {
     expect(screen.getByLabelText(/expected output/i)).toHaveValue('42');
   });
 
-  it('disables the textarea when readOnly', () => {
-    render(withEditor(<PredictOutput question={predictQuestion} disabled={false} onSubmit={vi.fn()} value="42" readOnly />));
-    expect(screen.getByLabelText(/expected output/i)).toBeDisabled();
+  it('makes the textarea read-only, not disabled, when readOnly', () => {
+    render(withEditor(<PredictOutput question={predictQuestion} disabled onSubmit={vi.fn()} value="42" readOnly />));
+    const textarea = screen.getByLabelText(/expected output/i);
+    expect(textarea).toHaveAttribute('readonly');
+    expect(textarea).toBeEnabled();
   });
 
   it('hides the submit button when submitLabelHidden', () => {

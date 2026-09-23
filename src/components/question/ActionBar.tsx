@@ -50,7 +50,7 @@ export function ActionBar({ pill, resolved, busy, onReset, onShowAnswer, showAns
         </Button>
         {onNext !== undefined && (
           <Button ref={nextRef} variant={resolved ? 'primary' : 'ghost'} className="disabled:opacity-40" onClick={onNext} disabled={!resolved}>
-            {t('question.next')}
+            {t('question.next')} <span aria-hidden="true">→</span>
           </Button>
         )}
       </div>

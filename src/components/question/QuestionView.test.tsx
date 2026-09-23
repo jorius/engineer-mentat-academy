@@ -131,6 +131,7 @@ describe('QuestionView', () => {
     expect(actionBar()).toHaveClass('sticky', 'bottom-0');
     expect(within(actionBar()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Show answer', 'Submit', 'Next →']);
     expect(within(actionBar()).getByText('3 attempts left')).toBeInTheDocument();
+    expect(button(/next/i)).toHaveAccessibleName('Next');
   });
 
   it('hides Next when the caller passes no onNext and offers Reset only for editable answers', () => {
@@ -324,6 +325,19 @@ describe('QuestionView', () => {
     expect(within(actionBar()).getByText('Out of attempts')).toBeInTheDocument();
   });
 
+  it('shows the predict reference read-only under a Reference answer caption', async () => {
+    const user = userEvent.setup();
+    setup(predict);
+    expect(screen.queryByText('Reference answer')).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText(/expected output/i), '2');
+    await user.click(button(/show answer/i));
+    expect(screen.getByText('Reference answer')).toBeInTheDocument();
+    const output = screen.getByLabelText(/expected output/i);
+    expect(output).toHaveValue('1');
+    expect(output).toHaveAttribute('readonly');
+    expect(output).toBeEnabled();
+  });
+
   it('submits with Ctrl+Enter from inside the answer textarea', async () => {
     const user = userEvent.setup();
     const { store } = setup(predict);
@@ -354,11 +368,15 @@ describe('QuestionView', () => {
     const mark = screen.getByRole('button', { name: /mark for review/i });
     expect(mark).toHaveAttribute('aria-pressed', 'false');
     expect(mark).toHaveAttribute('title', expect.stringMatching(/show up in review/i));
+    expect(mark).toHaveTextContent('☆');
     await user.click(mark);
     expect(store.get(single.id)?.flagged).toBe(true);
-    expect(screen.getByRole('button', { name: /marked/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(mark).toHaveAccessibleName('Mark for review');
+    expect(mark).toHaveAttribute('aria-pressed', 'true');
+    expect(mark).toHaveTextContent('★');
     await user.keyboard('m');
     expect(store.get(single.id)?.flagged).toBe(false);
+    expect(mark).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('toggles the notes drawer, persists notes on blur and closes with Esc', async () => {

@@ -43,7 +43,8 @@ export function PredictOutput({ question, disabled, onSubmit, value, onChange, r
           className="mt-1 w-full rounded-md border border-zinc-300 bg-white p-2 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-900"
           rows={5}
           value={text}
-          disabled={disabled || readOnly}
+          disabled={disabled && !readOnly}
+          readOnly={readOnly}
           onChange={(event): void => setText(event.target.value)}
         />
       </label>

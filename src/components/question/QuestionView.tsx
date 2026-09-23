@@ -407,6 +407,9 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
           <NotesDrawer key={question.id} ref={notesRef} id={notesId} open={notesOpen} notes={entry?.notes ?? ''} onSave={(notes): void => store.setNotes(question.id, notes)} />
         </div>
         <div ref={answerPaneRef} className="min-w-0 space-y-3">
+          {referenceShown && hasResettableInput(question) && (
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{t('question.referenceAnswer')}</p>
+          )}
           <AnswerInput
             key={question.id}
             question={question}

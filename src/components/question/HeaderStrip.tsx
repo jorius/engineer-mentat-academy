@@ -86,7 +86,7 @@ export function HeaderStrip({ question, position, marked, onToggleMark, notesOpe
       <div className="ml-auto flex items-center gap-1">
         <button type="button" className={toolClass} onClick={onToggleMark} aria-pressed={marked} title={t('question.markHint')}>
           <span aria-hidden="true" className={marked ? 'text-accent-500' : ''}>{marked ? '★' : '☆'}</span>
-          {marked ? t('question.marked') : t('question.markForReview')}
+          {t('question.markForReview')}
         </button>
         <button ref={notesButtonRef} type="button" className={toolClass} onClick={onToggleNotes} aria-expanded={notesOpen} aria-controls={notesId} title={t('question.notesHint')}>
           <span aria-hidden="true">📝</span>

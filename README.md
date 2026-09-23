@@ -16,9 +16,9 @@ Live: https://jorius.github.io/engineer-mentat-academy/
 
 Every question gives you retries up to the max attempts set in Settings (or unlimited), with
 a Show answer fallback that reveals the key without grading once you're done trying. The
-header's Mark for review star puts a question in Review and in mock results even if you got
-it right. Keyboard: `Ctrl+Enter` submits, `N` moves to the next question once it is resolved,
-and `M` toggles Mark for review.
+header's Mark for review star puts a question in Review even if you got it right, and a
+question solved only after a wrong attempt is marked for you. Keyboard: `Ctrl+Enter` submits,
+`N` moves to the next question once it is resolved, and `M` toggles Mark for review.
 
 ## Question kinds
 
