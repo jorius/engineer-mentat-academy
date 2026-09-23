@@ -36,4 +36,20 @@ describe('createSqlRunner', () => {
     const result = await run(schema, 'SELECT COUNT(*) FROM orders');
     expect(result.rows).toEqual([[3]]);
   });
+
+  it('reports a loader failure as an error result and retries on the next run', async () => {
+    let calls = 0;
+    const flaky = createSqlRunner(async () => {
+      calls += 1;
+      if (calls === 1) {
+        throw new Error('wasm unavailable');
+      }
+      return loadSqlInNode();
+    });
+    const first = await flaky('CREATE TABLE t(a INT);', 'SELECT 1');
+    expect(first).toEqual({ status: 'error', columns: [], rows: [], error: 'wasm unavailable' });
+    const second = await flaky('CREATE TABLE t(a INT);', 'SELECT 1');
+    expect(second.status).toBe('ok');
+    expect(calls).toBe(2);
+  });
 });

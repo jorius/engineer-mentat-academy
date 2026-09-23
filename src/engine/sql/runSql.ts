@@ -12,7 +12,13 @@ export function createSqlRunner(loader: SqlLoader): SqlRunner {
     if (instance === null) {
       instance = loader();
     }
-    const SQL = await instance;
+    let SQL: SqlJsStatic;
+    try {
+      SQL = await instance;
+    } catch (error) {
+      instance = null;
+      return { status: 'error', columns: [], rows: [], error: error instanceof Error ? error.message : String(error) };
+    }
     const db = new SQL.Database();
     try {
       db.run(schema);
