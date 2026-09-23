@@ -1,5 +1,5 @@
 // packages
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { JSX } from 'react';
 
@@ -9,6 +9,9 @@ import type { Answer, SingleQuestion } from '../../engine/question';
 // components
 import { Button } from '../primitives/Button';
 import { OptionButton } from './OptionButton';
+
+// utils
+import { orderOptions } from '../../utils/optionOrder';
 
 type Props = {
   question: SingleQuestion;
@@ -40,6 +43,7 @@ export function SingleChoice({
   const selected = controlled ? value : internalSelected;
   const lockedOptions = new Set(lockedOptionIds ?? []);
   const correctOptions = new Set(correctOptionIds ?? []);
+  const orderedOptions = useMemo(() => orderOptions(question.options, question.id), [question.id, question.options]);
 
   const select = (id: string): void => {
     if (controlled) {
@@ -60,10 +64,11 @@ export function SingleChoice({
       }}
     >
       <div role="radiogroup" aria-label={t('question.optionsGroup')} className="space-y-2">
-        {question.options.map((option) => (
+        {orderedOptions.map((option, index) => (
           <OptionButton
             key={option.id}
             id={option.id}
+            letter={String.fromCharCode(65 + index)}
             text={option.text}
             selected={selected === option.id}
             locked={lockedOptions.has(option.id)}

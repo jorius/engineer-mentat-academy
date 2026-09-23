@@ -23,14 +23,17 @@ import { createProgressStore } from '../../engine/progress';
 import type { ProgressStore } from '../../engine/progress';
 import { createStaticGrader } from '../../engine/staticGrader';
 import { executeSource } from '../../engine/runner/execute';
-import type { Question } from '../../engine/question';
+import type { Question, SingleQuestion } from '../../engine/question';
 import type { Grader } from '../../engine/grader';
 import { indexById, loadQuestions } from '../../engine/registry';
+
+// utils
+import { orderOptions } from '../../utils/optionOrder';
 
 // i18n
 import i18n from '../../i18n';
 
-const single: Question = {
+const single: SingleQuestion = {
   id: 'javascript-test-single',
   domain: 'languages',
   subject: 'javascript',
@@ -153,10 +156,16 @@ describe('QuestionView', () => {
     expect(within(actionBar()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Reset', 'Show answer', 'Submit']);
   });
 
-  it('shows the option letter before each option', () => {
-    setup(single);
-    expect(screen.getByText('a')).toBeVisible();
-    expect(screen.getByText('b')).toBeVisible();
+  it('shows the position letter before each option in the stable shuffled order', () => {
+    const named: SingleQuestion = {
+      ...single,
+      options: [{ id: 'a', text: 'Alpha' }, { id: 'b', text: 'Beta' }, { id: 'c', text: 'Gamma' }],
+    };
+    setup(named);
+    const ordered = orderOptions(named.options, named.id);
+    const radios = screen.getAllByRole('radio');
+    expect(radios.map((radio) => radio.getAttribute('aria-label'))).toEqual(ordered.map((option) => option.text));
+    radios.forEach((radio, index) => expect(within(radio).getByText(String.fromCharCode(65 + index))).toBeVisible());
   });
 
   it('locks a wrong pick without revealing the key, then records 1 once when solved on a retry', async () => {
@@ -214,7 +223,8 @@ describe('QuestionView', () => {
     await user.click(screen.getByRole('radio', { name: 'A' }));
     await user.click(button(/submit/i));
     await screen.findByText('Not yet. Try again, or show the answer.');
-    expect(document.activeElement).toBe(screen.getByRole('radio', { name: 'B' }));
+    const firstUnlocked = orderOptions(single.options, single.id).find((option) => option.id !== 'a');
+    expect(document.activeElement).toBe(screen.getByRole('radio', { name: firstUnlocked?.text }));
   });
 
   it('moves focus to Next when the question resolves', async () => {
@@ -264,6 +274,20 @@ describe('QuestionView', () => {
     expect(button(/show answer/i)).toBeDisabled();
     expect(button(/next/i)).toBeEnabled();
     expect(store.get(single.id)).toMatchObject({ attempts: 1, lastScore: 0 });
+  });
+
+  it('highlights the correct option after Show answer even when it is not listed first', async () => {
+    const user = userEvent.setup();
+    setup(single);
+    const ordered = orderOptions(single.options, single.id);
+    const position = ordered.findIndex((option) => option.id === 'b');
+    expect(position).toBeGreaterThan(0);
+    await user.click(button(/show answer/i));
+    const radios = screen.getAllByRole('radio');
+    expect(radios[position]).toHaveAccessibleName('B');
+    expect(radios[position]).toHaveClass('border-emerald-500/50');
+    expect(radios[position]).toHaveTextContent('✓');
+    expect(radios.filter((radio) => radio.textContent?.includes('✓'))).toHaveLength(1);
   });
 
   it('keeps multi-choice selections editable after a wrong submit without naming the missing options', async () => {

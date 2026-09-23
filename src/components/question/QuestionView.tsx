@@ -35,6 +35,9 @@ import { SchemaDrawer } from './SchemaDrawer';
 import { SingleChoice } from './SingleChoice';
 import { SqlExercise } from './SqlExercise';
 
+// utils
+import { orderOptions } from '../../utils/optionOrder';
+
 type Props = { question: Question; onNext?: () => void; position?: { index: number; total: number } };
 
 /** Every kind's answer value, held here so the action bar can submit, reset and fill them. */
@@ -128,7 +131,7 @@ function focusFirstUnlockedOption(pane: HTMLElement | null, question: Question, 
   if (pane === null || question.kind !== 'single') {
     return;
   }
-  const index = question.options.findIndex((option) => !lockedOptionIds.includes(option.id));
+  const index = orderOptions(question.options, question.id).findIndex((option) => !lockedOptionIds.includes(option.id));
   pane.querySelectorAll<HTMLElement>('[role="radio"]')[index]?.focus();
 }
 

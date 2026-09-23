@@ -6,6 +6,7 @@ import { Markdown } from '../common/Markdown';
 
 type Props = {
   id: string;
+  letter: string;
   text: string;
   selected: boolean;
   locked?: boolean;
@@ -20,9 +21,11 @@ type Props = {
  * MultiChoice (role="checkbox"). Keyboard activation (Space/Enter) comes for free from the
  * native <button>. A locked option (previously picked wrong) cannot be toggled; a correct
  * option gets the success style and a decorative check mark once the question is resolved.
+ * The badge shows `letter` (the display position); `id` is what toggling reports.
  */
 export function OptionButton({
   id,
+  letter,
   text,
   selected,
   locked = false,
@@ -63,7 +66,7 @@ export function OptionButton({
           correct ? 'bg-emerald-600 text-white' : selected ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
         }`}
       >
-        {id}
+        {letter}
       </span>
       <span className="min-w-0 flex-1 [&_.md>p]:my-0">
         <Markdown text={text} />

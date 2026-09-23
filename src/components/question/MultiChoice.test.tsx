@@ -9,6 +9,9 @@ import { MultiChoice } from './MultiChoice';
 // engine
 import type { MultiQuestion } from '../../engine/question';
 
+// utils
+import { orderOptions } from '../../utils/optionOrder';
+
 const question: MultiQuestion = {
   id: 'multi-test',
   domain: 'languages',
@@ -32,6 +35,12 @@ describe('MultiChoice', () => {
   it('wraps its options in a labeled group', () => {
     render(<MultiChoice question={question} disabled={false} onSubmit={vi.fn()} />);
     expect(screen.getByRole('group', { name: 'Answer options' })).toBeInTheDocument();
+  });
+
+  it('lists the options in their stable shuffled order with position letters', () => {
+    render(<MultiChoice question={question} disabled={false} onSubmit={vi.fn()} />);
+    const expected = orderOptions(question.options, question.id).map((option, index) => `${String.fromCharCode(65 + index)}${option.text}`);
+    expect(screen.getAllByRole('checkbox').map((checkbox) => checkbox.textContent)).toEqual(expected);
   });
 
   it('toggles an option on and off through onChange in controlled mode', async () => {

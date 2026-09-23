@@ -1,5 +1,5 @@
 // packages
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { JSX } from 'react';
 
@@ -9,6 +9,9 @@ import type { Answer, MultiQuestion } from '../../engine/question';
 // components
 import { Button } from '../primitives/Button';
 import { OptionButton } from './OptionButton';
+
+// utils
+import { orderOptions } from '../../utils/optionOrder';
 
 type Props = {
   question: MultiQuestion;
@@ -40,6 +43,7 @@ export function MultiChoice({
   const selected = controlled ? value : internalSelected;
   const lockedOptions = new Set(lockedOptionIds ?? []);
   const correctOptions = new Set(correctOptionIds ?? []);
+  const orderedOptions = useMemo(() => orderOptions(question.options, question.id), [question.id, question.options]);
 
   const toggle = (id: string): void => {
     const next = selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id];
@@ -59,10 +63,11 @@ export function MultiChoice({
       }}
     >
       <div role="group" aria-label={t('question.optionsGroup')} className="space-y-2">
-        {question.options.map((option) => (
+        {orderedOptions.map((option, index) => (
           <OptionButton
             key={option.id}
             id={option.id}
+            letter={String.fromCharCode(65 + index)}
             text={option.text}
             selected={selected.includes(option.id)}
             locked={lockedOptions.has(option.id)}

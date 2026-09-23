@@ -7,33 +7,42 @@ import userEvent from '@testing-library/user-event';
 import { OptionButton } from './OptionButton';
 
 describe('OptionButton', () => {
-  it('shows the letter badge and the option text with an accessible name', () => {
-    render(<OptionButton id="b" text="Option B" selected={false} onToggle={vi.fn()} />);
-    expect(screen.getByText('b')).toBeInTheDocument();
+  it('shows the position letter in the badge, not the id, and names the option by its text', () => {
+    render(<OptionButton id="b" letter="C" text="Option B" selected={false} onToggle={vi.fn()} />);
+    expect(screen.getByText('C')).toBeInTheDocument();
+    expect(screen.queryByText('b')).not.toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Option B' })).toBeInTheDocument();
   });
 
+  it('reports the option id, not the letter, when toggled', async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    render(<OptionButton id="b" letter="A" text="Option B" selected={false} onToggle={onToggle} />);
+    await user.click(screen.getByRole('radio', { name: 'Option B' }));
+    expect(onToggle).toHaveBeenCalledWith('b');
+  });
+
   it('renders as a checkbox with aria-checked in multi mode', () => {
-    render(<OptionButton id="a" text="Option A" selected multi onToggle={vi.fn()} />);
+    render(<OptionButton id="a" letter="A" text="Option A" selected multi onToggle={vi.fn()} />);
     expect(screen.getByRole('checkbox', { name: 'Option A' })).toHaveAttribute('aria-checked', 'true');
   });
 
   it('calls onToggle with the option id when clicked', async () => {
     const user = userEvent.setup();
     const onToggle = vi.fn();
-    render(<OptionButton id="a" text="Option A" selected={false} onToggle={onToggle} />);
+    render(<OptionButton id="a" letter="A" text="Option A" selected={false} onToggle={onToggle} />);
     await user.click(screen.getByRole('radio', { name: 'Option A' }));
     expect(onToggle).toHaveBeenCalledWith('a');
   });
 
   it('carries a neutral outline when selected, never the accent', () => {
-    render(<OptionButton id="a" text="Option A" selected onToggle={vi.fn()} />);
+    render(<OptionButton id="a" letter="A" text="Option A" selected onToggle={vi.fn()} />);
     expect(screen.getByRole('radio', { name: 'Option A' })).toHaveClass('border-zinc-900');
     expect(screen.getByRole('radio', { name: 'Option A' })).not.toHaveClass('border-accent-500');
   });
 
   it('marks a locked option struck through, dimmed and aria-disabled', () => {
-    render(<OptionButton id="a" text="Option A" selected={false} locked onToggle={vi.fn()} />);
+    render(<OptionButton id="a" letter="A" text="Option A" selected={false} locked onToggle={vi.fn()} />);
     const button = screen.getByRole('radio', { name: 'Option A' });
     expect(button).toHaveClass('line-through', 'opacity-50');
     expect(button).toHaveAttribute('aria-disabled', 'true');
@@ -42,7 +51,7 @@ describe('OptionButton', () => {
   it('ignores a click on a locked option', async () => {
     const user = userEvent.setup();
     const onToggle = vi.fn();
-    render(<OptionButton id="a" text="Option A" selected={false} locked onToggle={onToggle} />);
+    render(<OptionButton id="a" letter="A" text="Option A" selected={false} locked onToggle={onToggle} />);
     await user.click(screen.getByRole('radio', { name: 'Option A' }));
     expect(onToggle).not.toHaveBeenCalled();
   });
@@ -50,25 +59,25 @@ describe('OptionButton', () => {
   it('ignores a click when disabled', async () => {
     const user = userEvent.setup();
     const onToggle = vi.fn();
-    render(<OptionButton id="a" text="Option A" selected={false} disabled onToggle={onToggle} />);
+    render(<OptionButton id="a" letter="A" text="Option A" selected={false} disabled onToggle={onToggle} />);
     await user.click(screen.getByRole('radio', { name: 'Option A' }));
     expect(onToggle).not.toHaveBeenCalled();
   });
 
   it('shows the success style and a decorative check mark when correct', () => {
-    render(<OptionButton id="a" text="Option A" selected={false} correct onToggle={vi.fn()} />);
+    render(<OptionButton id="a" letter="A" text="Option A" selected={false} correct onToggle={vi.fn()} />);
     const button = screen.getByRole('radio', { name: 'Option A' });
     expect(button).toHaveClass('border-emerald-500/50');
     expect(screen.getByText('✓')).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('does not show a check mark when not correct', () => {
-    render(<OptionButton id="a" text="Option A" selected={false} onToggle={vi.fn()} />);
+    render(<OptionButton id="a" letter="A" text="Option A" selected={false} onToggle={vi.fn()} />);
     expect(screen.queryByText('✓')).not.toBeInTheDocument();
   });
 
   it('shows a dimmed, not-allowed cue for a plain disabled (not locked) option', () => {
-    render(<OptionButton id="a" text="Option A" selected={false} disabled onToggle={vi.fn()} />);
+    render(<OptionButton id="a" letter="A" text="Option A" selected={false} disabled onToggle={vi.fn()} />);
     const button = screen.getByRole('radio', { name: 'Option A' });
     expect(button).toHaveClass('opacity-60', 'cursor-not-allowed');
     expect(button).not.toHaveClass('line-through');
