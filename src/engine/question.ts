@@ -100,4 +100,4 @@ export type Answer =
   | { kind: 'predict'; text: string }
   | { kind: 'code'; source: string }
   | { kind: 'sql'; query: string }
-  | { kind: 'open'; checked: boolean[] };
+  | { kind: 'open'; checked: boolean[]; text: string };

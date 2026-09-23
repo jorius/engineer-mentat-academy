@@ -108,8 +108,10 @@ describe('createStaticGrader', () => {
 
   it('returns self verdict for open questions using the rubric', async () => {
     const q: Question = { ...base, id: 'o', kind: 'open', modelAnswer: 'm', rubric: ['one', 'two', 'three', 'four'] };
-    const result = await grader.grade(q, { kind: 'open', checked: [true, false, true, true] });
+    const result = await grader.grade(q, { kind: 'open', checked: [true, false, true, true], text: 'my answer' });
     expect(result).toEqual({ score: 0.75, verdict: 'self', feedback: ['Self-scored 3 of 4 rubric points'] });
+    const blank = await grader.grade(q, { kind: 'open', checked: [true, false, true, true], text: '' });
+    expect(blank).toEqual(result);
   });
 
   it('rejects a mismatched answer kind', async () => {

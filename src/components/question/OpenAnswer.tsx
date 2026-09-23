@@ -42,7 +42,7 @@ export function OpenAnswer({ question, disabled, onSubmit }: Props): JSX.Element
               </label>
             ))}
           </fieldset>
-          <Button disabled={disabled} onClick={(): void => onSubmit({ kind: 'open', checked })}>Submit self-score</Button>
+          <Button disabled={disabled} onClick={(): void => onSubmit({ kind: 'open', checked, text: draft })}>Submit self-score</Button>
         </div>
       )}
     </div>

@@ -145,6 +145,29 @@ describe('QuestionView', () => {
     expect(screen.getByRole('button', { name: /submit/i })).toBeDisabled();
   });
 
+  it('submits the typed text with an open answer', async () => {
+    const user = userEvent.setup();
+    const store = createProgressStore(null);
+    const grade = vi.fn<Grader['grade']>(async () => ({ score: 1, verdict: 'self', feedback: [] }));
+    const open: Question = { ...single, id: 'javascript-test-open', kind: 'open', modelAnswer: 'Model.', rubric: ['one', 'two'] };
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ProgressProvider store={store}>
+            <GraderProvider grader={{ grade }}>
+              <QuestionView question={open} />
+            </GraderProvider>
+          </ProgressProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+    await user.type(screen.getByPlaceholderText(/say it out loud/i), 'Closures capture bindings');
+    await user.click(screen.getByRole('button', { name: /reveal model answer/i }));
+    await user.click(screen.getByRole('checkbox', { name: 'one' }));
+    await user.click(screen.getByRole('button', { name: /submit self-score/i }));
+    expect(grade).toHaveBeenCalledWith(open, { kind: 'open', checked: [true, false], text: 'Closures capture bindings' });
+  });
+
   it('shows an error when grading fails', async () => {
     const user = userEvent.setup();
     const store = createProgressStore(null);
