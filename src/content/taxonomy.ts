@@ -51,6 +51,26 @@ export const DOMAINS: Domain[] = [
           t('boundaries', 'Typing boundaries and runtime validation', 'Tipado de fronteras y validación en tiempo de ejecución'),
         ],
       },
+      {
+        id: 'csharp',
+        name: 'C#',
+        es: { name: 'C#' },
+        topics: [
+          t('basics', 'Types, value vs reference, nullability', 'Tipos, valor vs referencia, nulabilidad'),
+          t('async', 'async/await and Tasks', 'async/await y Tasks'),
+          t('linq', 'LINQ and collections', 'LINQ y colecciones'),
+        ],
+      },
+      {
+        id: 'java',
+        name: 'Java',
+        es: { name: 'Java' },
+        topics: [
+          t('basics', 'Types, generics and records', 'Tipos, genéricos y records'),
+          t('collections-and-streams', 'Collections and Streams', 'Colecciones y Streams'),
+          t('concurrency', 'Concurrency', 'Concurrencia'),
+        ],
+      },
     ],
   },
   {
@@ -89,6 +109,36 @@ export const DOMAINS: Domain[] = [
       { id: 'express', name: 'Express', es: { name: 'Express' }, topics: [t('middleware', 'Middleware', 'Middleware'), t('routing', 'Routing', 'Enrutamiento'), t('error-handling', 'Error handling', 'Manejo de errores')] },
       { id: 'nestjs', name: 'NestJS', es: { name: 'NestJS' }, topics: [t('modules', 'Modules and providers', 'Módulos y providers'), t('pipes-and-guards', 'Pipes, guards and interceptors', 'Pipes, guards e interceptores')] },
       { id: 'nextjs', name: 'Next.js', es: { name: 'Next.js' }, topics: [t('app-router', 'App Router', 'App Router'), t('rendering-modes', 'SSR, SSG, ISR and client components', 'SSR, SSG, ISR y componentes de cliente')] },
+      {
+        id: 'dotnet',
+        name: '.NET',
+        es: { name: '.NET' },
+        topics: [
+          t('hosting-and-di', 'Hosting and dependency injection', 'Hosting e inyección de dependencias'),
+          t('configuration', 'Configuration and options', 'Configuración y opciones'),
+          t('entity-framework', 'Entity Framework Core', 'Entity Framework Core'),
+        ],
+      },
+      {
+        id: 'aspnet',
+        name: 'ASP.NET Core',
+        es: { name: 'ASP.NET Core' },
+        topics: [
+          t('minimal-apis-and-controllers', 'Minimal APIs and controllers', 'Minimal APIs y controladores'),
+          t('middleware', 'Middleware pipeline', 'Pipeline de middleware'),
+          t('auth', 'Authentication and authorization', 'Autenticación y autorización'),
+        ],
+      },
+      {
+        id: 'spring-boot',
+        name: 'Spring Boot',
+        es: { name: 'Spring Boot' },
+        topics: [
+          t('beans-and-di', 'Beans and dependency injection', 'Beans e inyección de dependencias'),
+          t('web', 'Spring MVC and REST controllers', 'Spring MVC y controladores REST'),
+          t('data-jpa', 'Spring Data JPA', 'Spring Data JPA'),
+        ],
+      },
     ],
   },
   {
