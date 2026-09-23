@@ -25,6 +25,7 @@ export function MultiChoice({ question, disabled, onSubmit }: Props): JSX.Elemen
       {question.options.map((option) => (
         <label key={option.id} className="flex cursor-pointer items-start gap-2 rounded-md border border-zinc-200 p-2 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900">
           <input type="checkbox" value={option.id} disabled={disabled} checked={selected.includes(option.id)} onChange={(): void => toggle(option.id)} aria-label={option.text} className="mt-1" />
+          <span className="mr-2 font-mono text-xs text-zinc-500">{option.id})</span>
           <Markdown text={option.text} />
         </label>
       ))}

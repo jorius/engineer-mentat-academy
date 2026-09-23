@@ -80,6 +80,12 @@ describe('QuestionView', () => {
     expect(store.get('javascript-test-single')).toMatchObject({ attempts: 1, lastScore: 1 });
   });
 
+  it('shows the option letter before each option', () => {
+    setup(single);
+    expect(screen.getByText('a)')).toBeVisible();
+    expect(screen.getByText('b)')).toBeVisible();
+  });
+
   it('shows feedback for a wrong answer and lets the user continue', async () => {
     const user = userEvent.setup();
     const { onNext } = setup(single);
