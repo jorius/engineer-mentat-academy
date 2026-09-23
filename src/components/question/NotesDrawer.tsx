@@ -1,14 +1,14 @@
 // packages
 import { useTranslation } from 'react-i18next';
-import type { JSX } from 'react';
+import type { JSX, Ref } from 'react';
 
-type Props = { id: string; open: boolean; notes: string; onSave: (notes: string) => void };
+type Props = { id: string; open: boolean; notes: string; onSave: (notes: string) => void; ref?: Ref<HTMLDivElement> };
 
 /** Private per-question notes, collapsed until the header's My notes button opens it; saved on blur. */
-export function NotesDrawer({ id, open, notes, onSave }: Props): JSX.Element {
+export function NotesDrawer({ id, open, notes, onSave, ref }: Props): JSX.Element {
   const { t } = useTranslation();
   return (
-    <div id={id} hidden={!open} className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+    <div ref={ref} id={id} hidden={!open} className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
       <label className="block text-xs font-semibold uppercase tracking-wide text-zinc-500">
         {t('question.notes')}
         <textarea

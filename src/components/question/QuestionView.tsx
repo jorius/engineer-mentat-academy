@@ -227,6 +227,8 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
   const notesId = useId();
   const activeId = useRef(question.id);
   const previous = useRef(attempt);
+  const notesRef = useRef<HTMLDivElement>(null);
+  const notesButtonRef = useRef<HTMLButtonElement>(null);
 
   // A new question (callers usually remount through `key`, but not all do) starts from a clean slate.
   if (currentId !== question.id) {
@@ -316,6 +318,17 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
   };
 
   const onKeyDown = useEffectEvent((event: KeyboardEvent): void => {
+    const plain = !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey;
+    // Inside My notes the shortcuts stand down: Ctrl+Enter never submits (or spends an attempt) and
+    // Esc closes the drawer, handing focus back to its header button.
+    if (event.target instanceof Node && notesRef.current?.contains(event.target) === true) {
+      if (event.key === 'Escape' && plain) {
+        event.preventDefault();
+        notesButtonRef.current?.focus();
+        setNotesOpen(false);
+      }
+      return;
+    }
     if (event.key === 'Enter' && event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey) {
       // Captured before the editor sees it, so Ctrl+Enter submits instead of inserting a line.
       event.preventDefault();
@@ -323,7 +336,7 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
       void submit();
       return;
     }
-    if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || isTypingTarget(event.target)) {
+    if (!plain || isTypingTarget(event.target)) {
       return;
     }
     if (event.key === 'Escape') {
@@ -357,6 +370,7 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
         hasNotes={hasSavedNotes(question.id)}
         notesId={notesId}
         onToggleNotes={(): void => setNotesOpen((open) => !open)}
+        notesButtonRef={notesButtonRef}
       />
       <div className="grid gap-6 md:grid-cols-2">
         <div className="min-w-0 space-y-4">
@@ -366,7 +380,7 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
           )}
           {question.kind === 'sql' && <SchemaDrawer schema={question.schema} />}
           <p className="text-xs text-zinc-400">{kind.hint}</p>
-          <NotesDrawer key={question.id} id={notesId} open={notesOpen} notes={entry?.notes ?? ''} onSave={(notes): void => store.setNotes(question.id, notes)} />
+          <NotesDrawer key={question.id} ref={notesRef} id={notesId} open={notesOpen} notes={entry?.notes ?? ''} onSave={(notes): void => store.setNotes(question.id, notes)} />
         </div>
         <div className="min-w-0 space-y-3">
           <AnswerInput

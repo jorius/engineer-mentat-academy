@@ -325,6 +325,33 @@ describe('QuestionView', () => {
     expect(screen.getByRole('textbox', { name: /my notes/i })).toHaveValue('check phase');
   });
 
+  it('never submits with Ctrl+Enter from inside My notes', async () => {
+    const user = userEvent.setup();
+    const grade = vi.fn<Grader['grade']>(async () => ({ score: 1, verdict: 'pass', feedback: [] }));
+    const { store } = setup(predict, { grader: { grade } });
+    await user.type(screen.getByLabelText(/expected output/i), '1');
+    await user.click(screen.getByRole('button', { name: /my notes/i }));
+    await user.type(screen.getByRole('textbox', { name: /my notes/i }), 'remember the newline');
+    await user.keyboard('{Control>}{Enter}{/Control}');
+    expect(grade).not.toHaveBeenCalled();
+    expect(screen.queryByText('Because B.')).not.toBeInTheDocument();
+    expect(within(actionBar()).getByText('3 attempts left')).toBeInTheDocument();
+    expect(store.get(predict.id)?.attempts).toBeUndefined();
+  });
+
+  it('closes My notes with Esc from inside the drawer and returns focus to the header button', async () => {
+    const user = userEvent.setup();
+    const { store } = setup(single);
+    const toggle = screen.getByRole('button', { name: /my notes/i });
+    await user.click(toggle);
+    await user.type(screen.getByRole('textbox', { name: /my notes/i }), 'draft');
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('textbox', { name: /my notes/i })).not.toBeInTheDocument();
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(document.activeElement).toBe(toggle);
+    expect(store.get(single.id)?.notes).toBe('draft');
+  });
+
   it('opens the notes drawer with saved notes on a revisit and marks the notes button', () => {
     const store = createProgressStore(null);
     store.setNotes(single.id, 'check phase, after poll');

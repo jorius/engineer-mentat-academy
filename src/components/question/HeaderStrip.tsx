@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useHref, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { JSX, MouseEvent } from 'react';
+import type { JSX, MouseEvent, Ref } from 'react';
 
 // content
 import { findSubject, findTopic, subjectName, topicName } from '../../content/taxonomy';
@@ -28,12 +28,13 @@ type Props = {
   hasNotes: boolean;
   notesId: string;
   onToggleNotes: () => void;
+  notesButtonRef?: Ref<HTMLButtonElement>;
 };
 
 const toolClass =
   'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800';
 
-export function HeaderStrip({ question, position, marked, onToggleMark, notesOpen, hasNotes, notesId, onToggleNotes }: Props): JSX.Element {
+export function HeaderStrip({ question, position, marked, onToggleMark, notesOpen, hasNotes, notesId, onToggleNotes, notesButtonRef }: Props): JSX.Element {
   const { t } = useTranslation();
   const locale = useLocale();
   const navigate = useNavigate();
@@ -87,7 +88,7 @@ export function HeaderStrip({ question, position, marked, onToggleMark, notesOpe
           <span aria-hidden="true" className={marked ? 'text-accent-500' : ''}>{marked ? '★' : '☆'}</span>
           {marked ? t('question.marked') : t('question.markForReview')}
         </button>
-        <button type="button" className={toolClass} onClick={onToggleNotes} aria-expanded={notesOpen} aria-controls={notesId} title={t('question.notesHint')}>
+        <button ref={notesButtonRef} type="button" className={toolClass} onClick={onToggleNotes} aria-expanded={notesOpen} aria-controls={notesId} title={t('question.notesHint')}>
           <span aria-hidden="true">📝</span>
           {t('question.notes')}
           {hasNotes && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-accent-500" />}
