@@ -36,13 +36,23 @@
     "mockInterview": "Entrevista simulada",
     "reviewMissed": "Repasar ({{count}})"
   },
+  "filters": {
+    "all": "Todos",
+    "only": "Solo",
+    "unseen": "Sin ver",
+    "marked": "Marcadas para repasar",
+    "missed": "Falladas",
+    "level": "Nivel",
+    "kind": "Tipo"
+  },
   "browse": {
     "title": "Explorar",
     "domainNotFound": "No se encontró el dominio.",
     "subjectNotFound": "No se encontró el tema.",
     "subjectStats": "{{total}} preguntas · {{unseen}} sin ver · {{flagged}} marcadas para repaso",
     "drillThese_one": "Practicar esta {{count}}",
-    "drillThese_other": "Practicar estas {{count}}"
+    "drillThese_other": "Practicar estas {{count}}",
+    "drillTopic": "Practicar · {{count}}"
   },
   "drill": {
     "title": "Práctica",
@@ -52,7 +62,15 @@
     "completeBody_one": "Respondiste {{count}} pregunta.",
     "completeBody_other": "Respondiste {{count}} preguntas.",
     "reviewMisses": "Repasar las falladas",
-    "browse": "Explorar"
+    "browse": "Explorar",
+    "setupTitle": "Arma una práctica",
+    "domain": "Dominio",
+    "subject": "Tema",
+    "topic": "Subtema",
+    "all": "Todos",
+    "matchCount_one": "{{count}} pregunta coincide",
+    "matchCount_other": "{{count}} preguntas coinciden",
+    "start": "Empezar práctica"
   },
   "mock": {
     "title": "Entrevista simulada",

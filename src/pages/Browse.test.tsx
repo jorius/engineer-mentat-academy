@@ -1,6 +1,7 @@
 // packages
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 
 // components
@@ -58,6 +59,46 @@ describe('browse pages', () => {
     renderAt('/browse/languages/javascript');
     expect(screen.getAllByRole('link', { name: /drill/i }).length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: /event loop/i })).toBeInTheDocument();
+  });
+
+  it('shows only the level and kind chips present in the subject', () => {
+    renderAt('/browse/languages/javascript');
+    const kinds = screen.getByRole('group', { name: 'Kind' });
+    expect(within(kinds).queryByRole('button', { name: /sql query/i })).not.toBeInTheDocument();
+    expect(within(kinds).getByRole('button', { name: /single choice/i })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(screen.getByRole('group', { name: 'Level' })).getByRole('button', { name: /junior/i })).toBeInTheDocument();
+    cleanup();
+    renderAt('/browse/databases/sql');
+    expect(within(screen.getByRole('group', { name: 'Kind' })).getByRole('button', { name: /sql query/i })).toBeInTheDocument();
+  });
+
+  it('gives each topic a drill link for its questions', () => {
+    renderAt('/browse/languages/javascript');
+    const closures = filterQuestions(loadQuestions(), { subject: 'javascript', topic: 'closures' }).length;
+    const link = screen.getAllByRole('link', { name: `Drill · ${closures}` }).find((a) => a.getAttribute('href')?.includes('topic=closures'));
+    expect(link).toHaveAttribute('href', '/drill?domain=languages&subject=javascript&topic=closures');
+  });
+
+  it('carries only the narrowing chips into the drill links', async () => {
+    const user = userEvent.setup();
+    renderAt('/browse/languages/javascript');
+    const levels = screen.getByRole('group', { name: 'Level' });
+    await user.click(within(levels).getByRole('button', { name: /senior/i }));
+    const senior = filterQuestions(loadQuestions(), { subject: 'javascript', levels: ['senior'] }).length;
+    const drillThese = screen.getByRole('link', { name: new RegExp(`drill (this|these) ${senior}$`, 'i') });
+    expect(drillThese).toHaveAttribute('href', '/drill?domain=languages&subject=javascript&level=senior');
+    await user.click(within(levels).getByRole('button', { name: 'All' }));
+    expect(screen.getByRole('link', { name: /drill (this|these) \d+$/i })).toHaveAttribute('href', '/drill?domain=languages&subject=javascript');
+  });
+
+  it('filters the list by the Only chips', async () => {
+    const user = userEvent.setup();
+    const store = createProgressStore(null);
+    store.setFlag('javascript-closure-counter-independence', true);
+    renderAt('/browse/languages/javascript', store);
+    await user.click(within(screen.getByRole('group', { name: 'Only' })).getByRole('button', { name: 'Marked for review' }));
+    expect(screen.getByRole('link', { name: 'Drill this 1' })).toHaveAttribute('href', '/drill?domain=languages&subject=javascript&only=marked');
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(1);
   });
 
   it('shows not found for an unknown domain', () => {

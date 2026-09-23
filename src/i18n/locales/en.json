@@ -36,13 +36,23 @@
     "mockInterview": "Mock interview",
     "reviewMissed": "Review ({{count}})"
   },
+  "filters": {
+    "all": "All",
+    "only": "Only",
+    "unseen": "Unseen",
+    "marked": "Marked for review",
+    "missed": "Missed",
+    "level": "Level",
+    "kind": "Kind"
+  },
   "browse": {
     "title": "Browse",
     "domainNotFound": "Domain not found.",
     "subjectNotFound": "Subject not found.",
     "subjectStats": "{{total}} questions · {{unseen}} unseen · {{flagged}} marked for review",
     "drillThese_one": "Drill this {{count}}",
-    "drillThese_other": "Drill these {{count}}"
+    "drillThese_other": "Drill these {{count}}",
+    "drillTopic": "Drill · {{count}}"
   },
   "drill": {
     "title": "Drill",
@@ -52,7 +62,15 @@
     "completeBody_one": "You went through {{count}} question.",
     "completeBody_other": "You went through {{count}} questions.",
     "reviewMisses": "Review misses",
-    "browse": "Browse"
+    "browse": "Browse",
+    "setupTitle": "Build a drill",
+    "domain": "Domain",
+    "subject": "Subject",
+    "topic": "Topic",
+    "all": "All",
+    "matchCount_one": "{{count}} question matches",
+    "matchCount_other": "{{count}} questions match",
+    "start": "Start drill"
   },
   "mock": {
     "title": "Mock interview",
