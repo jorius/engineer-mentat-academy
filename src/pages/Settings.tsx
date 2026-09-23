@@ -1,5 +1,6 @@
 // packages
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ChangeEvent, JSX } from 'react';
 
 // hooks
@@ -23,24 +24,21 @@ const ACCENT_SWATCH_CLASSES: Record<Accent, string> = {
   rose: 'bg-rose-500',
 };
 
-const EDITOR_FONTS: readonly { value: EditorFont; label: string }[] = [
+// Font names are product names and stay as-is; only the generic system entry is translated.
+const EDITOR_FONTS: readonly { value: EditorFont; label?: string }[] = [
   { value: 'jetbrains', label: 'JetBrains Mono' },
   { value: 'fira', label: 'Fira Code' },
-  { value: 'system', label: 'System monospace' },
+  { value: 'system' },
 ];
 
 const TAB_SIZES: readonly TabSize[] = [2, 4, 8];
 
-const MAX_ATTEMPTS_OPTIONS: readonly { value: MaxAttempts; label: string }[] = [
-  { value: 1, label: '1' },
-  { value: 2, label: '2' },
-  { value: 3, label: '3' },
-  { value: 'unlimited', label: 'Unlimited' },
-];
+const MAX_ATTEMPTS_OPTIONS: readonly MaxAttempts[] = [1, 2, 3, 'unlimited'];
 
 const PREVIEW_CODE = ['function greet(name: string): string {', "  return `Hello, ${name}!`;", '}', '', 'console.log(greet("Mentat"));'].join('\n');
 
 export function Settings(): JSX.Element {
+  const { t } = useTranslation();
   const { store, progress } = useProgress();
   const { preferences, store: preferencesStore } = usePreferences();
   const [message, setMessage] = useState<string | null>(null);
@@ -64,64 +62,64 @@ export function Settings(): JSX.Element {
     try {
       const text = await file.text();
       store.importJson(text);
-      setMessage(`Imported ${Object.keys(store.all()).length} question record(s).`);
+      setMessage(t('settings.imported', { count: Object.keys(store.all()).length }));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Import failed');
+      setMessage(error instanceof Error ? error.message : t('settings.importFailed'));
     } finally {
       event.target.value = '';
     }
   };
 
   const reset = (): void => {
-    if (window.confirm('Delete all local progress? This cannot be undone.')) {
+    if (window.confirm(t('settings.confirmReset'))) {
       store.reset();
-      setMessage('Progress cleared.');
+      setMessage(t('settings.cleared'));
     }
   };
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Settings</h1>
+      <h1 className="text-2xl font-semibold">{t('settings.title')}</h1>
       <Card className="space-y-3">
-        <h2 className="font-medium">Progress</h2>
-        <p className="text-sm text-zinc-500">{Object.keys(progress).length} question record(s) stored in this browser only.</p>
+        <h2 className="font-medium">{t('settings.progressHeading')}</h2>
+        <p className="text-sm text-zinc-500">{t('settings.recordsStored', { count: Object.keys(progress).length })}</p>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={exportProgress}>Export JSON</Button>
+          <Button onClick={exportProgress}>{t('settings.exportJson')}</Button>
           <label className="cursor-pointer rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium dark:border-zinc-700">
-            Import progress
-            <input type="file" accept="application/json" className="sr-only" aria-label="Import progress" onChange={(e): void => void importProgress(e)} />
+            {t('settings.importProgress')}
+            <input type="file" accept="application/json" className="sr-only" aria-label={t('settings.importProgress')} onChange={(e): void => void importProgress(e)} />
           </label>
-          <Button variant="danger" onClick={reset}>Reset</Button>
+          <Button variant="danger" onClick={reset}>{t('common.reset')}</Button>
         </div>
         {message !== null && <p className="text-sm" role="status">{message}</p>}
       </Card>
       <Card className="space-y-2">
-        <h2 className="font-medium">Grading</h2>
+        <h2 className="font-medium">{t('settings.gradingHeading')}</h2>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" disabled aria-label="Claude grader" />
-          Claude grader (coming later)
+          <input type="checkbox" disabled aria-label={t('settings.claudeGrader')} />
+          {t('settings.claudeGraderSoon')}
         </label>
         <p className="text-sm text-zinc-500">
-          Open questions are self-scored today. A future grader will send the question, rubric and your answer to Claude with a key you paste here; the key will be held in memory only.
+          {t('settings.graderNote')}
         </p>
       </Card>
       <Card className="space-y-3">
-        <h2 className="font-medium">Editor</h2>
+        <h2 className="font-medium">{t('settings.editorHeading')}</h2>
         <div className="flex flex-wrap gap-4">
           <label className="flex flex-col gap-1 text-sm">
-            Font
+            {t('settings.font')}
             <select
               className="rounded-md border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
               value={preferences.editorFont}
               onChange={(e): void => preferencesStore.set({ editorFont: e.target.value as EditorFont })}
             >
               {EDITOR_FONTS.map((font) => (
-                <option key={font.value} value={font.value}>{font.label}</option>
+                <option key={font.value} value={font.value}>{font.label ?? t('settings.systemMonospace')}</option>
               ))}
             </select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Font size
+            {t('settings.fontSize')}
             <input
               type="number"
               min={12}
@@ -132,7 +130,7 @@ export function Settings(): JSX.Element {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            Tab size
+            {t('settings.tabSize')}
             <select
               className="rounded-md border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
               value={preferences.tabSize}
@@ -144,7 +142,7 @@ export function Settings(): JSX.Element {
             </select>
           </label>
           <fieldset className="flex flex-col gap-1 text-sm">
-            <legend>Indent with</legend>
+            <legend>{t('settings.indentWith')}</legend>
             <label className="flex items-center gap-1">
               <input
                 type="radio"
@@ -152,7 +150,7 @@ export function Settings(): JSX.Element {
                 checked={!preferences.indentWithTabs}
                 onChange={(): void => preferencesStore.set({ indentWithTabs: false })}
               />
-              Spaces
+              {t('settings.spaces')}
             </label>
             <label className="flex items-center gap-1">
               <input
@@ -161,38 +159,38 @@ export function Settings(): JSX.Element {
                 checked={preferences.indentWithTabs}
                 onChange={(): void => preferencesStore.set({ indentWithTabs: true })}
               />
-              Tabs
+              {t('settings.tabs')}
             </label>
           </fieldset>
         </div>
         <div>
-          <p className="mb-1 text-sm text-zinc-500">Preview</p>
-          <CodeEditor value={previewCode} onChange={setPreviewCode} language="typescript" readOnly={false} ariaLabel="Editor preview" />
+          <p className="mb-1 text-sm text-zinc-500">{t('settings.preview')}</p>
+          <CodeEditor value={previewCode} onChange={setPreviewCode} language="typescript" readOnly={false} ariaLabel={t('settings.editorPreview')} />
         </div>
       </Card>
       <Card className="space-y-2">
-        <h2 className="font-medium">Appearance</h2>
+        <h2 className="font-medium">{t('settings.appearanceHeading')}</h2>
         <fieldset className="flex flex-wrap gap-3">
-          <legend className="mb-1 text-sm text-zinc-500">Accent color</legend>
+          <legend className="mb-1 text-sm text-zinc-500">{t('settings.accentColor')}</legend>
           {ACCENTS.map((accent) => (
             <label key={accent} className="flex cursor-pointer flex-col items-center gap-1 text-xs">
               <input
                 type="radio"
                 name="accent"
-                aria-label={accent}
+                aria-label={t(`settings.accents.${accent}`)}
                 checked={preferences.accent === accent}
                 onChange={(): void => preferencesStore.set({ accent })}
                 className={`h-6 w-6 appearance-none rounded-full border-2 border-transparent ${ACCENT_SWATCH_CLASSES[accent]} checked:border-zinc-900 dark:checked:border-white`}
               />
-              {accent}
+              {t(`settings.accents.${accent}`)}
             </label>
           ))}
         </fieldset>
       </Card>
       <Card className="space-y-2">
-        <h2 className="font-medium">Practice</h2>
+        <h2 className="font-medium">{t('settings.practiceHeading')}</h2>
         <label className="flex flex-col gap-1 text-sm">
-          Max attempts per question (used by the upcoming retry flow)
+          {t('settings.maxAttempts')}
           <select
             className="w-40 rounded-md border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
             value={preferences.maxAttempts}
@@ -201,7 +199,7 @@ export function Settings(): JSX.Element {
             }
           >
             {MAX_ATTEMPTS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
+              <option key={option} value={option}>{option === 'unlimited' ? t('settings.unlimited') : option}</option>
             ))}
           </select>
         </label>

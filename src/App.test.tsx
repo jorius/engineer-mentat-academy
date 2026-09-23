@@ -1,6 +1,7 @@
 // packages
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 
 // components
@@ -34,5 +35,17 @@ describe('routes', () => {
     renderAt('/');
     expect(screen.getByRole('link', { name: 'Browse' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+  });
+
+  it('switches the interface language from the header and remembers it', async () => {
+    const user = userEvent.setup();
+    renderAt('/');
+    expect(screen.getByRole('button', { name: 'EN' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: 'ES' }));
+    expect(screen.getByRole('link', { name: 'Explorar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ES' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'EN' })).toHaveAttribute('aria-pressed', 'false');
+    expect(localStorage.getItem('ema:lang')).toBe('es');
+    expect(document.documentElement.lang).toBe('es');
   });
 });

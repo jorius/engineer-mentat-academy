@@ -1,5 +1,6 @@
 // packages
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { JSX } from 'react';
 
 // engine
@@ -12,6 +13,7 @@ import { Button } from '../primitives/Button';
 type Props = { question: MultiQuestion; disabled: boolean; onSubmit: (answer: Answer) => void };
 
 export function MultiChoice({ question, disabled, onSubmit }: Props): JSX.Element {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState<string[]>([]);
   const toggle = (id: string): void => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   return (
@@ -29,7 +31,7 @@ export function MultiChoice({ question, disabled, onSubmit }: Props): JSX.Elemen
           <Markdown text={option.text} />
         </label>
       ))}
-      <Button type="submit" disabled={disabled || selected.length === 0}>Submit</Button>
+      <Button type="submit" disabled={disabled || selected.length === 0}>{t('question.submit')}</Button>
     </form>
   );
 }

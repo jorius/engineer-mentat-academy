@@ -1,5 +1,6 @@
 // packages
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import type { JSX } from 'react';
 
 // content
@@ -17,6 +18,7 @@ import { Card } from '../components/primitives/Card';
 import { ProgressBar } from '../components/primitives/ProgressBar';
 
 export function Home(): JSX.Element {
+  const { t } = useTranslation();
   const { list } = useQuestionBank();
   const { progress } = useProgress();
   const overall = summarize(list, progress);
@@ -24,13 +26,13 @@ export function Home(): JSX.Element {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold">Engineer Mentat Academy</h1>
-        <p className="text-zinc-500">Train like a Mentat: {overall.total} questions, {overall.attempted} attempted, {missed} to revisit.</p>
+        <h1 className="text-3xl font-semibold">{t('home.title')}</h1>
+        <p className="text-zinc-500">{t('home.tagline', { total: overall.total, attempted: overall.attempted, missed })}</p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Link to="/drill?unseen=1" className="rounded-md bg-accent-500 px-4 py-2 text-sm font-medium text-white hover:bg-accent-600">Drill unseen</Link>
-        <Link to="/mock" className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700">Mock interview</Link>
-        <Link to="/review" className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700">Review missed ({missed})</Link>
+        <Link to="/drill?unseen=1" className="rounded-md bg-accent-500 px-4 py-2 text-sm font-medium text-white hover:bg-accent-600">{t('home.drillUnseen')}</Link>
+        <Link to="/mock" className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700">{t('home.mockInterview')}</Link>
+        <Link to="/review" className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700">{t('home.reviewMissed', { count: missed })}</Link>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {DOMAINS.map((domain) => {
@@ -39,10 +41,10 @@ export function Home(): JSX.Element {
             <Card key={domain.id} className="space-y-1">
               <Link to={`/browse/${domain.id}`} className="font-medium underline">{domain.name}</Link>
               <p className="text-xs text-zinc-500">
-                {summary.attempted}/{summary.total} attempted
-                {summary.attempted > 0 && <> · mastery {Math.round(summary.mastery * 100)}%</>}
+                {t('common.attempted', { attempted: summary.attempted, total: summary.total })}
+                {summary.attempted > 0 && ` · ${t('common.mastery', { percent: Math.round(summary.mastery * 100) })}`}
               </p>
-              <ProgressBar value={summary.progress} label={`${domain.name} progress`} />
+              <ProgressBar value={summary.progress} label={t('common.progressLabel', { name: domain.name })} />
             </Card>
           );
         })}

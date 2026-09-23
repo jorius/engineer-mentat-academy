@@ -1,6 +1,7 @@
 // packages
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import type { JSX } from 'react';
 
 // engine
@@ -21,6 +22,7 @@ import { Button } from '../components/primitives/Button';
 import { parseDrillFilter } from '../utils/drillFilter';
 
 function DrillQueue({ questions, unseen }: { questions: Question[]; unseen: boolean }): JSX.Element {
+  const { t } = useTranslation();
   const { progress } = useProgress();
   // The queue is chosen once, when this component mounts for the current filter (see the `key` on
   // the caller below); answering a question updates `progress`, but must not reshuffle or reset it.
@@ -30,27 +32,27 @@ function DrillQueue({ questions, unseen }: { questions: Question[]; unseen: bool
   if (queue.length === 0) {
     return (
       <div className="space-y-3">
-        <h1 className="text-2xl font-semibold">Drill</h1>
-        <p>No questions match this filter.</p>
-        <Link to="/browse" className="underline">Pick a subject</Link>
+        <h1 className="text-2xl font-semibold">{t('drill.title')}</h1>
+        <p>{t('drill.noMatch')}</p>
+        <Link to="/browse" className="underline">{t('drill.pickSubject')}</Link>
       </div>
     );
   }
   if (drill.done || drill.current === undefined) {
     return (
       <div className="space-y-3">
-        <h1 className="text-2xl font-semibold">Drill complete</h1>
-        <p>You went through {drill.total} questions.</p>
+        <h1 className="text-2xl font-semibold">{t('drill.completeTitle')}</h1>
+        <p>{t('drill.completeBody', { count: drill.total })}</p>
         <div className="flex gap-2">
-          <Link to="/review"><Button>Review misses</Button></Link>
-          <Link to="/browse"><Button variant="ghost">Browse</Button></Link>
+          <Link to="/review"><Button>{t('drill.reviewMisses')}</Button></Link>
+          <Link to="/browse"><Button variant="ghost">{t('drill.browse')}</Button></Link>
         </div>
       </div>
     );
   }
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Drill</h1>
+      <h1 className="text-2xl font-semibold">{t('drill.title')}</h1>
       <QuestionView key={drill.current.id} question={drill.current} onNext={drill.next} position={{ index: drill.index, total: drill.total }} />
     </div>
   );

@@ -54,7 +54,7 @@ describe('Mock', () => {
     const user = userEvent.setup();
     setup();
     for (const level of ['junior', 'mid', 'senior']) {
-      await user.click(screen.getByLabelText(level));
+      await user.click(screen.getByLabelText(new RegExp(`^${level}$`, 'i')));
     }
     expect(screen.getByRole('button', { name: /start/i })).toBeDisabled();
   });

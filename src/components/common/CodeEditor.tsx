@@ -1,5 +1,6 @@
 // packages
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { indentWithTab } from '@codemirror/commands';
 import { indentUnit } from '@codemirror/language';
 import { EditorState } from '@codemirror/state';
@@ -36,11 +37,13 @@ function languageExtension(language: EditorLanguage): ReturnType<typeof javascri
   return javascript({ typescript: language === 'typescript' });
 }
 
-export function CodeEditor({ value, onChange, language, readOnly = false, ariaLabel = 'Code editor' }: Props): JSX.Element {
+export function CodeEditor({ value, onChange, language, readOnly = false, ariaLabel }: Props): JSX.Element {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const { t } = useTranslation();
+  const label = ariaLabel ?? t('question.codeEditor');
   const { theme } = useTheme();
   const { preferences } = usePreferences();
   const { editorFont, editorFontSize, tabSize, indentWithTabs } = preferences;
@@ -68,7 +71,7 @@ export function CodeEditor({ value, onChange, language, readOnly = false, ariaLa
             onChangeRef.current(update.state.doc.toString());
           }
         }),
-        EditorView.contentAttributes.of({ 'aria-label': ariaLabel }),
+        EditorView.contentAttributes.of({ 'aria-label': label }),
       ],
     });
     view.current = new EditorView({ state, parent: host.current });
@@ -76,9 +79,9 @@ export function CodeEditor({ value, onChange, language, readOnly = false, ariaLa
       view.current?.destroy();
       view.current = null;
     };
-    // The editor is recreated only when language, theme, readOnly or these preferences change; `value` is the initial doc.
+    // The editor is recreated only when language, theme, readOnly, its label or these preferences change; `value` is the initial doc.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language, theme, readOnly, editorFont, editorFontSize, tabSize, indentWithTabs]);
+  }, [language, theme, readOnly, label, editorFont, editorFontSize, tabSize, indentWithTabs]);
 
   useEffect(() => {
     const current = view.current;

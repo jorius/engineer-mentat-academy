@@ -1,5 +1,6 @@
 // packages
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { JSX } from 'react';
 
 // engine
@@ -12,12 +13,13 @@ import { Button } from '../primitives/Button';
 type Props = { question: PredictQuestion; disabled: boolean; onSubmit: (answer: Answer) => void };
 
 export function PredictOutput({ question, disabled, onSubmit }: Props): JSX.Element {
+  const { t } = useTranslation();
   const [text, setText] = useState('');
   return (
     <div className="space-y-3">
-      <CodeEditor value={question.code} onChange={(): void => undefined} language={question.language} readOnly ariaLabel="Program" />
+      <CodeEditor value={question.code} onChange={(): void => undefined} language={question.language} readOnly ariaLabel={t('question.program')} />
       <label className="block text-sm">
-        Expected output: one line per console call; inside arrays and objects, spacing and quote style do not matter
+        {t('question.expectedOutput')}
         <textarea
           className="mt-1 w-full rounded-md border border-zinc-300 bg-white p-2 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-900"
           rows={5}
@@ -26,7 +28,7 @@ export function PredictOutput({ question, disabled, onSubmit }: Props): JSX.Elem
           onChange={(event): void => setText(event.target.value)}
         />
       </label>
-      <Button disabled={disabled || text.trim().length === 0} onClick={(): void => onSubmit({ kind: 'predict', text })}>Submit</Button>
+      <Button disabled={disabled || text.trim().length === 0} onClick={(): void => onSubmit({ kind: 'predict', text })}>{t('question.submit')}</Button>
     </div>
   );
 }

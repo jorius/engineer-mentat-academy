@@ -1,5 +1,6 @@
 // packages
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { JSX } from 'react';
 
 // engine
@@ -12,6 +13,7 @@ import { Button } from '../primitives/Button';
 type Props = { question: SingleQuestion; disabled: boolean; onSubmit: (answer: Answer) => void };
 
 export function SingleChoice({ question, disabled, onSubmit }: Props): JSX.Element {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState<string | null>(null);
   return (
     <form
@@ -30,7 +32,7 @@ export function SingleChoice({ question, disabled, onSubmit }: Props): JSX.Eleme
           <Markdown text={option.text} />
         </label>
       ))}
-      <Button type="submit" disabled={disabled || selected === null}>Submit</Button>
+      <Button type="submit" disabled={disabled || selected === null}>{t('question.submit')}</Button>
     </form>
   );
 }
