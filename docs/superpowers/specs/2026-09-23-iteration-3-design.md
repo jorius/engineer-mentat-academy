@@ -63,3 +63,12 @@ Drill builder (option C), facet rail (B), mock presets (1), wizard (3), results 
 ## 9. Testing
 
 Unit: glyph map completeness; facets; ChipGroup aria-pressed and All; editor theme validation; pickMock kinds. Component: Layout select changes language and theme button label flips; HeaderStrip icons and copy-link title; BrowseSubject shows only kinds present and per-topic Drill links; Drill setup card navigates with the built query; Mock summary sentence and untimed session without a clock. Content: existing content test covers the 40 new questions and translations. Locale parity test covers every new key.
+
+## 10. Danger zone (added 2026-09-23, Jose's request)
+
+Settings ends with a "Danger zone" section (red border, heading `settings.dangerHeading`). It holds two actions and replaces the small Reset button in the Progress section:
+
+- **Clear progress** (`settings.clearProgress`): wipes attempts, scores, marks and notes (`progressStore.reset()`), keeps preferences. Confirmed by an inline field: the button is disabled until the user types `RESET` (`settings.typeToConfirm` = "Type RESET to confirm" / "Escribe RESET para confirmar"); no `window.confirm`.
+- **Reset everything** (`settings.resetEverything`): clears progress, preferences (`preferencesStore.reset()`), the theme key `ema:theme` and the language key `ema:lang`, then resets i18n to the detector default and the theme to dark. Same typed confirmation, one shared field for the section.
+- After either action a status line (`settings.cleared` / `settings.resetDone` = "Everything was reset." / "Se restableció todo.") replaces the field and the field empties.
+- `settings.dangerNote`: "These actions only affect this browser and cannot be undone." / "Estas acciones solo afectan a este navegador y no se pueden deshacer."
