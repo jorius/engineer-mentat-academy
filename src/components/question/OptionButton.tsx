@@ -56,7 +56,7 @@ export function OptionButton({
       onClick={handleClick}
       className={`flex w-full items-start gap-2 rounded-md border p-2 text-left transition ${stateClasses} ${
         locked ? 'line-through opacity-50' : ''
-      } ${inactive ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+      } ${disabled && !locked ? 'opacity-60 cursor-not-allowed' : ''} ${inactive ? 'cursor-not-allowed' : 'cursor-pointer'}`}
     >
       <span className="mr-2 inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded border border-zinc-300 px-1 font-mono text-xs text-zinc-500 dark:border-zinc-700">
         {id})

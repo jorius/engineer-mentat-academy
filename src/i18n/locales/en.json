@@ -131,6 +131,7 @@
     "flag": "Flag",
     "flagged": "Flagged",
     "submit": "Submit",
+    "optionsGroup": "Answer options",
     "next": "Next (N)",
     "grading": "Grading…",
     "gradingFailed": "Grading failed: {{error}}",

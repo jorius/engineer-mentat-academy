@@ -131,6 +131,7 @@
     "flag": "Marcar",
     "flagged": "Marcada",
     "submit": "Enviar",
+    "optionsGroup": "Opciones de respuesta",
     "next": "Siguiente (N)",
     "grading": "Evaluando…",
     "gradingFailed": "Falló la evaluación: {{error}}",

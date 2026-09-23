@@ -58,19 +58,21 @@ export function MultiChoice({
         onSubmit({ kind: 'multi', optionIds: selected });
       }}
     >
-      {question.options.map((option) => (
-        <OptionButton
-          key={option.id}
-          id={option.id}
-          text={option.text}
-          selected={selected.includes(option.id)}
-          locked={lockedOptions.has(option.id)}
-          correct={correctOptions.has(option.id)}
-          multi
-          disabled={disabled}
-          onToggle={toggle}
-        />
-      ))}
+      <div role="group" aria-label={t('question.optionsGroup')} className="space-y-2">
+        {question.options.map((option) => (
+          <OptionButton
+            key={option.id}
+            id={option.id}
+            text={option.text}
+            selected={selected.includes(option.id)}
+            locked={lockedOptions.has(option.id)}
+            correct={correctOptions.has(option.id)}
+            multi
+            disabled={disabled}
+            onToggle={toggle}
+          />
+        ))}
+      </div>
       {!submitLabelHidden && (
         <Button type="submit" disabled={disabled || selected.length === 0}>
           {t('question.submit')}

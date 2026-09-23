@@ -65,4 +65,12 @@ describe('OptionButton', () => {
     render(<OptionButton id="a" text="Option A" selected={false} onToggle={vi.fn()} />);
     expect(screen.queryByText('✓')).not.toBeInTheDocument();
   });
+
+  it('shows a dimmed, not-allowed cue for a plain disabled (not locked) option', () => {
+    render(<OptionButton id="a" text="Option A" selected={false} disabled onToggle={vi.fn()} />);
+    const button = screen.getByRole('radio', { name: 'Option A' });
+    expect(button).toHaveClass('opacity-60', 'cursor-not-allowed');
+    expect(button).not.toHaveClass('line-through');
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+  });
 });

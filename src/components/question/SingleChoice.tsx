@@ -59,18 +59,20 @@ export function SingleChoice({
         }
       }}
     >
-      {question.options.map((option) => (
-        <OptionButton
-          key={option.id}
-          id={option.id}
-          text={option.text}
-          selected={selected === option.id}
-          locked={lockedOptions.has(option.id)}
-          correct={correctOptions.has(option.id)}
-          disabled={disabled}
-          onToggle={select}
-        />
-      ))}
+      <div role="radiogroup" aria-label={t('question.optionsGroup')} className="space-y-2">
+        {question.options.map((option) => (
+          <OptionButton
+            key={option.id}
+            id={option.id}
+            text={option.text}
+            selected={selected === option.id}
+            locked={lockedOptions.has(option.id)}
+            correct={correctOptions.has(option.id)}
+            disabled={disabled}
+            onToggle={select}
+          />
+        ))}
+      </div>
       {!submitLabelHidden && (
         <Button type="submit" disabled={disabled || selected === null || selected === undefined}>
           {t('question.submit')}
