@@ -45,7 +45,7 @@ describe('questionSummary', () => {
     const question = q({
       prompt: 'Which of the following statements about the JavaScript event loop accurately describes execution order?',
     });
-    const summary = questionSummary(question, 40);
+    const summary = questionSummary(question, { max: 40 });
     expect(summary.length).toBeLessThanOrEqual(40);
     expect(summary.endsWith('…')).toBe(true);
     expect(summary).toBe('Which of the following statements about…');
@@ -108,5 +108,20 @@ describe('questionSummary', () => {
   it('does not mangle dunder identifiers when stripping underscore italics', () => {
     const question = q({ prompt: 'Explain `__proto__` and `Object.create`' });
     expect(questionSummary(question)).toBe('Explain __proto__ and Object.create');
+  });
+
+  it('localizes the fallback topic name and kind label', () => {
+    const question = q({
+      kind: 'predict',
+      domain: 'languages',
+      subject: 'javascript',
+      topic: 'closures',
+      language: 'javascript',
+      code: 'console.log(1);',
+      answer: '1',
+      prompt: '```js\nconsole.log(1);\n```',
+    });
+    const t = (key: string): string => (key === 'kinds.predict.label' ? 'Predecir la salida' : key);
+    expect(questionSummary(question, { locale: 'es', t })).toBe('Predecir la salida: Closures (clausuras)');
   });
 });

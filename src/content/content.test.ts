@@ -2,14 +2,15 @@
 import { describe, expect, it } from 'vitest';
 
 // engine
-import { questionSchema } from '../engine/question';
-import { loadQuestions } from '../engine/registry';
+import { questionSchema, questionTranslationSchema } from '../engine/question';
+import type { Question, QuestionTranslation } from '../engine/question';
+import { indexById, loadQuestions, loadTranslations } from '../engine/registry';
 import { executeSource } from '../engine/runner/execute';
 import { createSqlRunner } from '../engine/sql/runSql';
 import { loadSqlInNode } from '../engine/sql/nodeLoader';
 
 // content
-import { findTopic } from './taxonomy';
+import { findSubject, findTopic } from './taxonomy';
 
 const bank = loadQuestions();
 const runSql = createSqlRunner(loadSqlInNode);
@@ -64,6 +65,65 @@ describe('question bank', () => {
       const run = await executeSource(`${question.code}\nexport function solution() {}`, [], question.language, 50);
       expect(run.status, run.error).toBe('ok');
       expect(run.logs.join('\n')).toBe(question.answer);
+    }
+  });
+});
+
+type TranslationModule = { translations?: Record<string, QuestionTranslation> };
+
+const translationFiles = Object.entries(import.meta.glob<TranslationModule>('./*/*.es.ts', { eager: true }));
+const byId = indexById(bank);
+
+function translationCases(): (readonly [string, string, unknown])[] {
+  return translationFiles.flatMap(([path, module]) =>
+    Object.entries(module.translations ?? {}).map(([id, translation]) => [path, id, translation] as const),
+  );
+}
+
+describe('question translations', () => {
+  it('keeps translation files out of the question bank', () => {
+    expect(bank.every((question) => typeof question.id === 'string')).toBe(true);
+  });
+
+  it.each(translationFiles.map(([path, module]) => [path, module] as const))('%s sits beside a subject and exports translations', (path, module) => {
+    const match = /^\.\/([a-z0-9-]+)\/([a-z0-9-]+)\.es\.ts$/.exec(path);
+    expect(match, 'file must be named <domain>/<subject>.es.ts').not.toBeNull();
+    expect(findSubject(match?.[1] ?? '', match?.[2] ?? ''), `unknown subject for ${path}`).toBeDefined();
+    expect(module.translations, 'file must export `translations`').toBeTypeOf('object');
+  });
+
+  it('merges every file into the loaded table', () => {
+    expect(Object.keys(loadTranslations().es).sort()).toEqual(translationCases().map(([, id]) => id).sort());
+  });
+
+  it.each(translationCases())('%s → %s is valid', (path, id, translation) => {
+    const question: Question | undefined = byId.get(id);
+    expect(question, `no question with id ${id}`).toBeDefined();
+    if (question === undefined) {
+      return;
+    }
+    expect(path, 'translation must live in its question subject file').toBe(`./${question.domain}/${question.subject}.es.ts`);
+
+    const parsed = questionTranslationSchema.safeParse(translation);
+    expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true);
+    if (!parsed.success) {
+      return;
+    }
+    const text = parsed.data;
+
+    if (question.level === 'senior') {
+      expect(text.explanation, 'senior translations keep the Say this out loud line').toContain('**Dilo en voz alta:**');
+    }
+    if (text.options !== undefined) {
+      expect(question.kind === 'single' || question.kind === 'multi', 'only single and multi questions have options').toBe(true);
+      const optionIds = question.kind === 'single' || question.kind === 'multi' ? question.options.map((o) => o.id) : [];
+      Object.keys(text.options).forEach((optionId) => expect(optionIds, `unknown option id ${optionId}`).toContain(optionId));
+    }
+    if (text.modelAnswer !== undefined || text.rubric !== undefined) {
+      expect(question.kind, 'only open questions have a model answer and rubric').toBe('open');
+    }
+    if (text.rubric !== undefined && question.kind === 'open') {
+      expect(text.rubric.length, 'rubric must match the original line for line').toBe(question.rubric.length);
     }
   });
 });

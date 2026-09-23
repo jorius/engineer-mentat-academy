@@ -2,12 +2,38 @@
 import { useMemo } from 'react';
 
 // engine
-import { indexById, loadQuestions } from '../engine/registry';
+import { indexById, isTranslationLocale, loadQuestions, loadTranslations, localizeQuestion } from '../engine/registry';
 import type { Question } from '../engine/question';
 
-const list = loadQuestions();
-const cache: { list: Question[]; byId: Map<string, Question> } = { list, byId: indexById(list) };
+// hooks
+import { useLocale } from './useLocale';
 
-export function useQuestionBank(): { list: Question[]; byId: Map<string, Question> } {
-  return useMemo((): { list: Question[]; byId: Map<string, Question> } => cache, []);
+type QuestionBank = { list: Question[]; byId: Map<string, Question> };
+
+const canonicalList = loadQuestions();
+const canonical: QuestionBank = { list: canonicalList, byId: indexById(canonicalList) };
+const translations = loadTranslations();
+const banks = new Map<string, QuestionBank>([['en', canonical]]);
+
+function bankFor(locale: string): QuestionBank {
+  const key = isTranslationLocale(locale) ? locale : 'en';
+  const cached = banks.get(key);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const list = canonicalList.map((question) => localizeQuestion(question, key, translations));
+  const bank = { list, byId: indexById(list) };
+  banks.set(key, bank);
+  return bank;
+}
+
+/** The question bank with reader-facing text in the active UI language (English fallback per field). */
+export function useQuestionBank(): QuestionBank {
+  const locale = useLocale();
+  return useMemo((): QuestionBank => bankFor(locale), [locale]);
+}
+
+/** The canonical (English) question for `id`; grading runs on this so answer keys never depend on locale. */
+export function useCanonicalQuestion(id: string): Question | undefined {
+  return canonical.byId.get(id);
 }

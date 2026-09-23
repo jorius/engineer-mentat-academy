@@ -21,7 +21,7 @@ export const LEVEL_LABELS: Record<Level, { label: string; hint: string }> = {
 };
 
 /** Any translate function that maps a locale key to text, such as i18next's `t`. */
-type Translate = (key: string) => string;
+export type Translate = (key: string) => string;
 
 /** Localized label and hint for a question kind; the locale keys live under `kinds.<kind>`. */
 export function kindLabel(kind: Kind, t: Translate): { label: string; hint: string } {

@@ -4,6 +4,9 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { JSX } from 'react';
 
+// content
+import { findSubject, findTopic, subjectName, topicName } from '../../content/taxonomy';
+
 // engine
 import type { Answer, Question } from '../../engine/question';
 import type { GradeResult } from '../../engine/grader';
@@ -14,6 +17,8 @@ import { useGrader } from '../../contexts/GraderContext';
 
 // hooks
 import { useProgress } from '../../hooks/useProgress';
+import { useLocale } from '../../hooks/useLocale';
+import { useCanonicalQuestion, useQuestionBank } from '../../hooks/useQuestionBank';
 
 // components
 import { Markdown } from '../common/Markdown';
@@ -48,8 +53,14 @@ function AnswerArea({ question, disabled, onSubmit }: { question: Question; disa
   }
 }
 
-export function QuestionView({ question, onNext, position }: Props): JSX.Element {
+export function QuestionView({ question: given, onNext, position }: Props): JSX.Element {
   const { t } = useTranslation();
+  const locale = useLocale();
+  // Show the question in the active language (a queue built before a language switch still holds the
+  // old text), but grade the canonical English question so option ids and answer keys never depend on
+  // the locale. Questions outside the bank (tests, previews) are used as given.
+  const question = useQuestionBank().byId.get(given.id) ?? given;
+  const canonical = useCanonicalQuestion(given.id) ?? given;
   const grader = useGrader();
   const { store, progress } = useProgress();
   const [result, setResult] = useState<GradeResult | null>(null);
@@ -59,6 +70,8 @@ export function QuestionView({ question, onNext, position }: Props): JSX.Element
   const flagged = entry?.flagged ?? false;
   const kind = kindLabel(question.kind, t);
   const level = levelLabel(question.level, t);
+  const subject = findSubject(question.domain, question.subject);
+  const topic = findTopic(question.domain, question.subject, question.topic);
 
   useEffect(() => {
     setResult(null);
@@ -71,7 +84,7 @@ export function QuestionView({ question, onNext, position }: Props): JSX.Element
       setGrading(true);
       setError(null);
       try {
-        const graded = await grader.grade(question, answer);
+        const graded = await grader.grade(canonical, answer);
         setResult(graded);
         store.record(question.id, graded.score);
       } catch (err) {
@@ -80,7 +93,7 @@ export function QuestionView({ question, onNext, position }: Props): JSX.Element
         setGrading(false);
       }
     },
-    [grader, question, store],
+    [grader, canonical, question.id, store],
   );
 
   const toggleFlag = useCallback((): void => store.setFlag(question.id, !flagged), [store, question.id, flagged]);
@@ -109,7 +122,7 @@ export function QuestionView({ question, onNext, position }: Props): JSX.Element
           {position !== undefined && <span>{t('question.position', { index: position.index + 1, total: position.total })}</span>}
           <Badge tone={question.level} title={level.hint}>{level.label}</Badge>
           <Badge title={kind.hint}>{kind.label}</Badge>
-          <Link to={`/browse/${question.domain}/${question.subject}`} className="underline">{question.subject} · {question.topic}</Link>
+          <Link to={`/browse/${question.domain}/${question.subject}`} className="underline">{subject === undefined ? question.subject : subjectName(subject, locale)} · {topic === undefined ? question.topic : topicName(topic, locale)}</Link>
           <Link to={`/q/${question.id}`} className="ml-auto underline">{t('question.permalink')}</Link>
           <Button variant="ghost" onClick={toggleFlag} aria-pressed={flagged}>{flagged ? t('question.flagged') : t('question.flag')}</Button>
         </div>

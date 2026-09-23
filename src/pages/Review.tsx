@@ -8,6 +8,7 @@ import type { JSX } from 'react';
 import { useQuestionBank } from '../hooks/useQuestionBank';
 import { useProgress } from '../hooks/useProgress';
 import { useDrillQueue } from '../hooks/useDrillQueue';
+import { useLocale } from '../hooks/useLocale';
 
 // engine
 import { kindLabel, levelLabel } from '../engine/labels';
@@ -23,6 +24,7 @@ import { questionSummary } from '../utils/questionSummary';
 
 export function Review(): JSX.Element {
   const { t } = useTranslation();
+  const locale = useLocale();
   const { list } = useQuestionBank();
   const { progress } = useProgress();
   const [drilling, setDrilling] = useState(false);
@@ -72,7 +74,7 @@ export function Review(): JSX.Element {
           <Card key={q.id} className="flex flex-wrap items-center gap-2 text-sm">
             <Badge tone={q.level} title={level.hint}>{level.label}</Badge>
             <Badge title={kind.hint}>{kind.label}</Badge>
-            <Link to={`/q/${q.id}`} className="underline">{questionSummary(q)}</Link>
+            <Link to={`/q/${q.id}`} className="underline">{questionSummary(q, { locale, t })}</Link>
             <span className="ml-auto text-xs text-zinc-500">
               {(entry?.attempts ?? 0) > 0 ? `${Math.round((entry?.lastScore ?? 0) * 100)}%` : t('common.unattempted')}{entry?.flagged === true ? ` · ${t('common.flagged')}` : ''}
             </span>

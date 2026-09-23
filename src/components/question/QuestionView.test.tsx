@@ -21,6 +21,10 @@ import { createStaticGrader } from '../../engine/staticGrader';
 import { executeSource } from '../../engine/runner/execute';
 import type { Question } from '../../engine/question';
 import type { Grader } from '../../engine/grader';
+import { indexById, loadQuestions } from '../../engine/registry';
+
+// i18n
+import i18n from '../../i18n';
 
 const single: Question = {
   id: 'javascript-test-single',
@@ -198,5 +202,33 @@ describe('QuestionView', () => {
     await user.click(screen.getByRole('button', { name: /submit/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/worker died/);
     expect(store.get(single.id)).toBeUndefined();
+  });
+
+  it('shows the active language but grades the canonical English question', async () => {
+    const user = userEvent.setup();
+    await i18n.changeLanguage('es');
+    const canonical = indexById(loadQuestions()).get('javascript-closure-counter-independence');
+    if (canonical === undefined) {
+      throw new Error('seed question missing');
+    }
+    const grade = vi.fn<Grader['grade']>(async () => ({ score: 1, verdict: 'pass', feedback: [] }));
+    render(
+      <MemoryRouter>
+        <PreferencesProvider>
+          <ThemeProvider>
+            <ProgressProvider store={createProgressStore(null)}>
+              <GraderProvider grader={{ grade }}>
+                <QuestionView question={canonical} />
+              </GraderProvider>
+            </ProgressProvider>
+          </ThemeProvider>
+        </PreferencesProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('¿Qué se imprime?')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'JavaScript · Closures (clausuras)' })).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: '1' }));
+    await user.click(screen.getByRole('button', { name: /enviar|submit/i }));
+    expect(grade).toHaveBeenCalledWith(canonical, { kind: 'single', optionId: 'a' });
   });
 });

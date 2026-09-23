@@ -12,6 +12,9 @@ import { GraderProvider } from '../contexts/GraderContext';
 
 // engine
 import { filterQuestions, loadQuestions } from '../engine/registry';
+
+// i18n
+import i18n from '../i18n';
 import { createProgressStore } from '../engine/progress';
 import type { ProgressStore } from '../engine/progress';
 
@@ -68,5 +71,19 @@ describe('browse pages', () => {
     expect(bar).toHaveAttribute('aria-valuenow', String(expectedPercent));
     const card = bar.closest('a');
     expect(card?.textContent).toContain('mastery 100%');
+  });
+
+  it('shows translated prompts and taxonomy names in Spanish', async () => {
+    await i18n.changeLanguage('es');
+    renderAt('/browse/languages/javascript');
+    expect(screen.getByRole('link', { name: '¿Qué imprime esto, un valor por línea?' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Closures (clausuras)' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Lenguajes' })).toBeInTheDocument();
+  });
+
+  it('falls back to English prompts for untranslated questions in Spanish', async () => {
+    await i18n.changeLanguage('es');
+    renderAt('/browse/languages/javascript');
+    expect(screen.getByRole('link', { name: /Which of these produce a deep copy/ })).toBeInTheDocument();
   });
 });

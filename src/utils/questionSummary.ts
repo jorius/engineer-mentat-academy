@@ -1,9 +1,10 @@
 // engine
 import type { Question } from '../engine/question';
-import { KIND_LABELS } from '../engine/labels';
+import { KIND_LABELS, kindLabel } from '../engine/labels';
+import type { Translate } from '../engine/labels';
 
 // content
-import { findTopic } from '../content/taxonomy';
+import { findTopic, topicName } from '../content/taxonomy';
 
 const FENCED_CODE_BLOCK = /```[\s\S]*?```/g;
 const UNTERMINATED_FENCE = /```[\s\S]*$/;
@@ -59,18 +60,28 @@ function truncate(text: string, max: number): string {
   return `${boundary.trimEnd()}${ELLIPSIS}`;
 }
 
-function fallbackSummary(question: Question): string {
+export type SummaryOptions = {
+  /** UI language for the topic-name fallback; defaults to English. */
+  locale?: string;
+  /** Translate function for the kind label in the fallback; defaults to the English label. */
+  t?: Translate;
+  /** Maximum length before truncating with an ellipsis. */
+  max?: number;
+};
+
+function fallbackSummary(question: Question, locale: string, t: Translate | undefined): string {
   const topic = findTopic(question.domain, question.subject, question.topic);
-  const topicName = topic?.name ?? question.topic;
-  return `${KIND_LABELS[question.kind].label}: ${topicName}`;
+  const topicLabel = topic === undefined ? question.topic : topicName(topic, locale);
+  const kind = t === undefined ? KIND_LABELS[question.kind].label : kindLabel(question.kind, t).label;
+  return `${kind}: ${topicLabel}`;
 }
 
-export function questionSummary(question: Question, max = 90): string {
+export function questionSummary(question: Question, { locale = 'en', t, max = 90 }: SummaryOptions = {}): string {
   const withoutCode = stripFencedCode(question.prompt);
   const paragraph = firstParagraph(withoutCode);
   const plain = stripInlineMarkdown(paragraph);
   if (plain === '') {
-    return fallbackSummary(question);
+    return fallbackSummary(question, locale, t);
   }
   return truncate(plain, max);
 }

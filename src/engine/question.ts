@@ -101,3 +101,19 @@ export type Answer =
   | { kind: 'code'; source: string }
   | { kind: 'sql'; query: string }
   | { kind: 'open'; checked: boolean[]; text: string };
+
+/**
+ * Translated text for one question. Only reader-facing prose is translatable: code, starter,
+ * solution, tests, SQL schema, answer keys, option ids and expected rows never are. `strict()`
+ * rejects any other field, so a translation cannot smuggle in `code` or `schema`.
+ */
+export const questionTranslationSchema = z
+  .object({
+    prompt: z.string().min(1),
+    explanation: z.string().min(1),
+    options: z.record(z.string(), z.string().min(1)).optional(),
+    modelAnswer: z.string().min(1).optional(),
+    rubric: z.array(z.string().min(1)).optional(),
+  })
+  .strict();
+export type QuestionTranslation = z.infer<typeof questionTranslationSchema>;

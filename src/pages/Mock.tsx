@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { JSX } from 'react';
 
 // content
-import { DOMAINS } from '../content/taxonomy';
+import { DOMAINS, domainName } from '../content/taxonomy';
 
 // engine
 import { LEVELS } from '../engine/question';
@@ -16,6 +16,7 @@ import { levelLabel } from '../engine/labels';
 // hooks
 import { useQuestionBank } from '../hooks/useQuestionBank';
 import { useProgress } from '../hooks/useProgress';
+import { useLocale } from '../hooks/useLocale';
 import { useDrillQueue } from '../hooks/useDrillQueue';
 import { useCountdown } from '../hooks/useCountdown';
 
@@ -57,7 +58,8 @@ function Session({ questions, minutes, onFinish }: { questions: Question[]; minu
 
 export function Mock(): JSX.Element {
   const { t } = useTranslation();
-  const { list } = useQuestionBank();
+  const locale = useLocale();
+  const { list, byId } = useQuestionBank();
   const { progress } = useProgress();
   const [phase, setPhase] = useState<Phase>('setup');
   const [count, setCount] = useState(10);
@@ -97,7 +99,7 @@ export function Mock(): JSX.Element {
         <p>{t('mock.resultsSummary', { answered: answered.length, total: results.length, percent: Math.round(mean * 100) })}</p>
         {results.map((r) => (
           <Card key={r.question.id} className="flex items-center gap-2 text-sm">
-            <Link to={`/q/${r.question.id}`} className="underline">{questionSummary(r.question)}</Link>
+            <Link to={`/q/${r.question.id}`} className="underline">{questionSummary(byId.get(r.question.id) ?? r.question, { locale, t })}</Link>
             <span className="ml-auto">{r.attempted ? `${Math.round(r.score * 100)}%` : t('mock.skipped')}</span>
           </Card>
         ))}
@@ -129,7 +131,7 @@ export function Mock(): JSX.Element {
         <fieldset className="flex flex-wrap gap-3 text-sm">
           <legend className="mb-1">{t('mock.domains')}</legend>
           {DOMAINS.map((domain) => (
-            <label key={domain.id} className="flex items-center gap-1"><input type="checkbox" checked={domains.includes(domain.id)} onChange={(): void => toggle(domain.id, domains, setDomains)} />{domain.name}</label>
+            <label key={domain.id} className="flex items-center gap-1"><input type="checkbox" checked={domains.includes(domain.id)} onChange={(): void => toggle(domain.id, domains, setDomains)} />{domainName(domain, locale)}</label>
           ))}
         </fieldset>
         <Button

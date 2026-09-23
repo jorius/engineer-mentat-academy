@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { JSX } from 'react';
 
 // content
-import { findDomain, findSubject } from '../content/taxonomy';
+import { domainName, findDomain, findSubject, subjectName, topicName } from '../content/taxonomy';
 
 // engine
 import { filterQuestions } from '../engine/registry';
@@ -16,6 +16,7 @@ import { kindLabel, levelLabel } from '../engine/labels';
 // hooks
 import { useQuestionBank } from '../hooks/useQuestionBank';
 import { useProgress } from '../hooks/useProgress';
+import { useLocale } from '../hooks/useLocale';
 
 // components
 import { Badge } from '../components/primitives/Badge';
@@ -29,6 +30,7 @@ export function BrowseSubject(): JSX.Element {
   const { domain: domainId = '', subject: subjectId = '' } = useParams();
   const domain = findDomain(domainId);
   const subject = findSubject(domainId, subjectId);
+  const locale = useLocale();
   const { list } = useQuestionBank();
   const { progress } = useProgress();
   const [levels, setLevels] = useState<Level[]>([...LEVELS]);
@@ -47,10 +49,10 @@ export function BrowseSubject(): JSX.Element {
   return (
     <div className="space-y-4">
       <p className="text-sm text-zinc-500">
-        <Link to="/browse" className="underline">{t('browse.title')}</Link> / <Link to={`/browse/${domain.id}`} className="underline">{domain.name}</Link> / {subject.name}
+        <Link to="/browse" className="underline">{t('browse.title')}</Link> / <Link to={`/browse/${domain.id}`} className="underline">{domainName(domain, locale)}</Link> / {subjectName(subject, locale)}
       </p>
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-2xl font-semibold">{subject.name}</h1>
+        <h1 className="text-2xl font-semibold">{subjectName(subject, locale)}</h1>
         <Link to={`/drill?${drillParams.toString()}`} className="ml-auto rounded-md bg-accent-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-600">{t('browse.drillThese', { count: questions.length })}</Link>
       </div>
       <div className="flex flex-wrap gap-2 text-xs">
@@ -75,7 +77,7 @@ export function BrowseSubject(): JSX.Element {
         }
         return (
           <section key={topic.id} className="space-y-2">
-            <h2 className="text-lg font-medium">{topic.name}</h2>
+            <h2 className="text-lg font-medium">{topicName(topic, locale)}</h2>
             {own.map((q) => {
               const entry = progress[q.id];
               const level = levelLabel(q.level, t);
@@ -84,7 +86,7 @@ export function BrowseSubject(): JSX.Element {
                 <Card key={q.id} className="flex flex-wrap items-center gap-2 text-sm">
                   <Badge tone={q.level} title={level.hint}>{level.label}</Badge>
                   <Badge title={kind.hint}>{kind.label}</Badge>
-                  <Link to={`/q/${q.id}`} className="underline">{questionSummary(q)}</Link>
+                  <Link to={`/q/${q.id}`} className="underline">{questionSummary(q, { locale, t })}</Link>
                   <span className="ml-auto text-xs text-zinc-500">
                     {entry === undefined || entry.attempts === 0 ? t('common.unseen') : t('common.scoreAttempts', { percent: Math.round(entry.lastScore * 100), attempts: entry.attempts })}
                     {entry?.flagged === true ? ` · ${t('common.flagged')}` : ''}
