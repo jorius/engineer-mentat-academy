@@ -109,6 +109,6 @@ export const translations: Record<string, QuestionTranslation> = {
       e: 'Leer el estado de la instancia del componente: `wrapper.state(\'isOpen\')` es igual a `true`',
     },
     explanation:
-      'Los detalles de implementación son cosas que el usuario no puede observar: el estado interno, qué hook lo guarda, qué hijo recibe qué prop. Los tests que hacen aserciones sobre ellos dan **falsos negativos** (fallan con un refactor correcto) y **falsos positivos** (el estado puede ser `true` mientras el diálogo no se renderiza). Las opciones (b) y (d) verifican lo que el usuario ve y con lo que interactúa, mediante roles, así que sobreviven a los refactors y solo fallan cuando el comportamiento se rompe. Este es el argumento central a favor de React Testing Library frente al shallow rendering al estilo de Enzyme.',
+      'Los detalles de implementación son cosas que el usuario no puede observar: el estado interno, qué hook lo guarda, qué hijo recibe qué prop. Los tests que hacen aserciones sobre ellos dan **falsos negativos** (fallan con un refactor correcto) y **falsos positivos** (el estado puede ser `true` mientras el diálogo no se renderiza). Las dos aserciones con `getByRole` verifican lo que el usuario ve y con lo que interactúa, mediante roles, así que sobreviven a los refactors y solo fallan cuando el comportamiento se rompe. Este es el argumento central a favor de React Testing Library frente al shallow rendering al estilo de Enzyme.',
   },
 };

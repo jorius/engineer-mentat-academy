@@ -178,7 +178,7 @@ export function solution(tickets: Ticket[]) {
     tags: ['generics', 'constraints'],
     source: 'notion',
     explanation:
-      'An unconstrained `T` could be anything, so the compiler only allows what is valid for *every* type. `extends { length: number }` is a **constraint**: callers can pass any type that has a numeric `length`, and `T` still carries their exact type out.\n\n- Option b compiles but erases the type: the caller gets back `{ length: number }` and loses string or array methods.\n- Option c compiles by switching checking off, so `longest(1, 2)` would compile and return garbage.\n- Option d sets a **default**, not a constraint; it does not tell the compiler anything about `length`.',
+      'An unconstrained `T` could be anything, so the compiler only allows what is valid for *every* type. `extends { length: number }` is a **constraint**: callers can pass any type that has a numeric `length`, and `T` still carries their exact type out.\n\n- The non-generic `{ length: number }` signature compiles but erases the type: the caller gets back `{ length: number }` and loses string or array methods.\n- The `as any` cast compiles by switching checking off, so `longest(1, 2)` would compile and return garbage.\n- `<T = string>` sets a **default**, not a constraint; it does not tell the compiler anything about `length`.',
   },
   {
     id: 'typescript-interface-vs-type-open',
@@ -300,7 +300,7 @@ console.log(Object.isFrozen(ROLES));`,
     tags: ['enums', 'literal-types', 'isolated-modules'],
     source: 'notion',
     explanation:
-      'Enums are one of the few non-erasable TypeScript features. That shows up as friction: values arriving as JSON strings must be cast to the enum; `const enum` is inlined across files, which Babel, esbuild and `isolatedModules` cannot do; and Node\'s built-in type stripping (and `--erasableSyntaxOnly`) rejects enums altogether.\n\nA union of literals has none of that, and pairing it with an `as const` array gives you the runtime list back. Option d is backwards: an enum *is* a runtime object you can iterate (reverse mappings included), while a union type does not exist at runtime at all.',
+      'Enums are one of the few non-erasable TypeScript features. That shows up as friction: values arriving as JSON strings must be cast to the enum; `const enum` is inlined across files, which Babel, esbuild and `isolatedModules` cannot do; and Node\'s built-in type stripping (and `--erasableSyntaxOnly`) rejects enums altogether.\n\nA union of literals has none of that, and pairing it with an `as const` array gives you the runtime list back. The claim that only a union can be iterated with `Object.values` is backwards: an enum *is* a runtime object you can iterate (reverse mappings included), while a union type does not exist at runtime at all.',
   },
   {
     id: 'typescript-discriminated-union-render',

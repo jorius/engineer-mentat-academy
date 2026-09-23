@@ -122,7 +122,7 @@ export function solution(input: string): string {
     tags: ['react', 'dangerouslysetinnerhtml', 'javascript-urls'],
     source: 'notion',
     explanation:
-      'React escapes text children and attribute values, so (a) and (e) render the payload as inert text. `dangerouslySetInnerHTML` opts out of that on purpose: the name is the warning, and the input must be sanitized first. Setting `innerHTML` through a ref bypasses React completely; markdown renderers happily pass raw HTML through unless configured not to. `href` is escaped as a string but its **meaning** is not checked: `javascript:alert(1)` is still a URL, and depending on the React version you get only a console warning. Allowlist `http:`/`https:` (and maybe `mailto:`) for user-provided URLs.',
+      'React escapes text children and attribute values, so `<p>{bio}</p>` and `<input defaultValue={bio} />` render the payload as inert text. `dangerouslySetInnerHTML` opts out of that on purpose: the name is the warning, and the input must be sanitized first. Setting `innerHTML` through a ref bypasses React completely; markdown renderers happily pass raw HTML through unless configured not to. `href` is escaped as a string but its **meaning** is not checked: `javascript:alert(1)` is still a URL, and depending on the React version you get only a console warning. Allowlist `http:`/`https:` (and maybe `mailto:`) for user-provided URLs.',
   },
   {
     id: 'security-xss-csp-rollout',

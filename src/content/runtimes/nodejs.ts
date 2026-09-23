@@ -121,7 +121,7 @@ fs.readFile(__filename, () => {
     tags: ['event-loop', 'setImmediate', 'setTimeout'],
     source: 'notion',
     explanation:
-      'The `readFile` callback runs in the **poll** phase. When it returns, the loop moves on to the **check** phase, which runs the immediate. The timer can only fire when the loop wraps around to the **timers** phase of the next iteration. So inside an I/O callback, `setImmediate` always wins.\n\nOption c is the right answer for a different program: when both are scheduled from the **main module**, the order is not deterministic. `setTimeout(fn, 0)` is really 1 ms, and whether that 1 ms has elapsed when the first iteration checks timers depends on process startup timing.',
+      'The `readFile` callback runs in the **poll** phase. When it returns, the loop moves on to the **check** phase, which runs the immediate. The timer can only fire when the loop wraps around to the **timers** phase of the next iteration. So inside an I/O callback, `setImmediate` always wins.\n\n"Not deterministic" is the right answer for a different program: when both are scheduled from the **main module**, the order is not deterministic. `setTimeout(fn, 0)` is really 1 ms, and whether that 1 ms has elapsed when the first iteration checks timers depends on process startup timing.',
   },
   {
     id: 'nodejs-nexttick-promise-ordering',

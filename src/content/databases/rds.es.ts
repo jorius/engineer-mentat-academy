@@ -24,7 +24,7 @@ export const translations: Record<string, QuestionTranslation> = {
       e: 'Las read replicas existentes se promueven automáticamente para reemplazar al primario que falló.',
     },
     explanation:
-      'El nombre del endpoint no cambia; RDS cambia su registro DNS al standby promovido, normalmente en uno o dos minutos. Por eso las aplicaciones necesitan un TTL de DNS corto, reintentos de conexión con backoff y un pool que descarte las conexiones rotas; RDS Proxy acorta y oculta buena parte de esto. La replicación síncrona significa que no se pierden datos confirmados, mientras que las transacciones en curso se revierten. Las read replicas no forman parte del failover de RDS Multi-AZ (e es falsa para RDS); en **Aurora**, en cambio, se promueve una réplica usando niveles de prioridad de failover.',
+      'El nombre del endpoint no cambia; RDS cambia su registro DNS al standby promovido, normalmente en uno o dos minutos. Por eso las aplicaciones necesitan un TTL de DNS corto, reintentos de conexión con backoff y un pool que descarte las conexiones rotas; RDS Proxy acorta y oculta buena parte de esto. La replicación síncrona significa que no se pierden datos confirmados, mientras que las transacciones en curso se revierten. Las read replicas no forman parte del failover de RDS Multi-AZ, así que la afirmación de que se promueven automáticamente es falsa para RDS; en **Aurora**, en cambio, se promueve una réplica usando niveles de prioridad de failover.',
   },
   'rds-parameter-group-static-change': {
     prompt:
@@ -36,7 +36,7 @@ export const translations: Record<string, QuestionTranslation> = {
       d: 'Entrar por SSH al host de RDS, editar `postgresql.conf` y luego reiniciar el servicio.',
     },
     explanation:
-      'En RDS, la configuración del motor se gestiona con parameter groups. Los grupos por defecto no se pueden modificar, así que creas un grupo personalizado (idealmente con infraestructura como código) y lo asocias. Los parámetros **dinámicos** se aplican sin reiniciar; los **estáticos** esperan a un reboot, que en producción programas o haces con Multi-AZ para minimizar el tiempo de inactividad. RDS no da acceso al host (d), y el usuario maestro no es un superusuario real, así que `ALTER SYSTEM` no está disponible (c). Como un mismo grupo puede estar compartido por muchas instancias, cambiarlo las cambia a todas.',
+      'En RDS, la configuración del motor se gestiona con parameter groups. Los grupos por defecto no se pueden modificar, así que creas un grupo personalizado (idealmente con infraestructura como código) y lo asocias. Los parámetros **dinámicos** se aplican sin reiniciar; los **estáticos** esperan a un reboot, que en producción programas o haces con Multi-AZ para minimizar el tiempo de inactividad. RDS no da acceso al host, y el usuario maestro no es un superusuario real, así que `ALTER SYSTEM` no está disponible. Como un mismo grupo puede estar compartido por muchas instancias, cambiarlo las cambia a todas.',
   },
   'rds-when-to-choose-aurora': {
     prompt: '¿Cuándo elegirías Amazon Aurora en lugar de RDS estándar para PostgreSQL o MySQL, y cuándo te quedarías con RDS estándar?',

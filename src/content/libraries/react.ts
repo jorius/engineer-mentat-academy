@@ -21,7 +21,7 @@ export const questions: Question[] = [
     tags: ['useEffect', 'cleanup', 'class-components'],
     source: 'notion',
     explanation:
-      'An effect with `[]` runs after the first commit, and the function it returns is the cleanup React calls on unmount. Without the array (c) the effect and its cleanup run after **every** render, so you resubscribe on each render. (b) unsubscribes immediately. (d) puts a side effect in `useMemo`, which runs during render and may run more than once or be thrown away.\n\nThe better mental model is not "lifecycle" but "synchronize with an external system": if the subscription depended on a prop such as `storeId`, it would go in the dependency array, and that single effect would also replace `componentDidUpdate`.',
+      'An effect with `[]` runs after the first commit, and the function it returns is the cleanup React calls on unmount. Without the array the effect and its cleanup run after **every** render, so you resubscribe on each render. Calling `unsubscribe()` right after `subscribe()` unsubscribes immediately. The `useMemo` variant puts a side effect in `useMemo`, which runs during render and may run more than once or be thrown away.\n\nThe better mental model is not "lifecycle" but "synchronize with an external system": if the subscription depended on a prop such as `storeId`, it would go in the dependency array, and that single effect would also replace `componentDidUpdate`.',
   },
   {
     id: 'react-strict-mode-effect-twice',
@@ -96,7 +96,7 @@ What is logged right after the first mount?`,
     tags: ['rules-of-hooks'],
     source: 'topic-list',
     explanation:
-      'React identifies each hook by its **call order** within a render, so every render must call the same hooks in the same order, and only from components or custom hooks. An early return before a hook (a) makes the hook conditional. A loop (b) changes the count when `fields` changes. A hook in an event-handler helper (d) runs outside rendering entirely. Custom hooks (c) are just functions whose name starts with `use` and that call hooks at their own top level, which is the approved way to share hook logic.\n\n(React 19\'s `use()` is the one exception that may be called conditionally.)',
+      'React identifies each hook by its **call order** within a render, so every render must call the same hooks in the same order, and only from components or custom hooks. An early return before a hook makes the hook conditional. A loop changes the count when `fields` changes. A hook in an event-handler helper runs outside rendering entirely. Custom hooks like `useThemeColor()` are just functions whose name starts with `use` and that call hooks at their own top level, which is the approved way to share hook logic.\n\n(React 19\'s `use()` is the one exception that may be called conditionally.)',
   },
   {
     id: 'react-usestate-batched-increments',
@@ -565,7 +565,7 @@ function TicketList({ tickets }) {
     tags: ['keys', 'state-reset', 'useState'],
     source: 'topic-list',
     explanation:
-      'React keeps state for the same component type at the same position in the tree. Changing `key` tells React it is a different instance, so it unmounts the old one and mounts a fresh one with fresh state (including every child\'s state). The effect (b) works but renders once with the stale draft and only resets the one field you remembered. The lazy initializer (c) runs only on mount. `React.memo` (d) never remounts anything; it only skips renders.',
+      'React keeps state for the same component type at the same position in the tree. Changing `key` tells React it is a different instance, so it unmounts the old one and mounts a fresh one with fresh state (including every child\'s state). The `useEffect` reset works but renders once with the stale draft and only resets the one field you remembered. The lazy initializer runs only on mount. `React.memo` never remounts anything; it only skips renders.',
   },
   {
     id: 'react-controlled-input-no-onchange',
@@ -651,6 +651,6 @@ function TicketList({ tickets }) {
     tags: ['useDeferredValue', 'useTransition', 'concurrent-rendering'],
     source: 'notion',
     explanation:
-      'Both concurrent hooks mark work as non-urgent so React can interrupt it to keep typing responsive. `useTransition` wraps the **state update**, so you need to own the setter (b is impossible here). `useDeferredValue` wraps a **value you receive**: React first re-renders with the old deferred value, then renders the new one in the background and abandons it if another keystroke arrives. The `useMemo` matters: without it the urgent render still re-filters. `React.memo` (c) cannot help because `query` really changes on each keystroke, and `useLayoutEffect` (d) blocks paint even harder. Unlike a debounce there is no fixed delay: fast devices update almost immediately. For network requests you still debounce. Show `query !== deferred` as a "stale" hint.\n\n**Say this out loud:** "`useTransition` when I own the state update, `useDeferredValue` when I only receive the value; both keep input urgent and let the expensive render be interrupted, which a debounce cannot do."',
+      'Both concurrent hooks mark work as non-urgent so React can interrupt it to keep typing responsive. `useTransition` wraps the **state update**, so you need to own the setter (wrapping `setQuery` in `startTransition` is impossible here). `useDeferredValue` wraps a **value you receive**: React first re-renders with the old deferred value, then renders the new one in the background and abandons it if another keystroke arrives. The `useMemo` matters: without it the urgent render still re-filters. `React.memo` cannot help because `query` really changes on each keystroke, and `useLayoutEffect` blocks paint even harder. Unlike a debounce there is no fixed delay: fast devices update almost immediately. For network requests you still debounce. Show `query !== deferred` as a "stale" hint.\n\n**Say this out loud:** "`useTransition` when I own the state update, `useDeferredValue` when I only receive the value; both keep input urgent and let the expensive render be interrupted, which a debounce cannot do."',
   },
 ];

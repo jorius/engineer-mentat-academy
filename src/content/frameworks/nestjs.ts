@@ -21,7 +21,7 @@ export const questions: Question[] = [
     tags: ['dependency-injection', 'modules'],
     source: 'topic-list',
     explanation:
-      "Providers are **encapsulated** in the module that declares them. Another module can inject a provider only if the owning module lists it in `exports` and the consumer lists that module in `imports`. Option b compiles but creates a **second, independent instance** of `UsersService` (and forces `OrdersModule` to satisfy all of its dependencies), which breaks any in-memory state or caching. `providedIn: 'root'` is Angular, not Nest. `@Global()` modules exist but are meant for a few truly cross-cutting providers such as config or logging.",
+      "Providers are **encapsulated** in the module that declares them. Another module can inject a provider only if the owning module lists it in `exports` and the consumer lists that module in `imports`. Adding `UsersService` to the `providers` of `OrdersModule` compiles but creates a **second, independent instance** of `UsersService` (and forces `OrdersModule` to satisfy all of its dependencies), which breaks any in-memory state or caching. `providedIn: 'root'` is Angular, not Nest. `@Global()` modules exist but are meant for a few truly cross-cutting providers such as config or logging.",
   },
   {
     id: 'nestjs-unhandled-error-default-response',

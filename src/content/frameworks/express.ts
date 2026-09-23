@@ -236,7 +236,7 @@ export const questions: Question[] = [
     tags: ['streaming', 'headers-sent', 'error-middleware'],
     source: 'topic-list',
     explanation:
-      "Once the status line and headers are on the wire you cannot change the status code. Trying produces `ERR_HTTP_HEADERS_SENT` inside your error handler. Express's docs prescribe exactly this guard: if `res.headersSent`, call `next(err)` and let the built-in handler close the socket. The client then sees an aborted transfer instead of a truncated file that looks complete. Ending the response cleanly (option b) is the worst choice because it turns a failure into silent data loss.\n\n**Say this out loud:** \"An error handler has to check `res.headersSent`; after streaming has started the only honest signal left is aborting the connection, so I delegate to Express's default handler.\"",
+      "Once the status line and headers are on the wire you cannot change the status code. Trying produces `ERR_HTTP_HEADERS_SENT` inside your error handler. Express's docs prescribe exactly this guard: if `res.headersSent`, call `next(err)` and let the built-in handler close the socket. The client then sees an aborted transfer instead of a truncated file that looks complete. Ending the response cleanly with `res.end()` is the worst choice because it turns a failure into silent data loss.\n\n**Say this out loud:** \"An error handler has to check `res.headersSent`; after streaming has started the only honest signal left is aborting the connection, so I delegate to Express's default handler.\"",
   },
   {
     id: 'express-compose-middleware-fix',

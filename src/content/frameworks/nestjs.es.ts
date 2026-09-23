@@ -12,7 +12,7 @@ export const translations: Record<string, QuestionTranslation> = {
       d: 'Agrega `UsersModule` al array `exports` de `OrdersModule`',
     },
     explanation:
-      "Los providers están **encapsulados** en el módulo que los declara. Otro módulo puede inyectar un provider solo si el módulo dueño lo incluye en `exports` y el consumidor incluye ese módulo en `imports`. La opción b compila, pero crea una **segunda instancia independiente** de `UsersService` (y obliga a `OrdersModule` a satisfacer todas sus dependencias), lo que rompe cualquier estado en memoria o caché. `providedIn: 'root'` es de Angular, no de Nest. Los módulos `@Global()` existen, pero están pensados para unos pocos providers realmente transversales, como la configuración o el logging.",
+      "Los providers están **encapsulados** en el módulo que los declara. Otro módulo puede inyectar un provider solo si el módulo dueño lo incluye en `exports` y el consumidor incluye ese módulo en `imports`. Agregar `UsersService` a los `providers` de `OrdersModule` compila, pero crea una **segunda instancia independiente** de `UsersService` (y obliga a `OrdersModule` a satisfacer todas sus dependencias), lo que rompe cualquier estado en memoria o caché. `providedIn: 'root'` es de Angular, no de Nest. Los módulos `@Global()` existen, pero están pensados para unos pocos providers realmente transversales, como la configuración o el logging.",
   },
   'nestjs-unhandled-error-default-response': {
     prompt:

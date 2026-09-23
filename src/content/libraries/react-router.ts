@@ -91,7 +91,7 @@ At \`/orders/42\`, \`order\` is \`undefined\` even though an order with \`id: 42
     tags: ['useNavigate', 'history', 'auth-redirect'],
     source: 'topic-list',
     explanation:
-      '`replace: true` replaces the current history entry (`/login`) instead of pushing a new one, so Back skips the login form. (b) pushes, so Back lands on `/login` again. (c) causes a full reload and also pushes an entry. (d) goes back to wherever the user came from, which may not be the page they requested. `from` usually comes from the guard that redirected to login: `<Navigate to="/login" replace state={{ from: location }} />`, read with `useLocation().state`.',
+      '`replace: true` replaces the current history entry (`/login`) instead of pushing a new one, so Back skips the login form. `navigate` without `replace` pushes, so Back lands on `/login` again. Setting `window.location.href` causes a full reload and also pushes an entry. `navigate(-1)` goes back to wherever the user came from, which may not be the page they requested. `from` usually comes from the guard that redirected to login: `<Navigate to="/login" replace state={{ from: location }} />`, read with `useLocation().state`.',
   },
   {
     id: 'react-router-protected-routes',

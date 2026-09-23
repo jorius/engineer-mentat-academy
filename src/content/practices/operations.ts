@@ -158,7 +158,7 @@ export function solution(logs: LogLine[], correlationId: string): { path: string
     tags: ['alerting', 'slo', 'on-call'],
     source: 'topic-list',
     explanation:
-      'A page should mean "a human must act now to protect users". Symptom-based alerts on SLOs catch every cause that hurts users, including ones nobody predicted, while cause-based thresholds fire when nothing is wrong (CPU at 85% during a healthy batch job). Durations and multi-window burn rates filter flapping. Runbooks and a regular alert review keep the set honest. Muting without a replacement (d) just hides the signal and is how real incidents get missed.\n\n**Say this out loud:** "I page on symptoms, not causes: SLO burn-rate alerts on errors and latency, each one actionable with a runbook, and everything else goes to a ticket or a dashboard."',
+      'A page should mean "a human must act now to protect users". Symptom-based alerts on SLOs catch every cause that hurts users, including ones nobody predicted, while cause-based thresholds fire when nothing is wrong (CPU at 85% during a healthy batch job). Durations and multi-window burn rates filter flapping. Runbooks and a regular alert review keep the set honest. Muting without a replacement just hides the signal and is how real incidents get missed.\n\n**Say this out loud:** "I page on symptoms, not causes: SLO burn-rate alerts on errors and latency, each one actionable with a runbook, and everything else goes to a ticket or a dashboard."',
   },
   {
     id: 'operations-performance-percentiles',

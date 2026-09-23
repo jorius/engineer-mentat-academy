@@ -50,7 +50,7 @@ export const translations: Record<string, QuestionTranslation> = {
       c: '`<a href={website}>Website</a>` sin validar el esquema de la URL',
     },
     explanation:
-      'React escapa los hijos de texto y los valores de atributos, así que (a) y (e) muestran el payload como texto inerte. `dangerouslySetInnerHTML` desactiva eso a propósito: el nombre es la advertencia, y la entrada se debe sanitizar primero. Asignar `innerHTML` mediante una ref se salta React por completo; los renderizadores de markdown dejan pasar HTML crudo sin problema a menos que se configuren para no hacerlo. `href` se escapa como cadena, pero su **significado** no se revisa: `javascript:alert(1)` sigue siendo una URL, y según la versión de React solo obtienes una advertencia en la consola. Usa una allowlist de `http:`/`https:` (y quizá `mailto:`) para las URLs que aportan los usuarios.',
+      'React escapa los hijos de texto y los valores de atributos, así que `<p>{bio}</p>` y `<input defaultValue={bio} />` muestran el payload como texto inerte. `dangerouslySetInnerHTML` desactiva eso a propósito: el nombre es la advertencia, y la entrada se debe sanitizar primero. Asignar `innerHTML` mediante una ref se salta React por completo; los renderizadores de markdown dejan pasar HTML crudo sin problema a menos que se configuren para no hacerlo. `href` se escapa como cadena, pero su **significado** no se revisa: `javascript:alert(1)` sigue siendo una URL, y según la versión de React solo obtienes una advertencia en la consola. Usa una allowlist de `http:`/`https:` (y quizá `mailto:`) para las URLs que aportan los usuarios.',
   },
   'security-xss-csp-rollout': {
     prompt:
@@ -92,6 +92,6 @@ export const translations: Record<string, QuestionTranslation> = {
       'Señala que la autenticación con cookies reintroduce el CSRF, que se maneja con SameSite más tokens o verificaciones de Origin',
     ],
     explanation:
-      'Esta es una pregunta de trade-offs. La respuesta débil es "localStorage es inseguro"; la respuesta fuerte nombra ambos ataques, compara su radio de impacto y elige sesiones basadas en cookies con defensas contra CSRF, porque el robo de tokens por XSS es la peor falla.\n\n**Dilo en voz alta:** "Los tokens en localStorage cambian el CSRF por el robo de tokens ante cualquier XSS. Prefiero una cookie HttpOnly, Secure y SameSite, idealmente a través de un BFF, y luego cierro el CSRF con un token o una verificación de Origin."',
+      'Esta es una pregunta de trade-offs. Una respuesta floja es "localStorage es inseguro"; la respuesta fuerte nombra ambos ataques, compara su radio de impacto y elige sesiones basadas en cookies con defensas contra CSRF, porque el robo de tokens por XSS es la peor falla.\n\n**Dilo en voz alta:** "Los tokens en localStorage cambian el CSRF por el robo de tokens ante cualquier XSS. Prefiero una cookie HttpOnly, Secure y SameSite, idealmente a través de un BFF, y luego cierro el CSRF con un token o una verificación de Origin."',
   },
 };

@@ -21,7 +21,7 @@ export const questions: Question[] = [
     tags: ['lambda', 'layers', 'cold-start'],
     source: 'topic-list',
     explanation:
-      'A cold start is the time to create an execution environment: fetch and unpack the code (function **plus** layers), start the runtime, then run your init code (top-level imports, SDK clients). Layers change *where* the bytes live, not how many are loaded, so init time is essentially the same. Layers are for **sharing** code or binaries across functions and keeping the function artifact small to deploy; limits are 5 layers per function and 250 MB unzipped for function plus layers (container images go up to 10 GB). What actually shortens cold starts: a smaller bundle (tree-shaken, only the SDK v3 clients you use), lazy imports on rare paths, more memory (CPU scales with it), provisioned concurrency, or SnapStart on the runtimes that support it. Layers are not reloaded per invocation, so option d is also wrong.',
+      'A cold start is the time to create an execution environment: fetch and unpack the code (function **plus** layers), start the runtime, then run your init code (top-level imports, SDK clients). Layers change *where* the bytes live, not how many are loaded, so init time is essentially the same. Layers are for **sharing** code or binaries across functions and keeping the function artifact small to deploy; limits are 5 layers per function and 250 MB unzipped for function plus layers (container images go up to 10 GB). What actually shortens cold starts: a smaller bundle (tree-shaken, only the SDK v3 clients you use), lazy imports on rare paths, more memory (CPU scales with it), provisioned concurrency, or SnapStart on the runtimes that support it. Layers are not reloaded per invocation, so the claim that each layer adds a network round trip on every invocation is also wrong.',
   },
   {
     id: 'aws-lambda-concurrency-controls',
@@ -84,7 +84,7 @@ export const questions: Question[] = [
     tags: ['api-gateway', 'http-api', 'rest-api'],
     source: 'topic-list',
     explanation:
-      'HTTP APIs are the cheaper, lower-latency option (roughly $1.00 vs $3.50 per million requests) with a **native JWT authorizer**, simple Lambda proxy and HTTP proxy integrations, and automatic deployments. REST APIs keep the richer feature set: API keys and usage plans, stage caching, direct WAF association, request validation, mapping templates (VTL) for request/response transformation, private endpoints inside a VPC, edge-optimized endpoints and direct integrations with many AWS services. Rule of thumb: start with HTTP API unless you need one of those REST-only features. Option b is the one HTTP APIs do natively; REST only has a Cognito-specific authorizer, otherwise you write a Lambda authorizer.',
+      'HTTP APIs are the cheaper, lower-latency option (roughly $1.00 vs $3.50 per million requests) with a **native JWT authorizer**, simple Lambda proxy and HTTP proxy integrations, and automatic deployments. REST APIs keep the richer feature set: API keys and usage plans, stage caching, direct WAF association, request validation, mapping templates (VTL) for request/response transformation, private endpoints inside a VPC, edge-optimized endpoints and direct integrations with many AWS services. Rule of thumb: start with HTTP API unless you need one of those REST-only features. Validating JWTs from any OIDC issuer is the one HTTP APIs do natively; REST only has a Cognito-specific authorizer, otherwise you write a Lambda authorizer.',
   },
   {
     id: 'aws-api-gateway-throttling-status',
@@ -149,7 +149,7 @@ export const questions: Question[] = [
     tags: ['s3', 'consistency'],
     source: 'topic-list',
     explanation:
-      'Since December 2020 every S3 read after a successful write returns the latest data, for new objects, overwrites, deletes and list operations, at no extra cost. Answer a describes the old model that many blog posts still repeat. Strong consistency does not mean locking: two concurrent writers still produce last-writer-wins. For optimistic concurrency use **conditional writes** (`If-None-Match: *` to create only if absent, `If-Match` with an ETag to update only the version you read).',
+      'Since December 2020 every S3 read after a successful write returns the latest data, for new objects, overwrites, deletes and list operations, at no extra cost. The "eventually consistent overwrites" answer describes the old model that many blog posts still repeat. Strong consistency does not mean locking: two concurrent writers still produce last-writer-wins. For optimistic concurrency use **conditional writes** (`If-None-Match: *` to create only if absent, `If-Match` with an ETag to update only the version you read).',
   },
   {
     id: 'aws-s3-static-spa-hosting',
@@ -307,7 +307,7 @@ export function solution(event: S3Event): { bucket: string; key: string }[] {
     tags: ['sns', 'sqs', 'fan-out', 'messaging'],
     source: 'topic-list',
     explanation:
-      '**SNS** is push-based pub/sub: one publish is copied to every subscription, but SNS does not store messages for later reading. **SQS** is a pull-based queue with retention (up to 14 days); consumers of one queue *compete*, so each message goes to only one of them (option a gives each order to one service, not all three). The fan-out pattern combines them: SNS copies the event, each SQS queue buffers it for its own service, and each service scales and fails independently. Direct HTTPS subscriptions have limited retries, so a service down for an hour loses events. Topics cannot be polled at all.',
+      '**SNS** is push-based pub/sub: one publish is copied to every subscription, but SNS does not store messages for later reading. **SQS** is a pull-based queue with retention (up to 14 days); consumers of one queue *compete*, so each message goes to only one of them (the single shared queue gives each order to one service, not all three). The fan-out pattern combines them: SNS copies the event, each SQS queue buffers it for its own service, and each service scales and fails independently. Direct HTTPS subscriptions have limited retries, so a service down for an hour loses events. Topics cannot be polled at all.',
   },
   {
     id: 'aws-s3-to-sns-required-wiring',

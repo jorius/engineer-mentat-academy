@@ -23,7 +23,7 @@ export const questions: Question[] = [
     tags: ['document-store', 'mongodb'],
     source: 'topic-list',
     explanation:
-      'Document stores shine when the unit you read and write is a self-contained, variably shaped aggregate: one document holds the product, its variants and its specs, so the page is one read with no joins. The ledger (b) needs multi-row ACID invariants and constraints, the home ground of a relational database (MongoDB has multi-document transactions, but they are not its sweet spot). Ad-hoc analytics (c) wants SQL and a columnar warehouse. Multi-hop relationship traversal (d) is what graph databases such as Neo4j or Neptune are built for.',
+      'Document stores shine when the unit you read and write is a self-contained, variably shaped aggregate: one document holds the product, its variants and its specs, so the page is one read with no joins. The ledger needs multi-row ACID invariants and constraints, the home ground of a relational database (MongoDB has multi-document transactions, but they are not its sweet spot). Ad-hoc analytics wants SQL and a columnar warehouse. Multi-hop relationship traversal is what graph databases such as Neo4j or Neptune are built for.',
   },
   {
     id: 'nosql-store-families',
@@ -43,7 +43,7 @@ export const questions: Question[] = [
     tags: ['key-value', 'graph', 'wide-column', 'redis'],
     source: 'topic-list',
     explanation:
-      'Redis is an in-memory key-value store with per-key TTLs and atomic operations such as `INCR`, which is exactly what sessions, caches and rate limiters need. Time-series ingestion (b) fits a wide-column store such as Cassandra or a time-series database, keyed by device and time bucket. Wide-column stores (c) are designed around known queries and have no joins. Document stores (d) can hold counters, but a shared hot counter at sub-millisecond latency is the key-value store job.',
+      'Redis is an in-memory key-value store with per-key TTLs and atomic operations such as `INCR`, which is exactly what sessions, caches and rate limiters need. Time-series ingestion fits a wide-column store such as Cassandra or a time-series database, keyed by device and time bucket. Wide-column stores are designed around known queries and have no joins. Document stores can hold counters, but a shared hot counter at sub-millisecond latency is the key-value store job.',
   },
   {
     id: 'nosql-schemaless-myth',

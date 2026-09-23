@@ -15,6 +15,47 @@ import { findSubject, findTopic } from './taxonomy';
 const bank = loadQuestions();
 const runSql = createSqlRunner(loadSqlInNode);
 
+// Options are shuffled at render time and labelled by position, so prose must name an option
+// by its content, never by its id letter.
+const OPTION_LETTER_REFERENCES: readonly RegExp[] = [
+  /\b[Oo]ptions?\s+`?[a-f]`?\b/,
+  /\b[Oo]pci[oó]n(es)?\s+`?[a-f]`?\b/,
+  /`[a-f]`\s+(is|es|está|are|son)\s+(wrong|correct|right|incorrecta?|correcta?|falsa?|verdadera?)/,
+  /\b(answer|respuesta)\s+`?[a-f]`?\b/i,
+  /(^|[\s,(])[a-f]\s+(is|es|está|are|son)\s+(wrong|correct|right|false|true|incorrecta?|correcta?|falsa?|verdadera?)\b/,
+];
+
+// A parenthesised label such as "(b)" or "(a, c)" only points at an option in single and multi
+// questions; open questions may use it for the scenarios listed in their own prompt.
+const OPTION_LABEL = /(^|[\s,])\(`?[a-f]`?(,\s*`?[a-f]`?)*\)/m;
+
+function optionLetterReferences(texts: readonly (string | undefined)[], hasOptions: boolean): string[] {
+  const patterns = hasOptions ? [...OPTION_LETTER_REFERENCES, OPTION_LABEL] : OPTION_LETTER_REFERENCES;
+  return texts.flatMap((text) => {
+    if (text === undefined) {
+      return [];
+    }
+    return patterns.flatMap((pattern) => {
+      const match = pattern.exec(text);
+      return match === null ? [] : [text.slice(Math.max(0, match.index - 40), match.index + match[0].length + 40)];
+    });
+  });
+}
+
+function hasOptions(question: Question): boolean {
+  return question.kind === 'single' || question.kind === 'multi';
+}
+
+function questionProse(question: Question): (string | undefined)[] {
+  const options = question.kind === 'single' || question.kind === 'multi' ? question.options.map((o) => o.text) : [];
+  const open = question.kind === 'open' ? [question.modelAnswer, ...question.rubric] : [];
+  return [question.explanation, ...options, ...open];
+}
+
+function translationProse(text: QuestionTranslation): (string | undefined)[] {
+  return [text.explanation, ...Object.values(text.options ?? {}), text.modelAnswer, ...(text.rubric ?? [])];
+}
+
 describe('question bank', () => {
   it('is not empty', () => {
     expect(bank.length).toBeGreaterThan(0);
@@ -34,6 +75,7 @@ describe('question bank', () => {
     if (question.level === 'senior') {
       expect(question.explanation, 'senior questions need a Say this out loud line').toContain('**Say this out loud:**');
     }
+    expect(optionLetterReferences(questionProse(question), hasOptions(question)), 'name options by content, not by id letter').toEqual([]);
 
     if (question.kind === 'single') {
       expect(question.options.map((o) => o.id)).toContain(question.answer);
@@ -114,6 +156,7 @@ describe('question translations', () => {
     if (question.level === 'senior') {
       expect(text.explanation, 'senior translations keep the Say this out loud line').toContain('**Dilo en voz alta:**');
     }
+    expect(optionLetterReferences(translationProse(text), hasOptions(question)), 'name options by content, not by id letter').toEqual([]);
     if (text.options !== undefined) {
       expect(question.kind === 'single' || question.kind === 'multi', 'only single and multi questions have options').toBe(true);
       const optionIds = question.kind === 'single' || question.kind === 'multi' ? question.options.map((o) => o.id) : [];

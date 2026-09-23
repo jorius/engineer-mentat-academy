@@ -300,7 +300,7 @@ ORDER BY department, e.name`,
     tags: ['composite-index', 'leftmost-prefix', 'explain'],
     source: 'topic-list',
     explanation:
-      'A composite B-tree is sorted by `customer_id`, then by `created_at` within each customer. It can seek on any **leftmost prefix** of its columns: equality on `customer_id` (a), equality then a range on `created_at` (b). Within one customer the entries are already in `created_at` order, so (d) walks the index backwards and stops after 10 rows with no sort step. (c) skips the leading column, so there is no contiguous range to seek; some engines can do a skip scan, but only when the leading column has few distinct values. In (e) the range on the first column ends the seekable prefix: the engine seeks `customer_id > 7` and then checks `created_at` row by row. Rule of thumb: equality columns first, then the range or sort column.\n\n**Say this out loud:** "I order composite index columns as equality predicates first, then the range or `ORDER BY` column, because the index can only seek on a leftmost prefix and a range stops the prefix."',
+      'A composite B-tree is sorted by `customer_id`, then by `created_at` within each customer. It can seek on any **leftmost prefix** of its columns: equality on `customer_id` alone, or equality then a range on `created_at`. Within one customer the entries are already in `created_at` order, so `ORDER BY created_at DESC LIMIT 10` walks the index backwards and stops after 10 rows with no sort step. Filtering on `created_at` alone skips the leading column, so there is no contiguous range to seek; some engines can do a skip scan, but only when the leading column has few distinct values. In `customer_id > 7 AND created_at = ...` the range on the first column ends the seekable prefix: the engine seeks `customer_id > 7` and then checks `created_at` row by row. Rule of thumb: equality columns first, then the range or sort column.\n\n**Say this out loud:** "I order composite index columns as equality predicates first, then the range or `ORDER BY` column, because the index can only seek on a leftmost prefix and a range stops the prefix."',
   },
   {
     id: 'sql-like-leading-wildcard',
@@ -370,7 +370,7 @@ ORDER BY department, e.name`,
     tags: ['n-plus-one', 'orm', 'batching'],
     source: 'topic-list',
     explanation:
-      'This is the N+1 pattern: one query for the parent list plus one per parent. Each statement pays a network round trip, parsing and planning, so latency grows linearly with N even when every query is fast. The fix removes round trips: one `JOIN`, or two queries total (parents, then `IN (...)` for children, which is what ORM eager loading and GraphQL DataLoader do). The index (a) is worth having but still leaves N round trips. Parallelism (c) and a bigger pool (d) move the load onto the database and exhaust connections under concurrency.',
+      'This is the N+1 pattern: one query for the parent list plus one per parent. Each statement pays a network round trip, parsing and planning, so latency grows linearly with N even when every query is fast. The fix removes round trips: one `JOIN`, or two queries total (parents, then `IN (...)` for children, which is what ORM eager loading and GraphQL DataLoader do). The index on `orders.customer_id` is worth having but still leaves N round trips. Running the queries in parallel with `Promise.all` and raising the pool size move the load onto the database and exhaust connections under concurrency.',
   },
   {
     id: 'sql-non-sargable-predicates',
@@ -392,7 +392,7 @@ ORDER BY department, e.name`,
     tags: ['sargable', 'expression-index', 'explain'],
     source: 'topic-list',
     explanation:
-      'An index stores the raw column value, so a predicate can seek only when the column stands alone on one side of the comparison ("sargable"). Wrapping the column in a function (a, c) or doing arithmetic on it (d) forces the engine to compute the expression for every row. Rewrite (a) as the half-open range in (b), and (d) as `created_at > NOW() - INTERVAL \'1 day\'`. For case-insensitive email lookups, add an expression index on `LOWER(email)` or use a case-insensitive type or collation (`citext` in Postgres). Another quiet cause is an implicit cast, such as comparing a `VARCHAR` column with a number in MySQL.',
+      'An index stores the raw column value, so a predicate can seek only when the column stands alone on one side of the comparison ("sargable"). Wrapping the column in a function (`DATE(created_at)`, `LOWER(email)`) or doing arithmetic on it (`created_at + INTERVAL ...`) forces the engine to compute the expression for every row. Rewrite the `DATE(created_at)` filter as the half-open range `created_at >= ... AND created_at < ...`, and the arithmetic one as `created_at > NOW() - INTERVAL \'1 day\'`. For case-insensitive email lookups, add an expression index on `LOWER(email)` or use a case-insensitive type or collation (`citext` in Postgres). Another quiet cause is an implicit cast, such as comparing a `VARCHAR` column with a number in MySQL.',
   },
   {
     id: 'sql-diagnose-slow-query-explain',

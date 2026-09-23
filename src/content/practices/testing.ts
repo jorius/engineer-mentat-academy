@@ -327,6 +327,6 @@ export function solution(plan: Step[], tickMs: number): string[] {
     tags: ['react-testing-library', 'implementation-details', 'refactoring'],
     source: 'topic-list',
     explanation:
-      'Implementation details are things the user cannot observe: internal state, which hook holds it, which child receives which prop. Tests that assert on them give **false negatives** (they fail on a correct refactor) and **false positives** (state can be `true` while the dialog is not rendered). Options (b) and (d) assert on what the user sees and interacts with, through roles, so they survive refactors and fail only when behaviour breaks. This is the core argument for React Testing Library over Enzyme-style shallow rendering.',
+      'Implementation details are things the user cannot observe: internal state, which hook holds it, which child receives which prop. Tests that assert on them give **false negatives** (they fail on a correct refactor) and **false positives** (state can be `true` while the dialog is not rendered). The two `getByRole` assertions check what the user sees and interacts with, through roles, so they survive refactors and fail only when behaviour breaks. This is the core argument for React Testing Library over Enzyme-style shallow rendering.',
   },
 ];

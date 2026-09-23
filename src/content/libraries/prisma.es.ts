@@ -4,7 +4,7 @@ import type { QuestionTranslation } from '../../engine/question';
 export const translations: Record<string, QuestionTranslation> = {
   'prisma-select-vs-include': {
     prompt: '¿Qué query de Prisma devuelve el `email` de cada usuario y sus `posts`, y **ningún otro** campo de `User`?',
-    explanation: '`select` enumera exactamente lo que se devuelve, y una relación dentro de `select` también se carga. `include` significa "todos los campos escalares **más** estas relaciones". Los dos no se pueden usar en el mismo nivel (b es un error de validación), e `include` solo acepta relaciones (c). (d) filtra a los usuarios con posts pero devuelve solo los emails. Seleccionar solo los campos que necesitas también mantiene los secretos como `passwordHash` fuera de las respuestas de la API, y los tipos generados siguen la selección.',
+    explanation: '`select` enumera exactamente lo que se devuelve, y una relación dentro de `select` también se carga. `include` significa "todos los campos escalares **más** estas relaciones". Los dos no se pueden usar en el mismo nivel (combinarlos es un error de validación), e `include` solo acepta relaciones, así que `include: { email: true }` falla. La consulta con `where: { posts: { some: {} } }` filtra a los usuarios con posts pero devuelve solo los emails. Seleccionar solo los campos que necesitas también mantiene los secretos como `passwordHash` fuera de las respuestas de la API, y los tipos generados siguen la selección.',
   },
   'prisma-migrate-deploy': {
     prompt: '¿Qué comando del CLI de Prisma va en el pipeline de despliegue a producción?',

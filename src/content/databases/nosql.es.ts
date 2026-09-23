@@ -11,7 +11,7 @@ export const translations: Record<string, QuestionTranslation> = {
       d: 'Una recomendación de amigos de amigos que recorre relaciones hasta cuatro saltos de profundidad.',
     },
     explanation:
-      'Los document stores brillan cuando la unidad que lees y escribes es un agregado autocontenido y de forma variable: un documento guarda el producto, sus variantes y sus especificaciones, así que la página se resuelve con una sola lectura y sin joins. El libro contable (b) necesita invariantes ACID sobre varias filas y restricciones, el terreno natural de una base de datos relacional (MongoDB tiene transacciones multidocumento, pero no son su punto fuerte). La analítica ad hoc (c) pide SQL y un data warehouse columnar. Recorrer relaciones de varios saltos (d) es justo para lo que están hechas las bases de datos de grafos como Neo4j o Neptune.',
+      'Los document stores brillan cuando la unidad que lees y escribes es un agregado autocontenido y de forma variable: un documento guarda el producto, sus variantes y sus especificaciones, así que la página se resuelve con una sola lectura y sin joins. El libro contable necesita invariantes ACID sobre varias filas y restricciones, el terreno natural de una base de datos relacional (MongoDB tiene transacciones multidocumento, pero no son su punto fuerte). La analítica ad hoc pide SQL y un data warehouse columnar. Recorrer relaciones de varios saltos es justo para lo que están hechas las bases de datos de grafos como Neo4j o Neptune.',
   },
   'nosql-store-families': {
     prompt: '¿Qué combinación de familia NoSQL y caso de uso es la más adecuada?',
@@ -22,7 +22,7 @@ export const translations: Record<string, QuestionTranslation> = {
       d: 'Document store (MongoDB) para contadores atómicos de menos de un milisegundo compartidos por todas las instancias de la API.',
     },
     explanation:
-      'Redis es un key-value store en memoria con TTL por clave y operaciones atómicas como `INCR`, que es justo lo que necesitan las sesiones, las cachés y los rate limiters. La ingesta de series de tiempo (b) encaja en un wide-column store como Cassandra o en una base de datos de series de tiempo, con clave por dispositivo y bloque de tiempo. Los wide-column stores (c) se diseñan en torno a consultas conocidas y no tienen joins. Los document stores (d) pueden guardar contadores, pero un contador compartido y muy disputado con latencia de menos de un milisegundo es trabajo de un key-value store.',
+      'Redis es un key-value store en memoria con TTL por clave y operaciones atómicas como `INCR`, que es justo lo que necesitan las sesiones, las cachés y los rate limiters. La ingesta de series de tiempo encaja en un wide-column store como Cassandra o en una base de datos de series de tiempo, con clave por dispositivo y bloque de tiempo. Los wide-column stores se diseñan en torno a consultas conocidas y no tienen joins. Los document stores pueden guardar contadores, pero un contador compartido y muy disputado con latencia de menos de un milisegundo es trabajo de un key-value store.',
   },
   'nosql-schemaless-myth': {
     prompt:

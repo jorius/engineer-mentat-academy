@@ -21,7 +21,7 @@ export const questions: Question[] = [
     tags: ['reducers', 'pure-functions', 'immutability'],
     source: 'topic-list',
     explanation:
-      'A reducer must be a pure function of `(state, action)`: no mutation (b), no side effects such as network calls (c), and no non-deterministic values such as random ids or `Date.now()` (d), because replaying the same actions (time-travel debugging, tests, SSR hydration) must produce the same state. Generate ids in the action creator (Redux Toolkit\'s `prepare` callback) and put side effects in thunks, listeners or middleware. Returning the existing state for unknown actions (e) is required: it keeps the reference unchanged, so subscribers know nothing changed.',
+      'A reducer must be a pure function of `(state, action)`: no mutation (`state.count++`), no side effects such as network calls (`fetch`), and no non-deterministic values such as random ids or `Date.now()`, because replaying the same actions (time-travel debugging, tests, SSR hydration) must produce the same state. Generate ids in the action creator (Redux Toolkit\'s `prepare` callback) and put side effects in thunks, listeners or middleware. Returning the existing state for unknown actions is required: it keeps the reference unchanged, so subscribers know nothing changed.',
   },
   {
     id: 'redux-reducer-immutability-fix',
@@ -359,7 +359,7 @@ Which case reducer does **not** change the store state?`,
     tags: ['immer', 'createSlice'],
     source: 'topic-list',
     explanation:
-      '`createSlice` runs case reducers through Immer: `state` is a draft proxy, and Immer records **mutations** of that draft (a, c) or accepts a **returned** replacement value (b). `state = ...` only rebinds a local variable; the draft is untouched and nothing is returned, so Immer returns the original state. Write `return initialState` instead. The other Immer trap: you may mutate the draft **or** return a new value, not both; doing both throws.',
+      '`createSlice` runs case reducers through Immer: `state` is a draft proxy, and Immer records **mutations** of that draft (the `push` in `added`, the assignment in `couponApplied`) or accepts a **returned** replacement value (as in `cleared`). `state = ...` only rebinds a local variable; the draft is untouched and nothing is returned, so Immer returns the original state. Write `return initialState` instead. The other Immer trap: you may mutate the draft **or** return a new value, not both; doing both throws.',
   },
   {
     id: 'redux-async-thunk-vs-rtk-query',

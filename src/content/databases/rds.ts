@@ -44,7 +44,7 @@ export const questions: Question[] = [
     tags: ['failover', 'dns', 'multi-az', 'connection-handling'],
     source: 'topic-list',
     explanation:
-      'The endpoint name stays the same; RDS flips its DNS record to the promoted standby, typically in one to two minutes. Applications therefore need a short DNS TTL, connection retries with backoff, and a pool that discards broken connections; RDS Proxy shortens and hides much of this. Synchronous replication means no committed data is lost, while in-flight transactions are rolled back. Read replicas are not part of RDS Multi-AZ failover (e is false for RDS); in **Aurora**, by contrast, a replica is promoted using failover priority tiers.',
+      'The endpoint name stays the same; RDS flips its DNS record to the promoted standby, typically in one to two minutes. Applications therefore need a short DNS TTL, connection retries with backoff, and a pool that discards broken connections; RDS Proxy shortens and hides much of this. Synchronous replication means no committed data is lost, while in-flight transactions are rolled back. Read replicas are not part of RDS Multi-AZ failover, so the automatic replica promotion claim is false for RDS; in **Aurora**, by contrast, a replica is promoted using failover priority tiers.',
   },
   {
     id: 'rds-parameter-group-static-change',
@@ -68,7 +68,7 @@ export const questions: Question[] = [
     tags: ['parameter-groups', 'configuration', 'operations'],
     source: 'topic-list',
     explanation:
-      'Engine configuration on RDS is managed through parameter groups. Default groups cannot be modified, so you create a custom group (ideally in infrastructure as code) and attach it. **Dynamic** parameters apply without a restart; **static** ones wait for a reboot, which in production you schedule or perform with Multi-AZ to minimize downtime. RDS gives no host access (d), and the master user is not a true superuser, so `ALTER SYSTEM` is not available (c). Because a group can be shared by many instances, changing it changes all of them.',
+      'Engine configuration on RDS is managed through parameter groups. Default groups cannot be modified, so you create a custom group (ideally in infrastructure as code) and attach it. **Dynamic** parameters apply without a restart; **static** ones wait for a reboot, which in production you schedule or perform with Multi-AZ to minimize downtime. RDS gives no host access, and the master user is not a true superuser, so `ALTER SYSTEM` is not available. Because a group can be shared by many instances, changing it changes all of them.',
   },
   {
     id: 'rds-when-to-choose-aurora',

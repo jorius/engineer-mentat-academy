@@ -21,7 +21,7 @@ export const questions: Question[] = [
     tags: ['query', 'partition-key', 'sort-key'],
     source: 'topic-list',
     explanation:
-      'A `Query` must name exactly one partition with **equality** on the partition key, because the partition key is hashed to find the storage partition; there is no ordering to do a prefix or range search on (b). The sort key is stored in order within a partition, so it supports `=`, `<`, `<=`, `>`, `>=`, `BETWEEN` and `begins_with`. `contains` (d) is not a key condition; it is only allowed in a `FilterExpression`, which runs after the items are read. Querying by sort key alone (c) needs a GSI with that attribute as its partition key, or a `Scan`.',
+      'A `Query` must name exactly one partition with **equality** on the partition key, because the partition key is hashed to find the storage partition; there is no ordering to do a prefix or range search on, so `begins_with(PK, ...)` is invalid. The sort key is stored in order within a partition, so it supports `=`, `<`, `<=`, `>`, `>=`, `BETWEEN` and `begins_with`. `contains` is not a key condition; it is only allowed in a `FilterExpression`, which runs after the items are read. Querying by sort key alone (`SK = :sk`) needs a GSI with that attribute as its partition key, or a `Scan`.',
   },
   {
     id: 'dynamodb-gsi-vs-lsi',
@@ -42,7 +42,7 @@ export const questions: Question[] = [
     tags: ['gsi', 'lsi', 'secondary-index'],
     source: 'topic-list',
     explanation:
-      'An LSI is "local" because it lives in the same partition as the base items: same partition key, different sort key, created only with the table, and it adds the 10 GB item-collection limit. A GSI has its own partition and sort key, can be added or removed at any time, has its own capacity, and is replicated asynchronously, so its reads are **eventually consistent only** (b is false). GSI keys are not unique (e is false): many items can share the same GSI partition and sort key, and DynamoDB has no unique constraint beyond the primary key (you emulate uniqueness with a conditional put on a separate item in a transaction). An under-provisioned GSI can also throttle writes to the base table.',
+      'An LSI is "local" because it lives in the same partition as the base items: same partition key, different sort key, created only with the table, and it adds the 10 GB item-collection limit. A GSI has its own partition and sort key, can be added or removed at any time, has its own capacity, and is replicated asynchronously, so its reads are **eventually consistent only** and the `ConsistentRead: true` claim is false. GSI keys are not unique, so the unique-constraint claim is false too: many items can share the same GSI partition and sort key, and DynamoDB has no unique constraint beyond the primary key (you emulate uniqueness with a conditional put on a separate item in a transaction). An under-provisioned GSI can also throttle writes to the base table.',
   },
   {
     id: 'dynamodb-filter-after-limit',

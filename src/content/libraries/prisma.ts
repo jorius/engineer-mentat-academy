@@ -20,7 +20,7 @@ export const questions: Question[] = [
     tags: ['select', 'include', 'prisma-client'],
     source: 'topic-list',
     explanation:
-      '`select` lists exactly what comes back, and a relation inside `select` is loaded too. `include` means "all scalar fields **plus** these relations". The two cannot be used at the same level (b is a validation error), and `include` only accepts relations (c). (d) filters to users with posts but returns only emails. Selecting only the fields you need also keeps secrets such as `passwordHash` out of API responses, and the generated types follow the selection.',
+      '`select` lists exactly what comes back, and a relation inside `select` is loaded too. `include` means "all scalar fields **plus** these relations". The two cannot be used at the same level (combining them is a validation error), and `include` only accepts relations, so `include: { email: true }` fails. The `where: { posts: { some: {} } }` query filters to users with posts but returns only emails. Selecting only the fields you need also keeps secrets such as `passwordHash` out of API responses, and the generated types follow the selection.',
   },
   {
     id: 'prisma-migrate-deploy',
