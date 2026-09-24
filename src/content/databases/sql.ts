@@ -45,7 +45,8 @@ ORDER BY spent DESC, c.name`,
     ordered: true,
     tags: ['left-join', 'coalesce', 'group-by'],
     source: 'topic-list',
-    explanation: 'An inner join would drop Tom. `COALESCE` turns the `NULL` sum into 0. Grouping by the primary key keeps the query valid under strict `GROUP BY` rules in Postgres and MySQL `ONLY_FULL_GROUP_BY`.',
+    explanation:
+      'An inner join would drop Tom. `COALESCE` turns the `NULL` sum into 0. Group by `c.id`, not only by `name`, so two customers who share a name are not merged; `c.name` is also listed in the `GROUP BY` so the query is valid on every engine (Postgres and MySQL 5.7+ would accept `GROUP BY c.id` alone, because `name` is functionally dependent on the primary key).',
   },
   {
     id: 'sql-countries-over-threshold',
@@ -54,17 +55,18 @@ ORDER BY spent DESC, c.name`,
     topic: 'aggregation',
     level: 'junior',
     kind: 'sql',
-    prompt: 'Return the countries whose customers spent more than 150 in total. Columns: `country`, `spent`. Any order.',
+    prompt: 'Return the countries whose customers spent more than 250 in total. Columns: `country`, `spent`. Any order.',
     schema: shop,
     answer: `SELECT c.country, SUM(o.total) AS spent
 FROM customers c
 JOIN orders o ON o.customer_id = c.id
 GROUP BY c.country
-HAVING SUM(o.total) > 150`,
-    expectedRows: [['CO', 240], ['US', 320]],
+HAVING SUM(o.total) > 250`,
+    expectedRows: [['US', 320]],
     tags: ['having', 'group-by'],
     source: 'topic-list',
-    explanation: '`WHERE` filters rows before aggregation; `HAVING` filters groups after it. Putting the condition in `WHERE` would be a syntax error because the aggregate does not exist yet.',
+    explanation:
+      '`WHERE` filters rows before aggregation; `HAVING` filters groups after it. Here `HAVING` drops CO (240). Filtering single orders with `WHERE o.total > 250` would instead keep only Mia\'s 300 order and report 300, not 320. Putting `SUM(o.total) > 250` in `WHERE` is an error (SQLite: "misuse of aggregate"; Postgres: "aggregate functions are not allowed in WHERE") because the aggregate does not exist yet at that stage.',
   },
   {
     id: 'sql-null-not-equal-trap',
@@ -288,19 +290,19 @@ ORDER BY department, e.name`,
     level: 'senior',
     kind: 'multi',
     prompt:
-      'The `orders` table has a B-tree index `CREATE INDEX ix_orders_cust_created ON orders (customer_id, created_at);`. Which queries can use it to **seek** into a narrow range, rather than scanning the whole table or the whole index? Select all that apply.',
+      'The `orders` table has this B-tree index, and `customer_id` has many distinct values:\n\n```sql\nCREATE INDEX ix_orders_cust_created\n  ON orders (customer_id, created_at);\n```\n\nAssuming a classic B-tree access path (no skip scan), which queries can use it to **seek into one contiguous range** of the index, rather than scanning the whole table or the whole index? Select all that apply.',
     options: [
       { id: 'a', text: '`WHERE customer_id = 7`' },
-      { id: 'b', text: "`WHERE customer_id = 7 AND created_at >= '2026-09-01'`" },
+      { id: 'b', text: "```sql\nWHERE customer_id = 7\n  AND created_at >= '2026-09-01'\n```" },
       { id: 'c', text: "`WHERE created_at >= '2026-09-01'`" },
-      { id: 'd', text: '`WHERE customer_id = 7 ORDER BY created_at DESC LIMIT 10` (and it also avoids a sort)' },
-      { id: 'e', text: "`WHERE customer_id > 7 AND created_at = '2026-09-01'` (seeks on both columns)" },
+      { id: 'd', text: '```sql\nWHERE customer_id = 7\nORDER BY created_at DESC\nLIMIT 10\n```\n(and it also avoids a sort)' },
+      { id: 'e', text: "```sql\nWHERE customer_id > 7\n  AND created_at = '2026-09-01'\n```\n(seeks on both columns)" },
     ],
     answer: ['a', 'b', 'd'],
     tags: ['composite-index', 'leftmost-prefix', 'explain'],
     source: 'topic-list',
     explanation:
-      'A composite B-tree is sorted by `customer_id`, then by `created_at` within each customer. It can seek on any **leftmost prefix** of its columns: equality on `customer_id` alone, or equality then a range on `created_at`. Within one customer the entries are already in `created_at` order, so `ORDER BY created_at DESC LIMIT 10` walks the index backwards and stops after 10 rows with no sort step. Filtering on `created_at` alone skips the leading column, so there is no contiguous range to seek; some engines can do a skip scan, but only when the leading column has few distinct values. In `customer_id > 7 AND created_at = ...` the range on the first column ends the seekable prefix: the engine seeks `customer_id > 7` and then checks `created_at` row by row. Rule of thumb: equality columns first, then the range or sort column.\n\n**Say this out loud:** "I order composite index columns as equality predicates first, then the range or `ORDER BY` column, because the index can only seek on a leftmost prefix and a range stops the prefix."',
+      'A composite B-tree is sorted by `customer_id`, then by `created_at` within each customer. It can seek on any **leftmost prefix** of its columns: equality on `customer_id` alone, or equality then a range on `created_at`. Within one customer the entries are already in `created_at` order, so `ORDER BY created_at DESC LIMIT 10` walks the index backwards and stops after 10 rows with no sort step. Filtering on `created_at` alone skips the leading column, so there is no contiguous range to seek. Skip scan (Oracle, MySQL 8.0.13+, SQLite, Postgres 18) can turn it into one seek per distinct `customer_id`, which pays off only when the leading column has few distinct values, not for a customer id. In `customer_id > 7 AND created_at = ...` the range on the first column ends the contiguous prefix: a classic B-tree seeks to `customer_id > 7` and checks `created_at` on every index entry after it (Postgres 18 skip scan can re-seek per customer instead, again only worthwhile with few distinct customers). Rule of thumb: equality columns first, then the range or sort column.\n\n**Say this out loud:** "I order composite index columns as equality predicates first, then the range or `ORDER BY` column, because the index can only seek on a leftmost prefix and a range stops the prefix."',
   },
   {
     id: 'sql-like-leading-wildcard',
@@ -334,9 +336,9 @@ ORDER BY department, e.name`,
     level: 'senior',
     kind: 'open',
     prompt:
-      'A hot endpoint runs `SELECT id, total FROM orders WHERE customer_id = ? ORDER BY created_at DESC LIMIT 20`. There is already an index on `customer_id`. What is a covering index, would you add one here, and what does it cost?',
+      'A hot endpoint runs this query:\n\n```sql\nSELECT id, total\nFROM orders\nWHERE customer_id = ?\nORDER BY created_at DESC\nLIMIT 20\n```\n\nThere is already an index on `customer_id`. What is a covering index, would you add one here, and what does it cost?',
     modelAnswer:
-      'A covering index contains every column the query needs, so the engine answers from the index alone (an index-only scan) and never fetches the table rows. Here I would replace the single-column index with `(customer_id, created_at DESC)` and carry `total` along, either as a trailing key column or with `INCLUDE (total)` in Postgres and SQL Server; `id` is already available (the primary key is stored in secondary indexes in InnoDB, and SQLite stores the rowid). That turns "seek, then sort, then 20 random table lookups" into one ordered range read that stops after 20 entries. The costs: every insert and every update to those columns now writes one more index, the index takes disk and buffer-cache space, and a wide `INCLUDE` list makes the index nearly a copy of the table. In Postgres an index-only scan also depends on the visibility map, so a table with heavy churn and lagging vacuum still visits the heap. I would confirm the gain with `EXPLAIN ANALYZE` before and after, and drop the now-redundant `customer_id` index because the new one serves the same lookups.',
+      'A covering index contains every column the query needs, so the engine answers from the index alone (an index-only scan) and never fetches the table rows. Here I would replace the single-column index with `(customer_id, created_at DESC)` and carry the projected columns along. In Postgres that means `INCLUDE (total, id)`, because a Postgres index stores heap pointers, not the primary key. In InnoDB, and in SQL Server when `id` is the clustered key, every secondary index already carries the primary key, so `(customer_id, created_at, total)` or `INCLUDE (total)` is enough; SQLite stores the rowid, which `id INTEGER PRIMARY KEY` aliases. That turns "seek, then sort, then 20 random table lookups" into one ordered range read that stops after 20 entries. The costs: every insert and every update to those columns now writes one more index, the index takes disk and buffer-cache space, and a wide `INCLUDE` list makes the index nearly a copy of the table. In Postgres an index-only scan also depends on the visibility map, so a table with heavy churn and lagging vacuum still visits the heap. I would confirm the gain with `EXPLAIN ANALYZE` before and after, and drop the now-redundant `customer_id` index because the new one serves the same lookups.',
     rubric: [
       'Defines covering index as answering the query from the index without table lookups (index-only scan)',
       'Puts `customer_id` then `created_at` in the key so the index also satisfies the `ORDER BY ... LIMIT` without a sort',
@@ -383,7 +385,7 @@ ORDER BY department, e.name`,
       '`orders.created_at` (a `TIMESTAMP`) and `customers.email` (a `VARCHAR`) each have a plain B-tree index, and there are no expression indexes. Which predicates **prevent** the engine from seeking on those indexes? Select all that apply.',
     options: [
       { id: 'a', text: "`WHERE DATE(created_at) = '2026-09-01'`" },
-      { id: 'b', text: "`WHERE created_at >= '2026-09-01' AND created_at < '2026-09-02'`" },
+      { id: 'b', text: "```sql\nWHERE created_at >= '2026-09-01'\n  AND created_at < '2026-09-02'\n```" },
       { id: 'c', text: "`WHERE LOWER(email) = 'ana@example.com'`" },
       { id: 'd', text: "`WHERE created_at + INTERVAL '1 day' > NOW()`" },
       { id: 'e', text: "`WHERE email = 'ana@example.com'`" },

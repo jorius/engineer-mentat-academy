@@ -6,12 +6,12 @@ export const translations: Record<string, QuestionTranslation> = {
     prompt:
       'Devuelve el nombre de cada cliente con el monto total de sus pedidos, **incluidos los clientes sin pedidos** (como 0). Columnas: `name`, `spent`. Ordena por `spent` de forma descendente y luego por `name`.',
     explanation:
-      'Un inner join dejaría fuera a Tom. `COALESCE` convierte la suma `NULL` en 0. Agrupar por la primary key mantiene la consulta válida bajo las reglas estrictas de `GROUP BY` de Postgres y de `ONLY_FULL_GROUP_BY` en MySQL.',
+      'Un inner join dejaría fuera a Tom. `COALESCE` convierte la suma `NULL` en 0. Agrupa por `c.id`, no solo por `name`, para que dos clientes con el mismo nombre no se mezclen; `c.name` también está en el `GROUP BY`, así que la consulta es válida en cualquier motor (Postgres y MySQL 5.7+ aceptarían solo `GROUP BY c.id`, porque `name` depende funcionalmente de la primary key).',
   },
   'sql-countries-over-threshold': {
-    prompt: 'Devuelve los países cuyos clientes gastaron más de 150 en total. Columnas: `country`, `spent`. En cualquier orden.',
+    prompt: 'Devuelve los países cuyos clientes gastaron más de 250 en total. Columnas: `country`, `spent`. En cualquier orden.',
     explanation:
-      '`WHERE` filtra filas antes de la agregación; `HAVING` filtra grupos después de ella. Poner la condición en `WHERE` sería un error de sintaxis, porque el agregado todavía no existe.',
+      '`WHERE` filtra filas antes de la agregación; `HAVING` filtra grupos después de ella. Aquí `HAVING` descarta a CO (240). Filtrar pedidos sueltos con `WHERE o.total > 250` en cambio conservaría solo el pedido de 300 de Mia y reportaría 300, no 320. Poner `SUM(o.total) > 250` en `WHERE` es un error (SQLite: "misuse of aggregate"; Postgres: "aggregate functions are not allowed in WHERE") porque en esa etapa el agregado todavía no existe.',
   },
   'sql-null-not-equal-trap': {
     prompt:
@@ -75,13 +75,13 @@ export const translations: Record<string, QuestionTranslation> = {
   },
   'sql-composite-index-leftmost-prefix': {
     prompt:
-      'La tabla `orders` tiene un índice B-tree `CREATE INDEX ix_orders_cust_created ON orders (customer_id, created_at);`. ¿Qué consultas pueden usarlo para hacer **seek** directo a un rango estrecho, en lugar de recorrer toda la tabla o todo el índice? Selecciona todas las que apliquen.',
+      'La tabla `orders` tiene este índice B-tree, y `customer_id` tiene muchos valores distintos:\n\n```sql\nCREATE INDEX ix_orders_cust_created\n  ON orders (customer_id, created_at);\n```\n\nSuponiendo un acceso B-tree clásico (sin skip scan), ¿qué consultas pueden usarlo para hacer **seek a un único rango contiguo** del índice, en lugar de recorrer toda la tabla o todo el índice? Selecciona todas las que apliquen.',
     options: {
-      d: '`WHERE customer_id = 7 ORDER BY created_at DESC LIMIT 10` (y además evita un ordenamiento)',
-      e: "`WHERE customer_id > 7 AND created_at = '2026-09-01'` (hace seek en ambas columnas)",
+      d: '```sql\nWHERE customer_id = 7\nORDER BY created_at DESC\nLIMIT 10\n```\n(y además evita un ordenamiento)',
+      e: "```sql\nWHERE customer_id > 7\n  AND created_at = '2026-09-01'\n```\n(hace seek en ambas columnas)",
     },
     explanation:
-      'Un B-tree compuesto está ordenado por `customer_id` y, dentro de cada cliente, por `created_at`. Puede hacer seek sobre cualquier **prefijo izquierdo** de sus columnas: igualdad solo en `customer_id`, o igualdad y luego un rango en `created_at`. Dentro de un mismo cliente las entradas ya están en orden de `created_at`, así que `ORDER BY created_at DESC LIMIT 10` recorre el índice hacia atrás y se detiene tras 10 filas sin paso de ordenamiento. Filtrar solo por `created_at` se salta la columna inicial, así que no hay un rango contiguo al que hacer seek; algunos motores pueden hacer un skip scan, pero solo cuando la columna inicial tiene pocos valores distintos. En `customer_id > 7 AND created_at = ...`, el rango sobre la primera columna cierra el prefijo utilizable: el motor hace seek con `customer_id > 7` y luego revisa `created_at` fila por fila. Regla práctica: primero las columnas de igualdad, luego la columna de rango o de ordenamiento.\n\n**Dilo en voz alta:** "Ordeno las columnas de un índice compuesto con los predicados de igualdad primero y luego la columna de rango o de `ORDER BY`, porque el índice solo puede hacer seek sobre un prefijo izquierdo y un rango corta ese prefijo."',
+      'Un B-tree compuesto está ordenado por `customer_id` y, dentro de cada cliente, por `created_at`. Puede hacer seek sobre cualquier **prefijo izquierdo** de sus columnas: igualdad solo en `customer_id`, o igualdad y luego un rango en `created_at`. Dentro de un mismo cliente las entradas ya están en orden de `created_at`, así que `ORDER BY created_at DESC LIMIT 10` recorre el índice hacia atrás y se detiene tras 10 filas sin paso de ordenamiento. Filtrar solo por `created_at` se salta la columna inicial, así que no hay un rango contiguo al que hacer seek. El skip scan (Oracle, MySQL 8.0.13+, SQLite, Postgres 18) puede convertirlo en un seek por cada `customer_id` distinto, lo que solo compensa cuando la columna inicial tiene pocos valores distintos, no con un id de cliente. En `customer_id > 7 AND created_at = ...`, el rango sobre la primera columna cierra el prefijo contiguo: un B-tree clásico hace seek a `customer_id > 7` y revisa `created_at` en cada entrada del índice a partir de ahí (el skip scan de Postgres 18 puede en cambio volver a hacer seek por cliente, de nuevo solo rentable con pocos clientes distintos). Regla práctica: primero las columnas de igualdad, luego la columna de rango o de ordenamiento.\n\n**Dilo en voz alta:** "Ordeno las columnas de un índice compuesto con los predicados de igualdad primero y luego la columna de rango o de `ORDER BY`, porque el índice solo puede hacer seek sobre un prefijo izquierdo y un rango corta ese prefijo."',
   },
   'sql-like-leading-wildcard': {
     prompt:
@@ -97,9 +97,9 @@ export const translations: Record<string, QuestionTranslation> = {
   },
   'sql-covering-index-tradeoffs': {
     prompt:
-      'Un endpoint muy usado ejecuta `SELECT id, total FROM orders WHERE customer_id = ? ORDER BY created_at DESC LIMIT 20`. Ya existe un índice sobre `customer_id`. ¿Qué es un covering index, lo agregarías aquí y qué cuesta?',
+      'Un endpoint muy usado ejecuta esta consulta:\n\n```sql\nSELECT id, total\nFROM orders\nWHERE customer_id = ?\nORDER BY created_at DESC\nLIMIT 20\n```\n\nYa existe un índice sobre `customer_id`. ¿Qué es un covering index, lo agregarías aquí y qué cuesta?',
     modelAnswer:
-      'Un covering index contiene todas las columnas que necesita la consulta, así que el motor responde solo con el índice (un index-only scan) y nunca lee las filas de la tabla. Aquí reemplazaría el índice de una sola columna por `(customer_id, created_at DESC)` y llevaría `total` en el índice, ya sea como columna final de la clave o con `INCLUDE (total)` en Postgres y SQL Server; `id` ya está disponible (en InnoDB la primary key se guarda en los índices secundarios, y SQLite guarda el rowid). Eso convierte "seek, luego ordenamiento, luego 20 lecturas aleatorias a la tabla" en una sola lectura de rango ordenada que se detiene tras 20 entradas. Los costos: cada insert y cada update de esas columnas ahora escribe un índice más, el índice ocupa disco y espacio en el buffer cache, y una lista de `INCLUDE` muy ancha convierte el índice casi en una copia de la tabla. En Postgres, un index-only scan también depende del visibility map, así que una tabla con mucha rotación y un vacuum atrasado igual visita el heap. Confirmaría la mejora con `EXPLAIN ANALYZE` antes y después, y eliminaría el índice sobre `customer_id`, que queda redundante porque el nuevo atiende las mismas búsquedas.',
+      'Un covering index contiene todas las columnas que necesita la consulta, así que el motor responde solo con el índice (un index-only scan) y nunca lee las filas de la tabla. Aquí reemplazaría el índice de una sola columna por `(customer_id, created_at DESC)` y llevaría en él las columnas proyectadas. En Postgres eso significa `INCLUDE (total, id)`, porque un índice de Postgres guarda punteros al heap, no la primary key. En InnoDB, y en SQL Server cuando `id` es la clave clustered, todo índice secundario ya lleva la primary key, así que basta con `(customer_id, created_at, total)` o `INCLUDE (total)`; SQLite guarda el rowid, del que `id INTEGER PRIMARY KEY` es un alias. Eso convierte "seek, luego ordenamiento, luego 20 lecturas aleatorias a la tabla" en una sola lectura de rango ordenada que se detiene tras 20 entradas. Los costos: cada insert y cada update de esas columnas ahora escribe un índice más, el índice ocupa disco y espacio en el buffer cache, y una lista de `INCLUDE` muy ancha convierte el índice casi en una copia de la tabla. En Postgres, un index-only scan también depende del visibility map, así que una tabla con mucha rotación y un vacuum atrasado igual visita el heap. Confirmaría la mejora con `EXPLAIN ANALYZE` antes y después, y eliminaría el índice sobre `customer_id`, que queda redundante porque el nuevo atiende las mismas búsquedas.',
     rubric: [
       'Define covering index como responder la consulta desde el índice sin leer la tabla (index-only scan)',
       'Pone `customer_id` y luego `created_at` en la clave para que el índice también resuelva el `ORDER BY ... LIMIT` sin ordenar',
@@ -111,7 +111,7 @@ export const translations: Record<string, QuestionTranslation> = {
   },
   'sql-n-plus-one-at-sql-layer': {
     prompt:
-      'El log de la base de datos para una sola carga de página muestra:\n\n```sql\nSELECT id, name FROM customers WHERE country = \'CO\';\nSELECT * FROM orders WHERE customer_id = 1;\nSELECT * FROM orders WHERE customer_id = 2;\n-- ... one more per customer\n```\n\n¿Qué cambio resuelve el problema de fondo?',
+      'El log de la base de datos para una sola carga de página muestra:\n\n```sql\nSELECT id, name FROM customers WHERE country = \'CO\';\nSELECT * FROM orders WHERE customer_id = 1;\nSELECT * FROM orders WHERE customer_id = 2;\n-- ... una más por cada cliente\n```\n\n¿Qué cambio resuelve el problema de fondo?',
     options: {
       a: 'Agregar un índice sobre `orders.customer_id` para que cada consulta por cliente sea más rápida.',
       b: 'Traer los pedidos de todos los clientes en una sola sentencia, ya sea con un `JOIN` o con `WHERE customer_id IN (...)`, y agruparlos en la aplicación.',

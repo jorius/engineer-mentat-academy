@@ -32,7 +32,8 @@ export const questions: Question[] = [
     topic: 'engines-and-operations',
     level: 'mid',
     kind: 'multi',
-    prompt: 'Your RDS for MySQL Multi-AZ primary fails. Which statements about the failover are true? Select all that apply.',
+    prompt:
+      'Your RDS for MySQL **Multi-AZ DB instance** deployment (one primary, one standby) loses its primary. Which statements about the failover are true? Select all that apply.',
     options: [
       { id: 'a', text: 'RDS repoints the instance DNS endpoint to the standby, which is promoted to primary.' },
       { id: 'b', text: 'You must update the application connection string to the standby host name.' },
@@ -79,7 +80,7 @@ export const questions: Question[] = [
     kind: 'open',
     prompt: 'When would you choose Amazon Aurora over standard RDS for PostgreSQL or MySQL, and when would you stay on standard RDS?',
     modelAnswer:
-      "Aurora separates compute from a distributed storage layer that keeps six copies of the data across three Availability Zones and grows automatically (up to 128 TiB). Because replicas read the same storage, it supports up to 15 low-lag readers behind one reader endpoint, and failover to a replica usually takes well under a minute. It adds features standard RDS lacks: Global Database for cross-Region disaster recovery with about a second of lag, fast database cloning, backtrack on MySQL, and Serverless v2 for spiky or unpredictable load. I would pick it for read-heavy workloads that need many replicas, strict availability or recovery targets, or large and fast-growing data. I would stay on standard RDS for small or steady workloads where Aurora's higher instance prices and per-I/O charges cost more (or evaluate Aurora I/O-Optimized for I/O-heavy loads), when I need an engine version or extension Aurora does not support yet, or when portability to vanilla PostgreSQL or MySQL matters. The decision should come from measured read ratio, I/O profile and recovery objectives, priced with both storage configurations.",
+      "Aurora separates compute from a distributed storage layer that keeps six copies of the data across three Availability Zones and grows automatically (up to 256 TiB on current engine versions). Because replicas read the same storage, it supports up to 15 low-lag readers behind one reader endpoint, and failover to a replica usually takes well under a minute. It adds features standard RDS lacks: Global Database for cross-Region disaster recovery with about a second of lag, fast database cloning, backtrack on MySQL, and Serverless v2 for spiky or unpredictable load. I would pick it for read-heavy workloads that need many replicas, strict availability or recovery targets, or large and fast-growing data. I would stay on standard RDS for small or steady workloads where Aurora's higher instance prices and per-I/O charges cost more (or evaluate Aurora I/O-Optimized for I/O-heavy loads), when I need an engine version or extension Aurora does not support yet, or when portability to vanilla PostgreSQL or MySQL matters. The decision should come from measured read ratio, I/O profile and recovery objectives, priced with both storage configurations.",
     rubric: [
       'Explains the shared, distributed storage layer (six copies across three AZs) and why it makes replicas and failover faster',
       'Names concrete Aurora-only capabilities: up to 15 replicas, Global Database, cloning, Serverless v2',
