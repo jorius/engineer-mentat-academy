@@ -10,7 +10,7 @@ export const questions: Question[] = [
     level: 'junior',
     kind: 'multi',
     prompt:
-      'Your session cookie is set with `Set-Cookie: sid=abc123; HttpOnly; Secure; SameSite=Lax; Path=/`. Which statements about these attributes are true? Select all that apply.',
+      'Your session cookie is set with this header:\n\n```http\nSet-Cookie: sid=abc123; HttpOnly; Secure; SameSite=Lax; Path=/\n```\nWhich statements about these attributes are true? Select all that apply.',
     options: [
       { id: 'a', text: '`HttpOnly` stops page JavaScript (`document.cookie`) from reading the cookie, so an XSS payload cannot exfiltrate it directly' },
       { id: 'b', text: '`Secure` means the browser only sends the cookie over HTTPS' },
@@ -110,19 +110,19 @@ export function solution(input: string): string {
     topic: 'xss',
     level: 'mid',
     kind: 'multi',
-    prompt: 'In a React app, `bio`, `website` and `post` all come from other users. Which of these are XSS vectors? Select all that apply.',
+    prompt: 'In a React 19 app, `bio`, `website` and `post` all come from other users, and `markdownToHtml` is a plain markdown renderer that does not sanitize its output. Which of these are XSS vectors? Select all that apply.',
     options: [
-      { id: 'a', text: '`<p>{bio}</p>`' },
-      { id: 'b', text: '`<div dangerouslySetInnerHTML={{ __html: bio }} />`' },
-      { id: 'c', text: '`<a href={website}>Website</a>` without validating the URL scheme' },
-      { id: 'd', text: '`useEffect(() => { ref.current.innerHTML = markdownToHtml(post); }, [post]);`' },
-      { id: 'e', text: '`<input defaultValue={bio} />`' },
+      { id: 'a', text: '```tsx\n<p>{bio}</p>\n```' },
+      { id: 'b', text: '```tsx\n<div dangerouslySetInnerHTML={{ __html: bio }} />\n```' },
+      { id: 'c', text: '```tsx\n<button\n  onClick={() => {\n    window.location.href = website;\n  }}\n>\n  Visit website\n</button>\n```\nWithout validating the URL scheme' },
+      { id: 'd', text: '```tsx\nuseEffect(() => {\n  ref.current.innerHTML = markdownToHtml(post);\n}, [post]);\n```' },
+      { id: 'e', text: '```tsx\n<input defaultValue={bio} />\n```' },
     ],
     answer: ['b', 'c', 'd'],
     tags: ['react', 'dangerouslysetinnerhtml', 'javascript-urls'],
     source: 'notion',
     explanation:
-      'React escapes text children and attribute values, so `<p>{bio}</p>` and `<input defaultValue={bio} />` render the payload as inert text. `dangerouslySetInnerHTML` opts out of that on purpose: the name is the warning, and the input must be sanitized first. Setting `innerHTML` through a ref bypasses React completely; markdown renderers happily pass raw HTML through unless configured not to. `href` is escaped as a string but its **meaning** is not checked: `javascript:alert(1)` is still a URL, and depending on the React version you get only a console warning. Allowlist `http:`/`https:` (and maybe `mailto:`) for user-provided URLs.',
+      'React escapes text children and attribute values, so `<p>{bio}</p>` and `<input defaultValue={bio} />` render the payload as inert text. `dangerouslySetInnerHTML` opts out of that on purpose: the name is the warning, and the input must be sanitized first. Setting `innerHTML` through a ref bypasses React completely, and a renderer that does not sanitize passes raw HTML such as `<img src=x onerror=...>` straight into the DOM. Assigning `window.location.href` is a DOM sink React never sees: `javascript:alert(1)` is a valid URL, and navigating to it runs the script in your origin. React 19 does block `javascript:` URLs in the props it renders (`href`, `src`, `action`, `formAction`), swapping them for one that throws (React 16.9 to 18 only warned in development), but that does not cover `location`, `window.open` or URLs you hand to non-React code. Allowlist `http:`/`https:` (and maybe `mailto:`) for user-provided URLs.',
   },
   {
     id: 'security-xss-csp-rollout',

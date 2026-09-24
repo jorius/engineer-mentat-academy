@@ -12,7 +12,7 @@ export const questions: Question[] = [
     prompt:
       'You join a team whose React + Node product has 2,000 unit tests, almost no integration tests, and a flaky 40-minute Cypress suite. Production bugs keep slipping through at the seams between modules. **Test pyramid or testing trophy: which shape do you steer the team towards, and how do you get there?**',
     modelAnswer:
-      'The pyramid (many unit, fewer integration, few E2E) optimises for speed and isolation; the trophy (static analysis at the base, a thick middle of integration tests, fewer unit and E2E) optimises for confidence per test, which is what this team lacks. Bugs at the seams mean the unit tests mock exactly the boundaries that are breaking, so I would shift weight to integration tests: components rendered with React Testing Library against a mocked network layer (MSW), and API tests that hit real routes with a real database in a container. TypeScript strict mode and ESLint form the static base and catch a whole class of bugs for free. The E2E suite gets cut down to a handful of critical journeys (sign-up, checkout) and its flakiness fixed or quarantined, not retried. Unit tests stay where logic is dense and pure: pricing rules, parsers, reducers. I would measure the change by escaped defects and suite time, not coverage percentage. The shape is a means; the goal is the most confidence per minute of CI.',
+      'The pyramid (many unit, fewer integration, few E2E) optimises for speed and isolation; the trophy (static analysis at the base, a thick middle of integration tests, fewer unit and E2E) optimises for confidence per test, which is what this team lacks, so I steer the team towards the trophy. Bugs at the seams mean the unit tests mock exactly the boundaries that are breaking, so I would shift weight to integration tests: components rendered with React Testing Library against a mocked network layer (MSW), and API tests that hit real routes with a real database in a container. TypeScript strict mode and ESLint form the static base and catch a whole class of bugs for free. The E2E suite gets cut down to a handful of critical journeys (sign-up, checkout) and its flakiness fixed or quarantined, not retried. Unit tests stay where logic is dense and pure: pricing rules, parsers, reducers. I would measure the change by escaped defects and suite time, not coverage percentage. The shape is a means; the goal is the most confidence per minute of CI.',
     rubric: [
       'Explains both shapes and what each optimises for (speed and isolation vs confidence)',
       'Diagnoses that over-mocked unit tests miss integration bugs at the seams',
@@ -44,7 +44,7 @@ export const questions: Question[] = [
     tags: ['mocking', 'test-doubles'],
     source: 'topic-list',
     explanation:
-      'Mock what is **slow, non-deterministic, or outside your control**: network calls to third parties and the clock. Do not mock pure code you own: `calculateTax()` is fast and deterministic, and mocking it means the test no longer checks that tax is actually applied. Spying on private methods couples the test to the internal structure, so a harmless refactor breaks it. A useful rule: mock at the boundaries of the system (network, time, randomness, filesystem), not between your own units.',
+      'Mock what is **slow, non-deterministic, or outside your control**: network calls to third parties and the clock. Do not mock pure code you own: `calculateTax()` is fast and deterministic, and mocking it means the test no longer checks that tax is actually applied. Spying on private methods couples the test to the internal structure, so a harmless refactor breaks it; with a real `#private` method it is not even possible, because `#buildLineItems` is not a property that `vi.spyOn` / `jest.spyOn` can replace. A useful rule: mock at the boundaries of the system (network, time, randomness, filesystem), not between your own units.',
   },
   {
     id: 'testing-unit-test-doubles',
@@ -57,15 +57,15 @@ export const questions: Question[] = [
       '```ts\nconst send = vi.fn().mockResolvedValue({ ok: true });\nawait notifyUser(user, { send });\nexpect(send).toHaveBeenCalledWith(user.email, expect.stringContaining(\'Welcome\'));\n```\nWhat kind of test double is `send`, and what is the test verifying?',
     options: [
       { id: 'a', text: 'A stub: it only returns canned data, and the test checks the return value of `notifyUser`' },
-      { id: 'b', text: 'A mock: it returns canned data **and** records calls, and the test verifies the interaction (who was called with what)' },
+      { id: 'b', text: 'A mock function (Vitest and Jest vocabulary; Meszaros calls this a test spy): it returns canned data **and** records calls, and the test verifies the interaction (who was called with what)' },
       { id: 'c', text: 'A fake: a working lightweight implementation, like an in-memory email server' },
-      { id: 'd', text: 'A spy on the real email client: the real email is still sent' },
+      { id: 'd', text: 'A `vi.spyOn` wrapper around the real email client: the real email is still sent' },
     ],
     answer: 'b',
     tags: ['test-doubles', 'mocks', 'vitest'],
     source: 'topic-list',
     explanation:
-      'Stubs provide canned answers so the code under test can run; mocks additionally record calls so you can assert on the **interaction**; fakes are working simplified implementations (in-memory repository); spies wrap a real function and record calls while (by default) still calling through. `vi.fn()` / `jest.fn()` with an assertion on its calls is a mock. Interaction assertions are right when the side effect *is* the behaviour (an email must be sent); prefer state assertions otherwise.',
+      'Stubs provide canned answers so the code under test can run; fakes are working simplified implementations (an in-memory repository); `vi.spyOn` / `jest.spyOn` wrap a real method, record calls and by default still call through, which is not the case here because `send` is a standalone `vi.fn()`. What you call `send` depends on the vocabulary: Jest and Vitest call it a mock function, while Meszaros\'s *xUnit Test Patterns* (and Fowler\'s "Mocks Aren\'t Stubs") call a double that records calls for assertions afterwards a **test spy**, and keep **mock** for a double whose expectations are set up front and verified by the double itself. Either way, the test verifies the **interaction**. Interaction assertions are right when the side effect *is* the behaviour (an email must be sent); prefer state assertions otherwise.',
   },
   {
     id: 'testing-unit-fix-deep-equal',
@@ -109,7 +109,7 @@ export function solution(a: unknown, b: unknown): boolean {
     tags: ['deep-equality', 'test-helpers', 'object-is'],
     source: 'topic-list',
     explanation:
-      'The starter has four bugs. (1) It only walks the keys of `a`, so extra keys on `b` (including extra array elements) are ignored: the comparison is a *subset* check. (2) `===` says `NaN !== NaN`; `Object.is` treats them as equal. (3) `[]` and `{}` both have zero keys, so they compare equal unless you check `Array.isArray` on both sides. (4) Matching key **counts** is not enough: `{ a: 1, b: undefined }` and `{ a: 1, c: undefined }` both read `undefined` for the missing key, so you must check that each key actually exists on the other side.\n\nThis is exactly the gap between Jest/Vitest `toEqual` (which ignores `undefined` properties) and `toStrictEqual` (which does not). A helper this simple still misses `Date`, `Map`, `Set` and class instances, which is why you should use the framework matcher rather than roll your own.',
+      'Four problems need handling. (1) It only walks the keys of `a`, so extra keys on `b` (including extra array elements) are ignored: the comparison is a *subset* check. (2) `===` says `NaN !== NaN`; `Object.is` treats them as equal. (3) `[]` and `{}` both have zero keys, so they compare equal unless you check `Array.isArray` on both sides. (4) The obvious fix for (1), comparing key **counts**, is not enough: `{ a: 1, b: undefined }` and `{ a: 1, c: undefined }` both read `undefined` for the missing key, so you must check that each key actually exists on the other side.\n\nThis last case is one of the gaps between Jest/Vitest `toEqual` (which ignores `undefined` properties) and `toStrictEqual` (which does not). A helper this simple still misses `Date`, `Map`, `Set` and class instances, which is why you should use the framework matcher rather than roll your own.',
   },
   {
     id: 'testing-unit-fix-fake-timers',
@@ -241,7 +241,7 @@ export function solution(plan: Step[], tickMs: number): string[] {
     tags: ['flaky-tests', 'test-isolation', 'ci'],
     source: 'topic-list',
     explanation:
-      'Flakiness has causes: **shared state** between tests (order-dependent data, parallel workers writing the same rows), **timing assumptions** (fixed sleeps that are long enough on a laptop but not on a loaded CI runner), and **environment dependence** (clock, timezone, locale, random seeds). Isolating state, waiting for conditions instead of durations, and injecting the clock remove those causes. Retries and huge timeouts make the pipeline green while the non-determinism (which may be a real race in production code) stays. If you must quarantine a flaky test, track it as a bug with an owner.',
+      'Flakiness has causes: **shared state** between tests (order-dependent data, parallel workers writing the same rows), **timing assumptions** (fixed sleeps that are long enough on a laptop but not on a loaded CI runner), and **environment dependence** (clock, timezone, locale, random seeds). Isolating state, waiting for conditions instead of durations, and injecting the clock remove those causes. Two caveats: truncating in `beforeEach` only isolates tests that run serially against one database, so parallel workers each need their own database or schema (keyed by `VITEST_POOL_ID` or `JEST_WORKER_ID`); and a timezone mismatch on its own fails every CI run, while reading the real clock fails intermittently (a run that crosses midnight, a month end or a DST change). Retries and huge timeouts make the pipeline green while the non-determinism (which may be a real race in production code) stays. If you must quarantine a flaky test, track it as a bug with an owner.',
   },
   {
     id: 'testing-backend-testcontainers',
@@ -251,7 +251,7 @@ export function solution(plan: Step[], tickMs: number): string[] {
     level: 'mid',
     kind: 'single',
     prompt:
-      'Your repository-layer unit tests mock the database driver and all pass. In production, a query fails because a migration renamed `customer_id` to `client_id`, and another bug slips through because SQLite (used in tests) and Postgres (used in production) sort `NULL` differently. What is the cheapest test that would have caught **both**?',
+      'Your repository-layer tests either mock the database driver or run against in-memory SQLite, and they all pass. In production, a query fails because a migration renamed `customer_id` to `client_id`, and another bug slips through because SQLite and Postgres (used in production) sort `NULL` differently. What is the cheapest test that would have caught **both**?',
     options: [
       { id: 'a', text: 'More unit tests with stricter mocks that assert the exact SQL string' },
       { id: 'b', text: 'Integration tests that start a real Postgres of the production version with Testcontainers, run the migrations, and exercise the repository' },
@@ -262,7 +262,7 @@ export function solution(plan: Step[], tickMs: number): string[] {
     tags: ['testcontainers', 'integration', 'database'],
     source: 'topic-list',
     explanation:
-      'Mocks only verify what you *think* the database does. Asserting SQL strings re-states the implementation and still never runs the migration. A substitute engine (SQLite, H2, an ORM mock) diverges from production semantics (NULL ordering, JSON operators, locking, collations). Testcontainers starts a throwaway Docker container of the **same engine and version** per suite, so migrations and queries run for real, in seconds, and in CI. E2E would also catch it, but slower, later and with a much worse failure signal.',
+      'Mocks only verify what you *think* the database does. Asserting SQL strings re-states the implementation and still never runs the migration. A substitute engine (SQLite, H2, an ORM mock) diverges from production semantics (NULL ordering, JSON operators, locking, collations): SQLite, for example, puts `NULL` first in ascending order, and Postgres puts it last. Testcontainers starts a throwaway Docker container of the **same engine and version** per suite, so migrations and queries run for real, in seconds, and in CI. E2E would also catch it, but slower, later and with a much worse failure signal.',
   },
   {
     id: 'testing-backend-contract-tests',
@@ -296,10 +296,10 @@ export function solution(plan: Step[], tickMs: number): string[] {
     kind: 'single',
     prompt: 'In a React Testing Library test, which query should you reach for **first** to find the form\'s submit button?',
     options: [
-      { id: 'a', text: '`screen.getByTestId(\'submit-btn\')`' },
-      { id: 'b', text: '`container.querySelector(\'.btn-primary\')`' },
-      { id: 'c', text: '`screen.getByRole(\'button\', { name: /save/i })`' },
-      { id: 'd', text: '`screen.getByText(\'Save\')`' },
+      { id: 'a', text: '```ts\nscreen.getByTestId(\'submit-btn\')\n```' },
+      { id: 'b', text: '```ts\ncontainer.querySelector(\'.btn-primary\')\n```' },
+      { id: 'c', text: '```ts\nscreen.getByRole(\'button\', { name: /save/i })\n```' },
+      { id: 'd', text: '```ts\nscreen.getByText(\'Save\')\n```' },
     ],
     answer: 'c',
     tags: ['react-testing-library', 'accessibility', 'queries'],
@@ -321,12 +321,12 @@ export function solution(plan: Step[], tickMs: number): string[] {
       { id: 'b', text: 'After `await user.click(submit)`, asserting `screen.getByRole(\'dialog\')` is visible' },
       { id: 'c', text: 'Shallow-rendering the form and asserting the `<EmailField>` child received `error="Email is required"` as a prop' },
       { id: 'd', text: 'Asserting `screen.getByRole(\'alert\')` has the text "Email is required"' },
-      { id: 'e', text: 'Reading the component instance state: `wrapper.state(\'isOpen\')` equals `true`' },
+      { id: 'e', text: 'If the form were a class component, reading its instance state with Enzyme: `wrapper.state(\'isOpen\')` equals `true`' },
     ],
     answer: ['a', 'c', 'e'],
     tags: ['react-testing-library', 'implementation-details', 'refactoring'],
     source: 'topic-list',
     explanation:
-      'Implementation details are things the user cannot observe: internal state, which hook holds it, which child receives which prop. Tests that assert on them give **false negatives** (they fail on a correct refactor) and **false positives** (state can be `true` while the dialog is not rendered). The two `getByRole` assertions check what the user sees and interacts with, through roles, so they survive refactors and fail only when behaviour breaks. This is the core argument for React Testing Library over Enzyme-style shallow rendering.',
+      'Implementation details are things the user cannot observe: internal state, which hook holds it, which child receives which prop. Tests that assert on them give **false negatives** (they fail on a correct refactor) and **false positives** (state can be `true` while the dialog is not rendered). The two `getByRole` assertions check what the user sees and interacts with, through roles, so they survive refactors and fail only when behaviour breaks. `wrapper.state()` and shallow rendering are Enzyme APIs, and Enzyme has no official adapter for React 17 or later, so on a React 19 codebase these tests cannot even run. This is the core argument for React Testing Library over Enzyme-style shallow rendering.',
   },
 ];

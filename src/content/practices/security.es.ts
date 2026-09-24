@@ -4,7 +4,7 @@ import type { QuestionTranslation } from '../../engine/question';
 export const translations: Record<string, QuestionTranslation> = {
   'security-web-basics-cookie-flags': {
     prompt:
-      'Tu cookie de sesión se define con `Set-Cookie: sid=abc123; HttpOnly; Secure; SameSite=Lax; Path=/`. ¿Qué afirmaciones sobre estos atributos son verdaderas? Selecciona todas las que apliquen.',
+      'Tu cookie de sesión se define con este header:\n\n```http\nSet-Cookie: sid=abc123; HttpOnly; Secure; SameSite=Lax; Path=/\n```\n¿Qué afirmaciones sobre estos atributos son verdaderas? Selecciona todas las que apliquen.',
     options: {
       a: '`HttpOnly` impide que el JavaScript de la página (`document.cookie`) lea la cookie, así que un payload de XSS no puede exfiltrarla directamente',
       b: '`Secure` significa que el navegador solo envía la cookie por HTTPS',
@@ -45,12 +45,12 @@ export const translations: Record<string, QuestionTranslation> = {
       'El **escape** convierte el markup en texto inerte; es lo predeterminado para los datos de usuario, pero mostraría literalmente las etiquetas `<b>` del autor de la reseña. Cuando tienes que renderizar HTML de usuario, lo **sanitizas**: lo parseas y conservas solo una allowlist de etiquetas, atributos y esquemas de URL. Las blocklists fallan: `<img src=x onerror=...>`, `<svg onload=...>` y `<a href="javascript:...">` no contienen ninguna etiqueta `<script>`, y las regex no parsean HTML. `encodeURIComponent` es para componentes de URL, no para HTML. Sanitiza al mostrar (o tanto al recibir como al mostrar) con una biblioteca mantenida, y agrega una Content Security Policy como segunda capa.',
   },
   'security-xss-react-vectors': {
-    prompt: 'En una app de React, `bio`, `website` y `post` vienen de otros usuarios. ¿Cuáles de estos son vectores de XSS? Selecciona todas las que apliquen.',
+    prompt: 'En una app de React 19, `bio`, `website` y `post` vienen de otros usuarios, y `markdownToHtml` es un renderizador de markdown simple que no sanitiza su salida. ¿Cuáles de estos son vectores de XSS? Selecciona todas las que apliquen.',
     options: {
-      c: '`<a href={website}>Website</a>` sin validar el esquema de la URL',
+      c: '```tsx\n<button\n  onClick={() => {\n    window.location.href = website;\n  }}\n>\n  Visit website\n</button>\n```\nSin validar el esquema de la URL',
     },
     explanation:
-      'React escapa los hijos de texto y los valores de atributos, así que `<p>{bio}</p>` y `<input defaultValue={bio} />` muestran el payload como texto inerte. `dangerouslySetInnerHTML` desactiva eso a propósito: el nombre es la advertencia, y la entrada se debe sanitizar primero. Asignar `innerHTML` mediante una ref se salta React por completo; los renderizadores de markdown dejan pasar HTML crudo sin problema a menos que se configuren para no hacerlo. `href` se escapa como cadena, pero su **significado** no se revisa: `javascript:alert(1)` sigue siendo una URL, y según la versión de React solo obtienes una advertencia en la consola. Usa una allowlist de `http:`/`https:` (y quizá `mailto:`) para las URLs que aportan los usuarios.',
+      'React escapa los hijos de texto y los valores de atributos, así que `<p>{bio}</p>` y `<input defaultValue={bio} />` muestran el payload como texto inerte. `dangerouslySetInnerHTML` desactiva eso a propósito: el nombre es la advertencia, y la entrada se debe sanitizar primero. Asignar `innerHTML` mediante una ref se salta React por completo, y un renderizador que no sanitiza deja pasar HTML crudo como `<img src=x onerror=...>` directo al DOM. Asignar `window.location.href` es un sink del DOM que React nunca ve: `javascript:alert(1)` es una URL válida, y navegar a ella ejecuta el script en tu origen. React 19 sí bloquea las URLs `javascript:` en las props que renderiza (`href`, `src`, `action`, `formAction`) y las reemplaza por una que lanza un error (de React 16.9 a 18 solo había una advertencia en desarrollo), pero eso no cubre `location`, `window.open` ni las URLs que le pasas a código que no es de React. Usa una allowlist de `http:`/`https:` (y quizá `mailto:`) para las URLs que aportan los usuarios.',
   },
   'security-xss-csp-rollout': {
     prompt:
