@@ -89,7 +89,7 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       'Despite its name, **401 means "unauthenticated"**: no credentials, or credentials that are invalid or expired. It must come with a `WWW-Authenticate` header (RFC 9110 §15.5.2) telling the client how to authenticate. **403 means "authenticated, but not allowed"**: retrying with the same identity will not help.\n\n`405` is for a method the resource does not support at all (for anyone), and it must include an `Allow` header. `400` is for a malformed request.\n\nWhen revealing that a resource *exists* is itself a leak (another tenant\'s project), many APIs return `404` instead of `403`. That is a deliberate choice, not a mistake.',
-    hint: 'Separate "who is calling" from "what they may do", and check which of the two a valid, unexpired token already settles.',
+    hint: 'Separate authentication from authorization and recall which failure each of these codes reports.',
   },
   {
     id: 'rest-status-code-choices',
@@ -134,7 +134,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '`If-Match` makes the write **conditional**: "apply this only if the current version is still `v7`". Since the version is now `v8`, the precondition fails and the server answers **412 Precondition Failed** without changing anything. This is optimistic concurrency control over HTTP, the same idea as a `version` column checked in `UPDATE ... WHERE version = 7`.\n\n`304` is the answer to a conditional **GET** with `If-None-Match` (the cached copy is still fresh). `428 Precondition Required` is what you return when the client sent **no** `If-Match` at all on an endpoint that requires one. Many APIs use `409 Conflict` for version mismatches carried in the body; with HTTP preconditions, 412 is the precise code.\n\n**Say this out loud:** "I prevent lost updates with ETags: reads return a version, writes send `If-Match`, and a stale version gets a 412 so the client has to reconcile instead of silently overwriting someone else\'s change."',
-    hint: 'Treat `If-Match` as a conditional write, like optimistic locking with a version column, and recall which status means a precondition did not hold.',
+    hint: 'Treat `If-Match` as a conditional write, like optimistic locking with a version column, and recall what the server must do when the version no longer matches.',
   },
   {
     id: 'rest-idempotent-but-not-safe',
@@ -237,6 +237,6 @@ export function solution(requests: Req[]): { responses: Res[]; charges: number }
     source: 'notion',
     explanation:
       'Two bugs: the starter **charges before it checks the key**, so every retry moves money even though it replays the old response, and it **ignores the payload**, so a key accidentally reused for a different payment silently returns the wrong receipt.\n\nThe fix is "look up first, charge only on a miss, remember the request fingerprint with the response". In production the store is Redis or a DB table with a unique constraint on the key, entries expire after a TTL (Stripe keeps them 24 h), keys are scoped per client, and a request that arrives **while the first is still in flight** gets `409 Conflict` (the IETF Idempotency-Key draft uses 409 for that and 422 for a payload mismatch). The key must be written atomically with the side effect, or a crash between the two reintroduces the double charge.\n\n**Say this out loud:** "POST is not idempotent, so I make it idempotent with a client-generated key: check the key before the side effect, store a hash of the request with the response, replay on a match, reject a mismatched payload, and make the key write atomic with the charge."',
-    hint: 'Look up the key before any side effect, store the request amount alongside the saved response, and only charge on a miss.',
+    hint: 'Ask what must happen before the charge when a key arrives again, and what the stored entry needs so a reused key with a different amount can be detected.',
   },
 ];

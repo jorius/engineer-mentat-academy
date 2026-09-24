@@ -31,7 +31,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Good names answer *what* and *why* so comments become unnecessary: a predicate reads as a question (`isInactive`, `hasAccess`, `canRetry`), units live in the name (`MS_PER_DAY`, `lastLoginAt`), and the business number gets a name so it is not a magic `30`. `check` hides what is checked, comments that restate code drift out of date, and names that narrate the implementation are noise that must change whenever the code does.',
-    hint: 'Good names state what and why: predicates read as questions, units live in the name, and business numbers are not magic. Beware both cryptic and narrating names.',
+    hint: 'Recall what makes a name reveal intent, and for each version ask what a reader still has to guess or wade through.',
   },
   {
     id: 'clean-code-positional-flags-to-options',
@@ -191,7 +191,7 @@ export function solution(cart, percent) {
     source: 'topic-list',
     explanation:
       "A flag argument means the function does two things; split it into two named functions. Mixing calculation with I/O makes the logic impossible to test without mocks: extract the pure part. Section comments are extract-function candidates whose names are already written. A single return is a style choice (guard clauses with early returns are often clearer), and being widely used is a sign of a useful function, not a bad one. Functions should do one thing at one level of abstraction.",
-    hint: 'Ask whether each signal means the function does more than one thing or mixes levels of abstraction, rather than being a style choice or a sign of reuse.',
+    hint: 'Recall the "do one thing" and "one level of abstraction" guidelines, then ask what each signal says about the function\'s body.',
   },
   {
     id: 'clean-code-refactor-legacy-function',

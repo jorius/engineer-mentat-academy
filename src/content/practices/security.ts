@@ -45,8 +45,7 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       'The same-origin policy is the protection; CORS is the server\'s opt-in to let a browser page from another origin **read** responses. Non-browser clients never check it, so authentication, authorization and rate limiting remain mandatory. Browsers refuse the `*` + credentials combination; you must echo a specific allowed origin. And "simple" requests (a form-encoded `POST` without custom headers) are **not** preflighted: the request is sent with cookies, only the response is hidden, which is exactly how classic CSRF works.',
-    hint:
-      'Ask who enforces CORS, and what happens when the caller is not a browser at all.',
+    hint: 'Recall what problem CORS was added to the web platform to solve, and what the same-origin policy restricts by default.',
   },
   {
     id: 'security-xss-escape-html',
@@ -108,8 +107,7 @@ export function solution(input: string): string {
     source: 'notion',
     explanation:
       '**Escaping** turns markup into inert text; it is the default for user data, but it would show the reviewer\'s `<b>` tags literally. When you must render user HTML, you **sanitize**: parse it and keep only an allowlist of tags, attributes and URL schemes. Blocklists fail: `<img src=x onerror=...>`, `<svg onload=...>` and `<a href="javascript:...">` contain no `<script>` tag, and regexes do not parse HTML. `encodeURIComponent` is for URL components, not HTML. Sanitize on output (or on both input and output) with a maintained library, and add a Content Security Policy as a second layer.',
-    hint:
-      'The HTML must still render as formatted markup, so ask which defence keeps safe tags while removing dangerous ones, and why blocklists fail.',
+    hint: 'The review must still render as formatted markup: compare what escaping, URL encoding, blocklists and allowlists each do to that HTML.',
   },
   {
     id: 'security-xss-react-vectors',
@@ -131,8 +129,7 @@ export function solution(input: string): string {
     source: 'notion',
     explanation:
       'React escapes text children and attribute values, so `<p>{bio}</p>` and `<input defaultValue={bio} />` render the payload as inert text. `dangerouslySetInnerHTML` opts out of that on purpose: the name is the warning, and the input must be sanitized first. Setting `innerHTML` through a ref bypasses React completely, and a renderer that does not sanitize passes raw HTML such as `<img src=x onerror=...>` straight into the DOM. Assigning `window.location.href` is a DOM sink React never sees: `javascript:alert(1)` is a valid URL, and navigating to it runs the script in your origin. React 19 does block `javascript:` URLs in the props it renders (`href`, `src`, `action`, `formAction`), swapping them for one that throws (React 16.9 to 18 only warned in development), but that does not cover `location`, `window.open` or URLs you hand to non-React code. Allowlist `http:`/`https:` (and maybe `mailto:`) for user-provided URLs.',
-    hint:
-      'React escapes what it renders as text or attribute values; look for the places where HTML or a URL scheme bypasses that.',
+    hint: 'Recall exactly what React escapes automatically, and which values or DOM writes it never inspects.',
   },
   {
     id: 'security-xss-csp-rollout',
@@ -179,8 +176,7 @@ export function solution(input: string): string {
     source: 'notion',
     explanation:
       '`SameSite=Lax` (the default in modern Chromium when unset) blocks the classic hidden cross-site form `POST`, which removes most CSRF. The gaps: **same-site is not same-origin** (any subdomain under the same registrable domain, including one running an old CMS or user content, counts as same-site); `GET` requests on top-level navigation still carry the cookie, so any state-changing `GET` is exposed; and older clients may not enforce it. `SameSite=None` is the **least** strict value and requires `Secure`. CSRF tokens (synchronizer or double-submit) or an `Origin`/`Sec-Fetch-Site` check cost little and close those gaps. CSRF tokens do nothing against XSS: script running on your origin can read the token.\n\n**Say this out loud:** "SameSite is a strong default, not a complete defence: I keep GETs side-effect free and still verify a CSRF token or the Origin header on every state-changing request."',
-    hint:
-      'Recall what `Lax` still allows (top-level navigations) and how the browser defines "same site" compared with "same origin".',
+    hint: 'Recall the exact cases in which `SameSite=Lax` still attaches the cookie, and how the browser decides that two URLs are the same site.',
   },
   {
     id: 'security-csrf-jwt-localstorage',

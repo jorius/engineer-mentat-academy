@@ -44,7 +44,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '**Authentication** (who you are) worked: the token was genuine. **Authorization** (what you may do *to this object*) was never checked. This is **Broken Object Level Authorization**, #1 in the OWASP API Security Top 10, also called IDOR.\n\nThe fix belongs in the data access path, not the UI: scope every query by the caller\'s tenant or ownership taken **from the verified token**, never from a request parameter, and return `404` (not `403`) so you do not confirm the object exists. Row-level security in Postgres is a strong backstop.\n\nSwitching to UUIDs is defense in depth only: they make ids harder to guess, but they leak through logs, shared links and other endpoints, and they do not add a permission check. Restricting CORS origins is irrelevant; CORS does not stop a logged-in user from calling the API directly.',
-    hint: 'Split authentication from authorization, and ask whether the lookup ever checked that this particular object belongs to the caller.',
+    hint: 'Split authentication from authorization, and ask which of the two the valid token proves and which one this request also needed.',
   },
   {
     id: 'api-security-cognito-authorizer-scope',
@@ -66,7 +66,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '**Cognito** is the identity provider: it stores users and password hashes, runs sign-up/sign-in/MFA, federates with social and SAML/OIDC providers, and issues JWTs (ID, access and refresh tokens). The **API Gateway Cognito authorizer** validates the token (signature via the pool\'s JWKS, expiry, issuer, and for access tokens the OAuth scopes you configure) before your Lambda runs, and passes the claims in `requestContext.authorizer`.\n\nWhat neither can know is your domain rule: *this* user may read *this* order. That object-level check, plus role checks from `cognito:groups` or custom claims, lives in your service. In short: Cognito gives you authentication and coarse-grained scopes, you own fine-grained authorization.',
-    hint: 'List what the identity provider and the Gateway authorizer handle about the token itself, then ask what they cannot know about your data.',
+    hint: 'Recall what a Cognito user pool manages and what the API Gateway authorizer checks before your Lambda ever runs.',
   },
   {
     id: 'api-security-fixed-window-boundary-burst',
@@ -88,7 +88,7 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       'A fixed window counts per calendar bucket, so a client can spend a full quota at the end of one window and another full quota at the start of the next: **2x the limit in two seconds**.\n\n- **Sliding window log**: store each request timestamp and count those in the last 60 s. Exact, but memory grows with the limit.\n- **Sliding window counter**: weight the previous window\'s count by how much of it still overlaps (`prev * (1 - elapsed/60) + current`). Cheap and close enough; common with Redis.\n- **Token bucket**: a bucket of `capacity` tokens refilled at a steady rate; each request takes one. It deliberately **allows bursts up to capacity** while enforcing the long-run average, which is usually what you want for APIs (AWS API Gateway throttling uses it).\n\nThe key choice (API key, user, IP) is a separate decision from the algorithm.',
-    hint: 'Picture the counter on each side of the minute boundary, then think of algorithms that look at the last 60 seconds instead of the calendar minute.',
+    hint: 'Picture the counter on each side of the minute boundary, then check whether each proposed fix changes what the window measures or only who is counted.',
   },
   {
     id: 'api-security-token-bucket-allow',
@@ -127,7 +127,7 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       'The trick is **lazy refill**: no timer ticks tokens in. On each request you compute how many tokens accrued since the last one, `elapsed * rate`, add them, and **clamp to capacity** (without the clamp, a client idle for an hour could fire thousands of requests at once). Then spend one token or reject.\n\nThat is why the state per key is only two numbers, `tokens` and `lastRefill`, which fits in one Redis hash. In a distributed setup the read-refill-decrement must be **atomic** (a Lua script, or `WATCH` plus `MULTI`/`EXEC` retried on conflict; `MULTI` alone cannot read the count and branch on it), or two instances race and both spend the last token. A rejected call returns `429` with `Retry-After = ceil((1 - tokens) / rate)` seconds.\n\n**Say this out loud:** "A token bucket stores just tokens and a timestamp per key, refills lazily on each request capped at capacity, which allows controlled bursts while enforcing the average rate, and in Redis the check-and-decrement has to be one atomic script."',
-    hint: 'Use lazy refill: on each request add the tokens accrued since the last one, clamp to `capacity`, then spend one if available. Mind the milliseconds-to-seconds conversion.',
+    hint: 'Refill from the time elapsed since the previous request rather than on a timer, and mind the milliseconds-to-seconds conversion.',
   },
   {
     id: 'api-security-distributed-rate-limiting',
@@ -174,7 +174,7 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       '- **Rate limiting** per IP and globally limits brute force, spam and DoS; add a CAPTCHA or proof-of-work if abuse persists.\n- **Server-side schema validation** is the core rule: **never trust input**. Validate at the boundary (zod, class-validator, JSON Schema) with allowlists and size limits; this also blocks mass-assignment of fields you did not intend to accept.\n- **Parameterized queries plus output encoding** handle the input you *did* accept: parameterized queries stop SQL injection, and output encoding (plus a CSP) stops stored XSS when an admin views the message.\n\nThe CORS allowlist is the classic misconception: **CORS is enforced by browsers**, and it only controls whether a page from another origin may *read* the response. `curl`, scripts and bots ignore it entirely. Client-side validation does not help either: attackers do not use your form. Client-side validation is UX, not security.',
-    hint: 'For each measure, ask whether an attacker who skips your UI and calls the endpoint with `curl` is actually stopped by it.',
+    hint: 'Map each measure to the abuse it would defend against (floods, malformed input, injected content), and recall where and by whom each one is enforced.',
   },
   {
     id: 'api-security-token-storage-csrf',

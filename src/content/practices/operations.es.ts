@@ -13,16 +13,14 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un stack trace se lee de arriba hacia abajo, desde el **punto donde se lanzó el error** hasta el **punto de entrada**. El mensaje dice que un objeto era `undefined` cuando se leyó `.email`, no que faltara `email` (eso daría `undefined`, no un `TypeError`). El frame superior te dice dónde falló; la causa raíz suele estar unos frames más abajo, donde `sendReceipt` u `OrderService.complete` pasaron un cliente inexistente. Las rutas bajo `dist` son salida compilada: habilita los source maps (`node --enable-source-maps`, o súbelos a tu error tracker) para que los números de línea apunten a tu TypeScript. El frame `async` muestra que el trace sobrevivió a un `await` gracias a los async stack traces de V8.',
-    hint:
-      'Lee los frames de arriba hacia abajo: el de arriba es donde falló, no necesariamente de donde vino el valor malo, y las rutas `dist` apuntan a código compilado.',
+    hint: 'Recuerda en qué orden va un stack trace de Node, qué te dice cada frame y qué significan las rutas `dist` al leer los números de línea.',
   },
   'operations-production-debugging-correlation-ids': {
     prompt:
       'Las líneas de log de varios servicios se envían a un mismo almacén y llegan **desordenadas**. Cada línea lleva el `correlationId` que el gateway asignó a la solicitud entrante.\n\nImplementa `solution(logs, correlationId)` para que devuelva:\n\n- `path`: los servicios que manejaron esa solicitud, en orden de timestamp, colapsando los duplicados **consecutivos** (`orders, orders` se convierte en `orders`, pero `orders, payments, orders` se mantiene);\n- `firstError`: `"<service>: <msg>"` para la línea de nivel `error` más temprana de esa solicitud, o `null`.',
     explanation:
       'El correlation id es lo único que une las líneas de distintos servicios a una misma solicitud de usuario, así que se debe generar (o aceptar desde `X-Request-Id` / `traceparent`) en el borde, propagar en cada llamada y mensaje saliente, y adjuntar a cada línea de log (en Node, normalmente mediante `AsyncLocalStorage`, para no tener que pasarlo por cada función). Fíjate en que el primer error está en **payments**, mientras que el error que la mayoría vería primero es el de `orders` o el `502` del gateway: ordenar por tiempo y leer el error más temprano es como encuentras la causa raíz en lugar del síntoma más ruidoso. El desfase de reloj entre hosts hace que los timestamps sean aproximados; el tracing real (spans de OpenTelemetry con ids de padre) resuelve el orden por causalidad.',
-    hint:
-      'Filtra por id, ordena una copia por `ts` y recórrela una vez, saltando un servicio cuando es igual a la entrada anterior.',
+    hint: 'Las líneas llegan desordenadas, así que ordénalas antes de recorrerlas, y decide qué cuenta como un salto repetido.',
   },
   'operations-production-debugging-rollback-vs-flag': {
     prompt:
@@ -65,8 +63,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '**RED** (Rate, Errors, Duration, de Tom Wilkie) describe los **servicios orientados a solicitudes** desde el punto de vista de quien llama: es lo que graficas para los endpoints de la API. **USE** (Utilization, Saturation, Errors, de Brendan Gregg) describe **recursos**: CPUs, discos, pools de hilos, pools de conexiones, colas. La saturación es la métrica que los equipos olvidan y la que explica la latencia: un pool al 100% de utilización con 50 solicitudes en espera se ve como solicitudes lentas en RED mientras la CPU se ve bien. Los dos se complementan: RED te dice *que* los usuarios están sufriendo, USE te dice *qué recurso* es el cuello de botella.',
-    hint:
-      'Pregúntate si un pool de conexiones es un servicio impulsado por solicitudes o un recurso, y qué método se diseñó para recursos.',
+    hint: 'Recuerda qué fue diseñado para monitorear cada método, RED y USE, y decide qué tipo de cosa es un pool de conexiones.',
   },
   'operations-logging-alert-fatigue': {
     prompt:
@@ -80,8 +77,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un page debería significar "una persona tiene que actuar ya para proteger a los usuarios". Las alertas basadas en síntomas sobre los SLO atrapan todas las causas que afectan a los usuarios, incluidas las que nadie previó, mientras que los umbrales basados en causas se disparan cuando no pasa nada malo (CPU al 85% durante un job batch sano). Las duraciones y los burn rates de múltiples ventanas filtran las alertas intermitentes. Los runbooks y una revisión periódica de las alertas mantienen el conjunto honesto. Silenciar sin un reemplazo solo esconde la señal, y así es como se pasan por alto incidentes reales.\n\n**Dilo en voz alta:** "Hago page por síntomas, no por causas: alertas de burn rate del SLO sobre errores y latencia, cada una accionable y con un runbook, y todo lo demás va a un ticket o a un dashboard."',
-    hint:
-      'Un page debería significar que un usuario está sufriendo y que alguien tiene que actuar ya; juzga cada opción según si conserva esa señal o solo la silencia.',
+    hint: 'Recuerda qué hace que valga la pena despertar a alguien con un page, y compara las alertas basadas en síntomas con las basadas en causas.',
   },
   'operations-performance-percentiles': {
     prompt:

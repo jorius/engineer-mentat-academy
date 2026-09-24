@@ -22,7 +22,7 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       '**Over-fetching**: the endpoint returns more than the screen needs (40 user fields, whole line items), wasting bandwidth, which matters on mobile. **Under-fetching**: one endpoint does not return enough, so the client makes extra round trips (user, then orders), adding latency.\n\nIn GraphQL the **client declares the shape** of the response and the server resolves nested fields in one request, so both disappear from the client\'s point of view. The work does not vanish; it moves to the server, where nested resolvers can cause N+1 queries unless you batch. GraphQL is still JSON over HTTP (usually POST); the idea that it switches to a binary transport describes gRPC/protobuf, not GraphQL.',
-    hint: 'Define over-fetching and under-fetching in the REST flow, then check what a nested selection set changes about fields and round trips.',
+    hint: 'Define over-fetching and under-fetching in the REST flow, then recall who decides the shape of the response in a GraphQL query.',
   },
   {
     id: 'graphql-dataloader-per-request-context',
@@ -44,7 +44,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '`context` is the per-request object shared by every resolver in one operation: it is where the authenticated user, DB handles and loaders live. Creating loaders there scopes both the **batch window** and the **memo cache** to a single request.\n\n- **Module level** is the dangerous distractor: a shared cache never invalidates (stale data after writes), grows without bound, and can serve data loaded under one user\'s permissions to another user.\n- **Inside each field resolver** creates a new loader per field call, so there is nothing to batch with and the N+1 comes back.\n- **`info`** is the query AST and schema metadata, not a place for per-request state.\n\nFor a cross-request cache, put Redis (or HTTP caching) *below* the loader, with explicit TTLs and invalidation.',
-    hint: 'DataLoader caches by id: think about who could see a cached record if that cache outlived one request, and which resolver argument is built once per request.',
+    hint: 'DataLoader caches by id: think about who could see a cached record if that cache lived longer than intended.',
   },
   {
     id: 'graphql-n-plus-one-batching-predict',
@@ -162,7 +162,7 @@ export function solution(keys: number[], rows: Author[]): (Author | null)[] {
     source: 'topic-list',
     explanation:
       'DataLoader resolves the promise for `keys[i]` with `result[i]`. If you return the raw rows, a missing id shifts every later result by one and **authors get attached to the wrong posts**, a silent data bug rather than a crash (DataLoader only throws when the lengths differ).\n\nIndex the rows in a `Map` (O(n + k)) instead of calling `rows.find` per key (O(n * k)). Return `null` for a missing record, or an `Error` instance if that key should reject individually.',
-    hint: 'Index the rows in a `Map` keyed by id, then map over `keys` so the order and length follow the keys, not the rows.',
+    hint: 'Let the contract decide the output: which array drives its length and order, and what a missing id becomes.',
   },
   {
     id: 'graphql-operational-costs',

@@ -221,7 +221,7 @@ export function solution(rows: Row[], limit: number, cursor: string | null): Pag
     source: 'topic-list',
     explanation:
       'A good error response has an **accurate status code** (so proxies, retries and monitoring work), a **consistent machine-readable envelope** (so every client handles every error the same way), **stable error codes** the client can branch on (not English messages), and **field-level detail** so a form can highlight both fields at once.\n\nRFC 9457 *Problem Details for HTTP APIs* (which replaced RFC 7807) standardizes that envelope: `type`, `title`, `status`, `detail`, `instance`, plus extension members such as `errors`. `200 OK` with `success: false` hides the failure from HTTP tooling, a plain-text `Invalid input` body is not machine-readable, and a `500` with a stack trace is a 5xx for a client mistake that also leaks internals. `400` is also acceptable for validation errors, as long as the body\'s `status` member matches the HTTP status (RFC 9457 requires it).',
-    hint: 'Judge each response by four things: an accurate status, a consistent machine-readable body, field-level detail, and no leaked internals.',
+    hint: 'Think about who consumes an error response (client code, proxies, monitoring, the developer fixing the call) and what each of them reads from it.',
   },
   {
     id: 'api-design-202-accepted-meaning',

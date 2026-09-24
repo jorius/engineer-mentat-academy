@@ -49,7 +49,7 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       'Each microservice should own its data and expose it only through its API or events (database per service). A shared table leaks internal structure: renaming a column, adding a constraint or changing an index is now a cross-team, lockstep release, and one service can bypass the other\'s invariants. If `invoicing` needs order data, `orders` should publish events (and `invoicing` keeps its own read model) or expose an API. The consistency trade-off moves the other way: a shared database is strongly consistent, which is exactly why it is tempting.',
-    hint: 'Think about what the table schema becomes when two services depend on it, and what that does to deploying them independently.',
+    hint: 'Recall the main reason microservice guidance says each service should own its data.',
   },
   {
     id: 'distributed-systems-kafka-ordering-keys',
@@ -71,7 +71,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Kafka only guarantees order **within a partition**. Without a key, messages are spread across partitions and consumed in parallel, so per-order order is lost. Keying by the entity whose order matters (`orderId`) hashes all its events to one partition while different orders still spread across all 12, keeping parallelism. A single partition would restore order but throws away the parallelism the prompt requires (one consumer for the whole topic), and Kafka cannot shrink an existing topic\'s partition count anyway: you would have to create a new topic and migrate. Timestamps from different producers are not a reliable order. Two extra details: keep the idempotent producer enabled so retries do not reorder or duplicate within a partition, and remember that adding partitions later changes the key-to-partition mapping.',
-    hint: 'Kafka orders messages only within a partition. Ask how the producer decides which partition a message lands on.',
+    hint: 'Recall exactly what ordering guarantee Kafka gives and at what granularity, then check which option keeps it for one order without giving up parallelism.',
   },
   {
     id: 'distributed-systems-kafka-consumer-groups',
@@ -92,7 +92,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Within one consumer group, each partition is assigned to **exactly one** consumer, so the partition count caps the group\'s parallelism; extra consumers stay idle until a rebalance gives them a partition (for example when another instance dies). Different consumer groups each receive every message independently, which is how several services subscribe to the same topic. To scale a consumer further you add partitions, keeping in mind that it changes key placement.',
-    hint: 'Within one consumer group, how many consumers can own a given partition at the same time?',
+    hint: 'Recall how Kafka assigns partitions to the members of one consumer group.',
   },
   {
     id: 'distributed-systems-kafka-delivery-semantics',
@@ -117,7 +117,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Commit-after-processing is **at-least-once** (duplicates possible); commit-before-processing is **at-most-once** (loss possible). The idempotent producer de-duplicates retries per partition using producer IDs and sequence numbers. Kafka transactions give exactly-once only for read-process-write **within Kafka**; once a side effect leaves Kafka (a database row, an email, a payment), you get effectively-once by making the consumer idempotent, for example by storing processed message IDs or the consumed offset in the same database transaction. Extra consumers beyond the partition count are idle.\n\n**Say this out loud:** "I design for at-least-once and make consumers idempotent; exactly-once is a Kafka-internal guarantee, and anything with external side effects needs dedupe keys or offsets stored transactionally with the write."',
-    hint: 'Map offset commit timing to at-least-once versus at-most-once, and ask where Kafka\'s exactly-once guarantee stops once a side effect leaves Kafka.',
+    hint: 'Map offset commit timing to delivery guarantees, and recall the exact scope of Kafka\'s idempotent producer, its transactions and consumer-group parallelism.',
   },
   {
     id: 'distributed-systems-dlq-routing',
@@ -248,7 +248,7 @@ export function solution(messages, maxAttempts) {
     source: 'notion',
     explanation:
       'A message that can never be processed blocks everything behind it when the consumer insists on handling it before committing. The dead-letter queue (or topic) is where such messages are parked with enough context to investigate and redrive later. More consumers do not help because the partition belongs to one consumer, and retrying a deterministic failure never succeeds. SQS offers this natively with a redrive policy (`maxReceiveCount`); on Kafka you implement it in the consumer or framework.',
-    hint: 'A deterministic failure never succeeds on retry, and the partition belongs to one consumer. Where can the consumer park that message so the rest keep flowing?',
+    hint: 'Ask whether this failure is transient or deterministic, and what happens to the rest of the partition while one consumer keeps retrying it.',
   },
   {
     id: 'distributed-systems-idempotency-dedupe',
@@ -317,7 +317,7 @@ export function solution(events: IncomingEvent[]): number[] {
     source: 'notion',
     explanation:
       'At-least-once delivery means duplicates are normal, so the consumer turns them into no-ops by remembering which keys it has already handled. A `Set` gives O(1) membership checks and a single pass preserves arrival order. In production the "seen" set is not in memory: it is a table with a unique constraint on the key (insert-or-ignore inside the same transaction as the side effect) or a Redis `SET NX` with a TTL at least as long as the producer\'s retry window.',
-    hint: 'Keep a `Set` of keys already seen and make one pass in arrival order; events without a key skip the check.',
+    hint: 'Make one pass in arrival order and remember what you have already accepted; mind the events that carry no key.',
   },
   {
     id: 'distributed-systems-idempotency-keys-api',
@@ -376,7 +376,7 @@ export function solution(events: IncomingEvent[]): number[] {
     source: 'notion',
     explanation:
       'Exponential backoff gives a struggling dependency room to recover; the cap keeps the worst-case wait bounded. **Jitter** is the part people forget: without it, every client that failed at the same moment retries at the same moment (a thundering herd), re-creating the spike that caused the failure. Full jitter (`random(0, min(cap, base * 2^i))`) spreads retries across the whole window and, in AWS\'s analysis, finishes the total work with the fewest calls. The cap must apply **before** the jitter: capping afterwards (`min(cap, random * base * 2^i)`) clamps most late retries to exactly `cap`, so clients line up again at the cap and the jitter is lost.\n\nTaking the randomness as an input (a seeded generator or pre-drawn values) is what makes retry logic unit-testable. Also bound the total: a max attempt count or a deadline, honor `Retry-After` on 429/503, and only retry idempotent operations.\n\n**Say this out loud:** "Retries use capped exponential backoff with full jitter to avoid synchronized retry storms, a bounded attempt budget, and only on idempotent operations or requests carrying an idempotency key."',
-    hint: 'Compute the ceiling with `Math.min` of the cap and the doubled base first, then scale it by the draw and use `Math.floor`. The order of cap and jitter matters.',
+    hint: 'Decide whether the cap applies before or after the jitter, and mind the rounding.',
   },
   {
     id: 'distributed-systems-what-to-retry',
@@ -399,7 +399,7 @@ export function solution(events: IncomingEvent[]): number[] {
     source: 'notion',
     explanation:
       'Retry when the failure is **transient** *and* repeating the request is **safe**. A 503 on a GET is both. A 429 is transient by definition and the server told you when to come back. A network failure on a POST is safe to retry only because the idempotency key lets the server deduplicate. A 400 is deterministic: the same request fails the same way. A timed-out POST without a key may already have succeeded, so retrying can double-charge; surface the error or reconcile instead. Also put a circuit breaker around the dependency so retries stop when it is clearly down.',
-    hint: 'Retry only when the failure is transient and repeating the request is safe; ask whether a request might already have succeeded.',
+    hint: 'For each failure, ask two questions: would the same request fare differently later, and what happens on the server if it runs twice?',
   },
   {
     id: 'distributed-systems-correlation-propagation',
@@ -465,6 +465,6 @@ export function solution(incoming, ids) {
     source: 'notion',
     explanation:
       "HTTP header names are case-insensitive. Node's `req.headers` lowercases them for you, but headers from queues, Lambda events, test fixtures or other frameworks often do not, so a case-sensitive lookup silently starts a new correlation ID and splits one request's logs in two.\n\nA correlation ID ties log lines together; a trace adds structure. In W3C Trace Context the **trace-id** stays constant across the whole request while each hop sends its **own span ID** as the parent-id, which is how a tracing backend (OpenTelemetry, Jaeger, X-Ray) rebuilds the call tree. Forwarding the incoming `traceparent` unchanged would attach the downstream span to the wrong parent. In practice the OpenTelemetry SDK does this propagation for you; the principle to know is: accept, validate, generate if missing, log it on every line, and forward it on every outgoing call and message.",
-    hint: 'Header names are case-insensitive, so search the keys with `toLowerCase`. Validate `traceparent` with a regex and swap only the parent-id for the new span.',
+    hint: 'Remember that header names are case-insensitive, and check what a valid `traceparent` looks like and which of its fields belongs to the new span.',
   },
 ];

@@ -27,8 +27,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'La política de mismo origen es la protección; CORS es la forma en que el servidor autoriza explícitamente a una página de otro origen a **leer** respuestas en el navegador. Los clientes que no son navegadores nunca lo revisan, así que la autenticación, la autorización y el rate limiting siguen siendo obligatorios. Los navegadores rechazan la combinación de `*` + credenciales; tienes que devolver un origen permitido específico. Y las solicitudes "simples" (un `POST` form-encoded sin headers personalizados) **no** pasan por preflight: la solicitud se envía con cookies y solo se oculta la respuesta, que es exactamente como funciona el CSRF clásico.',
-    hint:
-      'Pregúntate quién aplica CORS y qué pasa cuando quien llama no es un navegador.',
+    hint: 'Recuerda qué problema vino a resolver CORS en la plataforma web, y qué restringe por defecto la same-origin policy.',
   },
   'security-xss-escape-html': {
     prompt:
@@ -49,8 +48,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'El **escape** convierte el markup en texto inerte; es lo predeterminado para los datos de usuario, pero mostraría literalmente las etiquetas `<b>` del autor de la reseña. Cuando tienes que renderizar HTML de usuario, lo **sanitizas**: lo parseas y conservas solo una allowlist de etiquetas, atributos y esquemas de URL. Las blocklists fallan: `<img src=x onerror=...>`, `<svg onload=...>` y `<a href="javascript:...">` no contienen ninguna etiqueta `<script>`, y las regex no parsean HTML. `encodeURIComponent` es para componentes de URL, no para HTML. Sanitiza al mostrar (o tanto al recibir como al mostrar) con una biblioteca mantenida, y agrega una Content Security Policy como segunda capa.',
-    hint:
-      'El HTML tiene que seguir mostrándose con formato, así que pregúntate qué defensa conserva las etiquetas seguras mientras quita las peligrosas, y por qué fallan las listas de bloqueo.',
+    hint: 'La reseña todavía debe mostrarse como markup con formato: compara lo que el escapado, la codificación de URL, las blocklists y las allowlists le hacen a ese HTML.',
   },
   'security-xss-react-vectors': {
     prompt: 'En una app de React 19, `bio`, `website` y `post` vienen de otros usuarios, y `markdownToHtml` es un renderizador de markdown simple que no sanitiza su salida. ¿Cuáles de estos son vectores de XSS? Selecciona todas las que apliquen.',
@@ -59,8 +57,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'React escapa los hijos de texto y los valores de atributos, así que `<p>{bio}</p>` y `<input defaultValue={bio} />` muestran el payload como texto inerte. `dangerouslySetInnerHTML` desactiva eso a propósito: el nombre es la advertencia, y la entrada se debe sanitizar primero. Asignar `innerHTML` mediante una ref se salta React por completo, y un renderizador que no sanitiza deja pasar HTML crudo como `<img src=x onerror=...>` directo al DOM. Asignar `window.location.href` es un sink del DOM que React nunca ve: `javascript:alert(1)` es una URL válida, y navegar a ella ejecuta el script en tu origen. React 19 sí bloquea las URLs `javascript:` en las props que renderiza (`href`, `src`, `action`, `formAction`) y las reemplaza por una que lanza un error (de React 16.9 a 18 solo había una advertencia en desarrollo), pero eso no cubre `location`, `window.open` ni las URLs que le pasas a código que no es de React. Usa una allowlist de `http:`/`https:` (y quizá `mailto:`) para las URLs que aportan los usuarios.',
-    hint:
-      'React escapa lo que renderiza como texto o como valor de atributo; busca los lugares donde el HTML o un esquema de URL se saltan eso.',
+    hint: 'Recuerda exactamente qué escapa React de forma automática, y qué valores o escrituras al DOM nunca inspecciona.',
   },
   'security-xss-csp-rollout': {
     prompt:
@@ -90,8 +87,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '`SameSite=Lax` (el valor predeterminado en Chromium moderno cuando no se define) bloquea el clásico `POST` cross-site de un formulario oculto, lo que elimina la mayor parte del CSRF. Los huecos: **same-site no es same-origin** (cualquier subdominio bajo el mismo dominio registrable, incluido uno que corre un CMS viejo o contenido de usuarios, cuenta como same-site); las solicitudes `GET` en navegaciones de nivel superior siguen llevando la cookie, así que cualquier `GET` que cambie estado queda expuesto; y los clientes más viejos pueden no aplicarlo. `SameSite=None` es el valor **menos** estricto y requiere `Secure`. Los tokens CSRF (synchronizer o double-submit) o una verificación de `Origin`/`Sec-Fetch-Site` cuestan poco y cierran esos huecos. Los tokens CSRF no hacen nada contra el XSS: un script que corre en tu origen puede leer el token.\n\n**Dilo en voz alta:** "SameSite es un buen valor predeterminado, no una defensa completa: mantengo los GET sin efectos secundarios y sigo verificando un token CSRF o el header Origin en cada solicitud que cambia estado."',
-    hint:
-      'Recuerda qué sigue permitiendo `Lax` (navegaciones de nivel superior) y cómo define el navegador "mismo sitio" frente a "mismo origen".',
+    hint: 'Recuerda los casos exactos en que `SameSite=Lax` todavía adjunta la cookie, y cómo decide el navegador que dos URLs son del mismo sitio.',
   },
   'security-csrf-jwt-localstorage': {
     prompt:

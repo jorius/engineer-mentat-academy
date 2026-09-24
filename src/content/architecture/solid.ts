@@ -21,7 +21,7 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       'SRP is about **cohesion around a reason to change**, not about counting methods or lines. A `UserService` with `login()` and `updateProfile()` changes when security rules change *and* when profile fields change, so two teams edit the same file for unrelated reasons. Splitting it into `AuthenticationService` and `UserProfileService` isolates those changes. A class with ten methods can still satisfy SRP if they all serve the same concern. In React the usual smell is a component that fetches, transforms and renders several things; the fix is a data hook plus small presentational components.',
-    hint: 'Think about who asks for changes to the code, not about how many methods, lines or classes it has.',
+    hint: 'Recall how Robert C. Martin rephrased "one responsibility" in terms of change.',
   },
   {
     id: 'solid-srp-invoice-reasons',
@@ -44,7 +44,7 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       'Four different stakeholders (finance, design, data, infrastructure) can each force an edit here, so a change for one risks breaking the others and every change needs the whole class retested. Adding a test is not a change to the class. A reasonable split is a pure `calculateTotal` function (easy to unit test), an `InvoiceRenderer`, an `InvoiceRepository` and a `Mailer`, with a thin use case that orchestrates them.',
-    hint: 'Ask which stakeholder or technology would force an edit to the class itself, and whether each item changes the class at all.',
+    hint: 'List the distinct actors and technologies this class answers to, then match each scenario against that list.',
   },
   {
     id: 'solid-ocp-exporter-registry',
@@ -66,7 +66,7 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       'OCP means you extend behavior by **adding** code, not by editing working code. A registry (a strategy map) lets each format live in its own module, and the three call sites never change again. Adding a `case \'xml\'` to each switch works but must be repeated in every duplicated switch, which is exactly the shotgun-surgery smell OCP targets. Subclassing the service still edits a switch, just in a subclass, and the `isXml` parameter adds a boolean flag that does not scale past two formats.\n\nThe pragmatic caveat: a single `switch` over a stable, closed set of cases (for example the three states of a traffic light) is fine. OCP pays off when the set grows and the branching is duplicated.',
-    hint: 'Open-closed means adding a format without editing working code. Count how many places each option forces you to touch.',
+    hint: 'Recall what open-closed asks of existing, working code when a new variant arrives.',
   },
   {
     id: 'solid-lsp-penguin-predict',
@@ -205,7 +205,7 @@ export function solution(kinds) {
     source: 'notion',
     explanation:
       'The base class made a promise (`fly()`) that not every subtype can keep, so the fix belongs in the **model**, not in the callers. Moving `fly()` down to a `FlyingBird` (or into a mixin / interface) means a `Penguin` never claims to fly, and callers filter on the capability. Filtering with `!(bird instanceof Penguin)` would pass the tests but reintroduces the smell: every new non-flyer (an ostrich, a kiwi) would require editing every caller, which also breaks open-closed.\n\nIn TypeScript the same idea is `interface Flyer { fly(): string }` and a type guard; in JS generally, prefer shallow hierarchies and composition so substitutes never surprise you.\n\n**Say this out loud:** "A subclass that throws or no-ops an inherited method is a Liskov violation. I fix the abstraction so the base type only promises what every subtype can do, instead of adding type checks in callers."',
-    hint: 'Move `fly()` out of the base class into an intermediate class for flyers, and filter birds by whether they have the method rather than by their class.',
+    hint: 'Ask which classes can actually keep the `fly()` promise, and how a caller can pick flyers without naming `Penguin`.',
   },
   {
     id: 'solid-isp-mixins-predict',
@@ -319,7 +319,7 @@ export function solution(amount, gatewayApproves) {
     source: 'notion',
     explanation:
       'Before the fix, high-level policy (`paid` vs `declined`) depends directly on a low-level vendor detail. After it, both depend on an abstraction, the `requestPayment(details, amount)` contract, and the concrete gateway is **passed in**. That is dependency *inversion* (the principle) achieved through dependency *injection* (the technique). The default parameter keeps the production call site unchanged; in a larger app a composition root or a DI container (NestJS providers) does the wiring.\n\nThe payoff is exactly what the tests show: the business rule is testable with a two-line fake, no module mocking, and swapping PayPal for Stripe touches one wiring line.\n\n**Say this out loud:** "I inject dependencies at the boundary instead of importing concretions, so high-level logic depends on a contract; that is what makes it testable and lets me swap vendors without touching the policy."',
-    hint: 'Pass the gateway in through the constructor, with a default parameter so the production call site does not change.',
+    hint: 'Let the handler receive its gateway from outside, and keep the existing production call site working unchanged.',
   },
   {
     id: 'solid-pragmatism-review',

@@ -30,8 +30,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Haz mock de lo que es **lento, no determinista o está fuera de tu control**: las llamadas de red a terceros y el reloj. No hagas mock del código puro que es tuyo: `calculateTax()` es rápido y determinista, y hacerle mock significa que el test ya no comprueba que el impuesto realmente se aplique. Espiar métodos privados acopla el test a la estructura interna, así que un refactor inofensivo lo rompe; con un método `#private` real ni siquiera es posible, porque `#buildLineItems` no es una propiedad que `vi.spyOn` / `jest.spyOn` puedan reemplazar. Una regla útil: haz mock en los límites del sistema (red, tiempo, aleatoriedad, sistema de archivos), no entre tus propias unidades.',
-    hint:
-      'Pregúntate qué colaboradores son lentos, no deterministas o están fuera de tu control, y cuáles son código tuyo que el test debería ejercitar de verdad.',
+    hint: 'Recuerda dónde suele estar el límite de una prueba unitaria, y qué pierde una prueba cuando reemplaza código propio.',
   },
   'testing-unit-test-doubles': {
     prompt:
@@ -44,8 +43,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Los stubs dan respuestas predefinidas para que el código bajo prueba pueda ejecutarse; los fakes son implementaciones simplificadas que funcionan (un repositorio en memoria); `vi.spyOn` / `jest.spyOn` envuelven un método real, registran las llamadas y por defecto siguen llamando al método real, que no es el caso aquí porque `send` es un `vi.fn()` independiente. Cómo llamas a `send` depende del vocabulario: Jest y Vitest lo llaman función mock, mientras que *xUnit Test Patterns* de Meszaros (y "Mocks Aren\'t Stubs" de Fowler) llaman **test spy** a un doble que registra las llamadas para verificarlas después, y reservan **mock** para un doble cuyas expectativas se definen de antemano y que se verifica a sí mismo. En cualquier caso, el test verifica la **interacción**. Las aserciones de interacción son correctas cuando el efecto secundario *es* el comportamiento (hay que enviar un correo); en los demás casos, prefiere aserciones sobre el estado.',
-    hint:
-      'Fíjate en qué registra `vi.fn()` además de devolver un valor, y en sobre qué hace realmente la aserción la línea `expect`.',
+    hint: 'Recuerda cómo nombran los test doubles la taxonomía de Meszaros y el vocabulario de Vitest, y luego lee la línea `expect` para ver qué verifica la prueba.',
   },
   'testing-unit-fix-deep-equal': {
     prompt:
@@ -75,8 +73,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'La inestabilidad tiene causas: **estado compartido** entre tests (datos que dependen del orden, workers paralelos escribiendo las mismas filas), **suposiciones de tiempo** (sleeps fijos que alcanzan en una laptop pero no en un runner de CI cargado) y **dependencia del entorno** (reloj, zona horaria, locale, semillas aleatorias). Aislar el estado, esperar condiciones en lugar de duraciones e inyectar el reloj eliminan esas causas. Dos matices: truncar en `beforeEach` solo aísla los tests que se ejecutan en serie contra una misma base de datos, así que cada worker paralelo necesita su propia base de datos o esquema (identificado con `VITEST_POOL_ID` o `JEST_WORKER_ID`); y una diferencia de zona horaria por sí sola falla en todas las ejecuciones de CI, mientras que leer el reloj real falla de forma intermitente (una ejecución que cruza la medianoche, un fin de mes o un cambio de horario). Los reintentos y los timeouts enormes ponen el pipeline en verde mientras el no determinismo (que puede ser una condición de carrera real en el código de producción) sigue ahí. Si de verdad tienes que poner en cuarentena un test flaky, regístralo como un bug con un responsable.',
-    hint:
-      'Clasifica cada opción según si elimina una fuente de no determinismo (estado compartido, tiempos, entorno) o solo hace que el pipeline lo tolere.',
+    hint: 'Nombra las fuentes probables de inestabilidad en esta suite, y luego recuerda qué les hace cada opción.',
   },
   'testing-backend-testcontainers': {
     prompt:
@@ -89,8 +86,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Los mocks solo verifican lo que tú *crees* que hace la base de datos. Verificar cadenas SQL repite la implementación y aun así nunca ejecuta la migración. Un motor sustituto (SQLite, H2, un mock del ORM) se aparta de la semántica de producción (orden de NULL, operadores JSON, bloqueos, collations): SQLite, por ejemplo, pone `NULL` primero en orden ascendente, y Postgres al final. Testcontainers levanta un contenedor Docker desechable del **mismo motor y versión** por suite, así que las migraciones y las consultas se ejecutan de verdad, en segundos y en CI. Un E2E también lo detectaría, pero más lento, más tarde y con una señal de falla mucho peor.',
-    hint:
-      'Pregúntate qué opción ejecuta de verdad tus migraciones y consultas sobre el mismo motor y la misma versión que usa producción.',
+    hint: 'Para cada fallo en producción, nombra lo que una prueba tendría que haber ejecutado de verdad para detectarlo, y luego compara las opciones según cuánto de eso ejercitan y cuánto cuestan.',
   },
   'testing-backend-contract-tests': {
     prompt:
@@ -113,8 +109,7 @@ export const translations: Record<string, QuestionTranslation> = {
     prompt: 'En un test de React Testing Library, ¿qué query deberías usar **primero** para encontrar el botón de envío del formulario?',
     explanation:
       'El principio rector de RTL es "cuanto más se parezcan tus tests a la forma en que se usa tu software, más confianza te pueden dar". Los usuarios (y las tecnologías de asistencia) encuentran un botón por su rol y su nombre accesible, así que `getByRole` va primero en la prioridad recomendada, seguido de `getByLabelText`, `getByPlaceholderText` y `getByText`. `getByTestId` es una vía de escape para cuando no existe nada semántico, y los selectores CSS acoplan el test a los estilos. Un bonus: si `getByRole` no encuentra tu botón, muchas veces es un bug de accesibilidad.',
-    hint:
-      'Recuerda el principio rector de RTL: busca el elemento como lo encontraría un usuario o una tecnología de asistencia.',
+    hint: 'Recuerda la lista de prioridad de queries en la documentación de Testing Library y el principio que hay detrás.',
   },
   'testing-frontend-implementation-details': {
     prompt:
@@ -128,7 +123,6 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Los detalles de implementación son cosas que el usuario no puede observar: el estado interno, qué hook lo guarda, qué hijo recibe qué prop. Los tests que hacen aserciones sobre ellos dan **falsos negativos** (fallan con un refactor correcto) y **falsos positivos** (el estado puede ser `true` mientras el diálogo no se renderiza). Las dos aserciones con `getByRole` verifican lo que el usuario ve y con lo que interactúa, mediante roles, así que sobreviven a los refactors y solo fallan cuando el comportamiento se rompe. `wrapper.state()` y el shallow rendering son APIs de Enzyme, y Enzyme no tiene adaptador oficial para React 17 o posterior, así que en una base de código con React 19 estos tests ni siquiera pueden ejecutarse. Este es el argumento central a favor de React Testing Library frente al shallow rendering al estilo de Enzyme.',
-    hint:
-      'Para cada aserción, pregúntate si un usuario podría observarla en pantalla o si depende de qué hook o componente hijo guarda el estado.',
+    hint: 'Recuerda qué entiende Testing Library por detalles de implementación, y pregúntate qué haría cada aserción si refactorizaras el interior del componente.',
   },
 };

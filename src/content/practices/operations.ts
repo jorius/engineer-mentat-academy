@@ -33,8 +33,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'A stack trace reads top-down from the **throw site** to the **entry point**. The message says an object was `undefined` when `.email` was read, not that `email` was missing (that would give `undefined`, not a `TypeError`). The top frame tells you where it crashed; the root cause is often a few frames down, where `sendReceipt` or `OrderService.complete` passed a missing customer. Paths under `dist` are compiled output: enable source maps (`node --enable-source-maps`, or upload them to your error tracker) so line numbers point at your TypeScript. The `async` frame shows the trace survived an `await` thanks to V8 async stack traces.',
-    hint:
-      'Read the frames top to bottom: the top is where it crashed, not necessarily where the bad value came from, and `dist` paths point at compiled code.',
+    hint: 'Recall how a Node stack trace is ordered, what each frame tells you, and what `dist` paths mean for reading line numbers.',
   },
   {
     id: 'operations-production-debugging-correlation-ids',
@@ -75,8 +74,7 @@ export function solution(logs: LogLine[], correlationId: string): { path: string
     source: 'topic-list',
     explanation:
       'The correlation id is the only thing that ties lines from different services to one user request, so it must be generated (or accepted from `X-Request-Id` / `traceparent`) at the edge, propagated on every outgoing call and message, and attached to every log line (in Node, typically via `AsyncLocalStorage` so you do not thread it through every function). Note that the first error is in **payments**, while the error most people would see first is the `orders` one or the gateway `502`: sorting by time and reading the earliest error is how you find the root cause instead of the loudest symptom. Clock skew between hosts makes timestamps approximate; real tracing (OpenTelemetry spans with parent ids) fixes ordering by causality.',
-    hint:
-      'Filter by id, sort a copy by `ts`, then walk it once, skipping a service when it equals the previous entry.',
+    hint: 'The lines arrive out of order, so fix the order before walking them, and decide what counts as a repeated hop.',
   },
   {
     id: 'operations-production-debugging-rollback-vs-flag',
@@ -145,8 +143,7 @@ export function solution(logs: LogLine[], correlationId: string): { path: string
     source: 'topic-list',
     explanation:
       '**RED** (Rate, Errors, Duration, from Tom Wilkie) describes **request-driven services** from the caller\'s point of view: it is what you chart for the API endpoints. **USE** (Utilization, Saturation, Errors, from Brendan Gregg) describes **resources**: CPUs, disks, thread pools, connection pools, queues. Saturation is the metric teams forget and the one that explains latency: a pool at 100% utilization with 50 waiters shows up as slow requests in RED while CPU looks fine. The two compose: RED tells you *that* users are hurting, USE tells you *which resource* is the bottleneck.',
-    hint:
-      'Ask whether a connection pool is a request-driven service or a resource, and which method was designed for resources.',
+    hint: 'Recall what the RED and USE methods were each designed to monitor, and decide what kind of thing a connection pool is.',
   },
   {
     id: 'operations-logging-alert-fatigue',
@@ -169,8 +166,7 @@ export function solution(logs: LogLine[], correlationId: string): { path: string
     source: 'topic-list',
     explanation:
       'A page should mean "a human must act now to protect users". Symptom-based alerts on SLOs catch every cause that hurts users, including ones nobody predicted, while cause-based thresholds fire when nothing is wrong (CPU at 85% during a healthy batch job). Durations and multi-window burn rates filter flapping. Runbooks and a regular alert review keep the set honest. Muting without a replacement just hides the signal and is how real incidents get missed.\n\n**Say this out loud:** "I page on symptoms, not causes: SLO burn-rate alerts on errors and latency, each one actionable with a runbook, and everything else goes to a ticket or a dashboard."',
-    hint:
-      'A page should mean a user is hurting and someone must act now; judge each option by whether it keeps that signal or just silences it.',
+    hint: 'Recall what makes a page worth waking someone for, and compare symptom-based with cause-based alerting.',
   },
   {
     id: 'operations-performance-percentiles',

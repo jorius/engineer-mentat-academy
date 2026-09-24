@@ -13,7 +13,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un Builder se reconoce por un único método de creación (`build()`/`create()`) y varios métodos de configuración que normalmente devuelven `this` para poder encadenarse. Existe para eliminar el *constructor telescópico* (`new Request(url, method, headers, undefined, 2000, true)`) y para que `build()` valide el objeto completo una sola vez. Devolver `this` lo hace fluido, pero la fluidez por sí sola no es el patrón: un Decorator devuelve un *nuevo envoltorio* con la misma interfaz, y una Chain of Responsibility pasa una solicitud entre handlers en tiempo de ejecución.',
-    hint: 'Fíjate en qué devuelve cada llamada encadenada y qué hace la última; pregúntate qué patrón reemplaza un constructor con una larga lista de argumentos opcionales.',
+    hint: 'Mira qué devuelve cada llamada encadenada y qué hace la llamada final, y luego recuerda la intención de cada patrón mencionado.',
   },
   'design-patterns-vehicle-factory-falsy-defaults': {
     prompt: 'Una `VehicleFactory` guiada por configuración usa `||` para los valores por defecto, como en la versión clásica de los tutoriales. ¿Qué imprime esto, una línea por cada `console.log`?',
@@ -26,21 +26,21 @@ export const translations: Record<string, QuestionTranslation> = {
       "El equipo reemplazó el `switch` de la factory por un mapa de búsqueda para que los nuevos tipos de vehículo se agreguen registrando un creador (abierto/cerrado). Los tipos desconocidos deben caer en un `vehicle` genérico con 4 puertas. Un test de fuzzing que envía valores de `vehicleType` como `'constructor'` y `'__proto__'` ahora falla. Corrige `createVehicle` para que la búsqueda solo use creadores **registrados**. Deja `solution` como está.",
     explanation:
       "Un objeto literal simple hereda de `Object.prototype`, así que `creators['constructor']` es la función `Object` (que devuelve su argumento sin cambios), `creators['toString']` es un método y `creators['__proto__']` es el propio `Object.prototype`: no se puede llamar, así que la factory lanza un error. Cualquier clave que venga de la entrada del usuario o de configuración debe buscarse en una estructura que solo contenga lo que registraste: un `Map`, un diccionario `Object.create(null)` o una guarda `Object.hasOwn(creators, type)`.\n\nEl registro en sí es la decisión correcta: convierte la factory en algo que extiendes agregando una entrada en lugar de editar un `switch` (abierto/cerrado), y permite que los plugins registren sus propios tipos.\n\n**Dilo en voz alta:** \"Un mapa de factory guiado por configuración es como mantengo la creación abierta a la extensión, pero la búsqueda tiene que ser por clave propia: un `Map` u `Object.hasOwn`, nunca un índice directo sobre un objeto con entrada no confiable.\"",
-    hint: 'Un objeto literal hereda claves de `Object.prototype`. Usa una búsqueda que solo vea entradas propias: un `Map` o una guarda con `Object.hasOwn`.',
+    hint: 'Un objeto literal común hereda claves de `Object.prototype`; haz que la búsqueda vea solo las entradas que registraste.',
   },
   'design-patterns-singleton-module-closure': {
     prompt:
       'Todos los que llaman a `getConfig()` deberían compartir **un** único objeto de configuración, creado de forma perezosa en el primer uso. Ahora mismo cada llamada construye uno nuevo. Corrige `getConfig` usando un closure a nivel de módulo (no hace falta una clase). Deja sin cambios `createConfig` y `solution`.',
     explanation:
       'En JavaScript el sistema de módulos ya te da un Singleton: el cuerpo de un módulo se ejecuta una sola vez y todos los que lo importan obtienen los mismos bindings. Un `let instance` privado más un getter perezoso es todo el patrón; una clase con un `static #instance` y un `getInstance()` estático (TypeScript además puede marcar el constructor como `private`; JavaScript no) es la misma idea con más ceremonia.\n\nEl costo de un Singleton es el estado global oculto: las pruebas lo comparten y es difícil de reemplazar. Cuando puedas, prefiere exportar una factory e inyectar la instancia, y reserva los Singletons de verdad para cosas que deben ser únicas por proceso (un pool de conexiones, un logger).',
-    hint: 'Mantén una variable a nivel de módulo que sobreviva entre llamadas y crea la configuración solo la primera vez, cuando está vacía.',
+    hint: 'Pregúntate dónde tiene que vivir la instancia para sobrevivir a una sola llamada, y cuándo debe crearse.',
   },
   'design-patterns-memoize-decorator-falsy-cache': {
     prompt:
       '`memoize` es un Decorator: envuelve una función con caché manteniendo la misma firma de llamada. El profiling muestra que `slowSquare(0)` se sigue recalculando en cada llamada. Corrige `memoize` para que **todo** resultado calculado previamente se sirva desde la caché, sea cual sea su valor.',
     explanation:
       'La verificación por truthiness trata un `0` en caché (o `""`, `false`, `null`) como un fallo de caché, así que los resultados falsy nunca se sirven desde la caché. Verifica la **presencia** (`Map#has`, u `Object.hasOwn(cache, key)`) en lugar del valor.\n\nUn `Map` también evita otras dos trampas de la caché basada en objetos: las claves se convierten a string (`1` y `"1"` colisionan) y las claves heredadas como `"constructor"` parecen aciertos. Para funciones con varios argumentos necesitas una estrategia de claves (`JSON.stringify(args)` para primitivos, `WeakMap`s anidados para argumentos que son objetos), y para procesos de larga vida un límite (LRU) para que la caché no sea una fuga de memoria. La memoización solo es segura para funciones **puras**.',
-    hint: 'La verificación del caché evalúa si el valor guardado es truthy. Verifica en cambio si la clave está presente, por ejemplo con `Map#has`.',
+    hint: 'Mira qué comprueba realmente la verificación de la caché, y pregúntate qué valores cacheados no la pasarían.',
   },
   'design-patterns-adapter-vs-facade': {
     prompt:
@@ -53,7 +53,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'El dato decisivo es que la **interfaz destino ya existe** (`PaymentGateway`) y la clase traduce una interfaz incompatible a ella: eso es un Adapter, y es exactamente lo que hace intercambiable al proveedor. Un Facade también simplifica, pero define un frente simplificado *nuevo* sobre un subsistema que normalmente es tuyo (`BillingService.charge()` sobre tres APIs internas) y no se trata de ajustarse a una interfaz esperada. Proxy y Decorator mantienen ambos la **misma** interfaz que el objeto envuelto: un Proxy controla el acceso (caché, inicialización perezosa, rate limiting), un Decorator agrega comportamiento (reintentos, logging, `withRetry(fn)`, HOCs).',
-    hint: 'Pregúntate si la interfaz destino ya existía antes de esta clase, y si la clase conserva la interfaz del objeto envuelto o la traduce a otra.',
+    hint: 'Recuerda la intención de cada uno de estos cuatro envoltorios, y compárala con lo que esta clase hace con la interfaz del cliente de Stripe.',
   },
   'design-patterns-observer-emitter': {
     prompt:

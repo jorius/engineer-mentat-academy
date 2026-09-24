@@ -10,7 +10,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Los buenos nombres responden al *qué* y al *por qué*, así los comentarios dejan de ser necesarios: un predicado se lee como una pregunta (`isInactive`, `hasAccess`, `canRetry`), las unidades viven en el nombre (`MS_PER_DAY`, `lastLoginAt`) y el número de negocio recibe un nombre para que no sea un `30` mágico. `check` oculta qué se verifica, los comentarios que repiten el código se desactualizan, y los nombres que narran la implementación son ruido que hay que cambiar cada vez que cambia el código.',
-    hint: 'Los buenos nombres dicen qué y por qué: los predicados se leen como preguntas, las unidades van en el nombre y los números de negocio no son mágicos. Cuidado con nombres crípticos y narrativos.',
+    hint: 'Recuerda qué hace que un nombre revele la intención, y para cada versión pregúntate qué tiene que adivinar o atravesar todavía quien la lee.',
   },
   'clean-code-positional-flags-to-options': {
     prompt:
@@ -37,7 +37,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un argumento flag significa que la función hace dos cosas; divídela en dos funciones con nombre. Mezclar cálculo con E/S hace imposible probar la lógica sin mocks: extrae la parte pura. Los comentarios de sección son candidatos a extraer función cuyos nombres ya están escritos. Un único return es una elección de estilo (las guard clauses con returns tempranos suelen ser más claras), y que se use mucho es señal de una función útil, no de una mala. Las funciones deben hacer una sola cosa en un solo nivel de abstracción.',
-    hint: 'Pregúntate si cada señal indica que la función hace más de una cosa o mezcla niveles de abstracción, en vez de ser una elección de estilo o una señal de reutilización.',
+    hint: 'Recuerda las pautas de "hacer una sola cosa" y "un solo nivel de abstracción", y luego pregúntate qué dice cada señal sobre el cuerpo de la función.',
   },
   'clean-code-refactor-legacy-function': {
     prompt:

@@ -67,7 +67,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Una buena respuesta de error tiene un **código de estado preciso** (para que funcionen los proxies, los reintentos y el monitoreo), un **envelope consistente y legible por máquinas** (para que cada cliente maneje cada error de la misma forma), **códigos de error estables** sobre los que el cliente pueda ramificar (no mensajes en inglés), y **detalle a nivel de campo** para que un formulario pueda resaltar ambos campos a la vez.\n\nEl RFC 9457 *Problem Details for HTTP APIs* (que reemplazó al RFC 7807) estandariza ese envelope: `type`, `title`, `status`, `detail`, `instance`, más miembros de extensión como `errors`. `200 OK` con `success: false` oculta el fallo a las herramientas HTTP, un body de texto plano `Invalid input` no es legible por máquinas y un `500` con el stack trace es un 5xx para un error del cliente que además filtra detalles internos. `400` también es aceptable para errores de validación, siempre que el miembro `status` del body coincida con el código HTTP (RFC 9457 lo exige).',
-    hint: 'Evalúa cada respuesta por cuatro cosas: un código de estado preciso, un body consistente y legible por máquinas, detalle por campo y nada de detalles internos filtrados.',
+    hint: 'Piensa en quién consume una respuesta de error (el código cliente, los proxies, el monitoreo, quien corrige la llamada) y qué lee cada uno de ella.',
   },
   'api-design-202-accepted-meaning': {
     prompt: '`POST /reports` inicia un reporte que tarda unos 3 minutos en generarse. El servidor responde `202 Accepted` con `Location: /jobs/abc123`. ¿Qué le dice eso al cliente?',

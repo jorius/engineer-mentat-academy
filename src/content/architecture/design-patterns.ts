@@ -22,7 +22,7 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       'A Builder is recognizable by a single creation method (`build()`/`create()`) and several configuration methods that usually return `this` so they chain. It exists to kill the *telescoping constructor* (`new Request(url, method, headers, undefined, 2000, true)`) and to let `build()` validate the whole object once. Returning `this` makes it fluent, but fluency alone is not the pattern: a Decorator returns a *new wrapper* with the same interface, and a Chain of Responsibility passes a request between handlers at run time.',
-    hint: 'Look at what each chained call returns and what the final call does; ask which pattern replaces a constructor with a long list of optional arguments.',
+    hint: 'Look at what each chained call returns and what the final call does, then recall the intent of each pattern named.',
   },
   {
     id: 'design-patterns-vehicle-factory-falsy-defaults',
@@ -132,7 +132,7 @@ export function solution(options) {
     source: 'notion',
     explanation:
       "A plain object literal inherits from `Object.prototype`, so `creators['constructor']` is the `Object` function (which returns its argument unchanged), `creators['toString']` is a method, and `creators['__proto__']` is `Object.prototype` itself: not callable, so the factory throws. Any key that comes from user input or config must be looked up in a structure that only contains what you registered: a `Map`, an `Object.create(null)` dictionary, or an `Object.hasOwn(creators, type)` guard.\n\nThe registry itself is the right move: it turns the factory into something you extend by adding an entry rather than editing a `switch` (open-closed), and it lets plugins register their own types.\n\n**Say this out loud:** \"A factory-by-config map is how I keep creation open for extension, but the lookup must be an own-key lookup: a `Map` or `Object.hasOwn`, never a bare object index on untrusted input.\"",
-    hint: 'A plain object literal inherits keys from `Object.prototype`. Reach for a lookup that only sees own entries: a `Map` or an `Object.hasOwn` guard.',
+    hint: 'A plain object literal inherits keys from `Object.prototype`; make the lookup see only the entries you registered.',
   },
   {
     id: 'design-patterns-singleton-module-closure',
@@ -187,7 +187,7 @@ export function solution(calls) {
     source: 'notion',
     explanation:
       'In JavaScript the module system already gives you a singleton: a module body runs once and every importer gets the same bindings. A private `let instance` plus a lazy getter is the whole pattern; a class with a `static #instance` and a static `getInstance()` (TypeScript can also mark the constructor `private`; JavaScript cannot) is the same idea with more ceremony.\n\nThe cost of a singleton is hidden global state: tests share it and it is hard to swap. Prefer exporting a factory and injecting the instance where you can, and keep true singletons for things that must be unique per process (a connection pool, a logger).',
-    hint: 'Keep a module-level variable that survives between calls and only create the config the first time it is empty.',
+    hint: 'Ask where the instance has to live so it outlives a single call, and when it should be created.',
   },
   {
     id: 'design-patterns-memoize-decorator-falsy-cache',
@@ -258,7 +258,7 @@ export function solution(inputs) {
     source: 'core-list',
     explanation:
       'The truthiness check treats a cached `0` (or `""`, `false`, `null`) as a miss, so falsy results are never served from cache. Check for **presence** (`Map#has`, or `Object.hasOwn(cache, key)`) instead of the value.\n\nA `Map` also avoids two other object-cache traps: keys are stringified (`1` and `"1"` collide) and inherited keys such as `"constructor"` look like hits. For multi-argument functions you need a key strategy (`JSON.stringify(args)` for primitives, nested `WeakMap`s for object arguments), and for long-lived processes a bound (LRU) so the cache is not a memory leak. Memoization is only safe for **pure** functions.',
-    hint: 'The cache check tests the stored value\'s truthiness. Check whether the key is present instead, for example with `Map#has`.',
+    hint: 'Look at what the cache check actually tests, and ask which cached values would fail it.',
   },
   {
     id: 'design-patterns-adapter-vs-facade',
@@ -280,7 +280,7 @@ export function solution(inputs) {
     source: 'notion',
     explanation:
       'The deciding fact is that the **target interface already exists** (`PaymentGateway`) and the class translates an incompatible one into it: that is an Adapter, and it is exactly what makes the vendor swappable. A Facade also simplifies, but it defines a *new* simplified front over a subsystem you usually own (`BillingService.charge()` over three internal APIs) and is not about matching an expected interface. Proxy and Decorator both keep the **same** interface as the wrapped object: a Proxy controls access (caching, lazy init, rate limiting), a Decorator adds behavior (retries, logging, `withRetry(fn)`, HOCs).',
-    hint: 'Ask whether the target interface already existed before this class, and whether the class keeps the wrapped object\'s interface or translates it into another.',
+    hint: 'Recall the intent of each of these four wrappers, and compare it with what this class does to the Stripe client\'s interface.',
   },
   {
     id: 'design-patterns-observer-emitter',

@@ -47,8 +47,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Mock what is **slow, non-deterministic, or outside your control**: network calls to third parties and the clock. Do not mock pure code you own: `calculateTax()` is fast and deterministic, and mocking it means the test no longer checks that tax is actually applied. Spying on private methods couples the test to the internal structure, so a harmless refactor breaks it; with a real `#private` method it is not even possible, because `#buildLineItems` is not a property that `vi.spyOn` / `jest.spyOn` can replace. A useful rule: mock at the boundaries of the system (network, time, randomness, filesystem), not between your own units.',
-    hint:
-      'Ask which collaborators are slow, non-deterministic or outside your control, and which are your own code that the test should really exercise.',
+    hint: 'Recall where a unit test\'s boundary usually sits, and what a test loses when it replaces code you own.',
   },
   {
     id: 'testing-unit-test-doubles',
@@ -70,8 +69,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Stubs provide canned answers so the code under test can run; fakes are working simplified implementations (an in-memory repository); `vi.spyOn` / `jest.spyOn` wrap a real method, record calls and by default still call through, which is not the case here because `send` is a standalone `vi.fn()`. What you call `send` depends on the vocabulary: Jest and Vitest call it a mock function, while Meszaros\'s *xUnit Test Patterns* (and Fowler\'s "Mocks Aren\'t Stubs") call a double that records calls for assertions afterwards a **test spy**, and keep **mock** for a double whose expectations are set up front and verified by the double itself. Either way, the test verifies the **interaction**. Interaction assertions are right when the side effect *is* the behaviour (an email must be sent); prefer state assertions otherwise.',
-    hint:
-      'Look at what `vi.fn()` keeps track of besides returning a value, and at what the `expect` line actually asserts on.',
+    hint: 'Recall how Meszaros\' taxonomy and Vitest\'s vocabulary name test doubles, then read the `expect` line to see what the test verifies.',
   },
   {
     id: 'testing-unit-fix-deep-equal',
@@ -252,8 +250,7 @@ export function solution(plan: Step[], tickMs: number): string[] {
     source: 'topic-list',
     explanation:
       'Flakiness has causes: **shared state** between tests (order-dependent data, parallel workers writing the same rows), **timing assumptions** (fixed sleeps that are long enough on a laptop but not on a loaded CI runner), and **environment dependence** (clock, timezone, locale, random seeds). Isolating state, waiting for conditions instead of durations, and injecting the clock remove those causes. Two caveats: truncating in `beforeEach` only isolates tests that run serially against one database, so parallel workers each need their own database or schema (keyed by `VITEST_POOL_ID` or `JEST_WORKER_ID`); and a timezone mismatch on its own fails every CI run, while reading the real clock fails intermittently (a run that crosses midnight, a month end or a DST change). Retries and huge timeouts make the pipeline green while the non-determinism (which may be a real race in production code) stays. If you must quarantine a flaky test, track it as a bug with an owner.',
-    hint:
-      'Sort each option by whether it removes a source of non-determinism (shared state, timing, environment) or only makes the pipeline tolerate it.',
+    hint: 'Name the likely sources of flakiness in this suite, then recall what each option does to them.',
   },
   {
     id: 'testing-backend-testcontainers',
@@ -275,8 +272,7 @@ export function solution(plan: Step[], tickMs: number): string[] {
     source: 'topic-list',
     explanation:
       'Mocks only verify what you *think* the database does. Asserting SQL strings re-states the implementation and still never runs the migration. A substitute engine (SQLite, H2, an ORM mock) diverges from production semantics (NULL ordering, JSON operators, locking, collations): SQLite, for example, puts `NULL` first in ascending order, and Postgres puts it last. Testcontainers starts a throwaway Docker container of the **same engine and version** per suite, so migrations and queries run for real, in seconds, and in CI. E2E would also catch it, but slower, later and with a much worse failure signal.',
-    hint:
-      'Ask which option actually executes your migrations and queries on the same engine and version that production uses.',
+    hint: 'For each production failure, name what a test would have had to run for real to catch it, then weigh the options by how much of that they exercise and what they cost.',
   },
   {
     id: 'testing-backend-contract-tests',
@@ -322,8 +318,7 @@ export function solution(plan: Step[], tickMs: number): string[] {
     source: 'topic-list',
     explanation:
       'RTL\'s guiding principle is "the more your tests resemble the way your software is used, the more confidence they can give you". Users (and assistive technology) find a button by its role and accessible name, so `getByRole` is first in the recommended priority, followed by `getByLabelText`, `getByPlaceholderText` and `getByText`. `getByTestId` is an escape hatch for when nothing semantic exists, and CSS selectors couple the test to styling. A bonus: if `getByRole` cannot find your button, it is often an accessibility bug.',
-    hint:
-      'Remember RTL\'s guiding principle: query the way a user or assistive technology would find the element.',
+    hint: 'Recall the query priority list in the Testing Library docs and the principle behind it.',
   },
   {
     id: 'testing-frontend-implementation-details',
@@ -346,7 +341,6 @@ export function solution(plan: Step[], tickMs: number): string[] {
     source: 'topic-list',
     explanation:
       'Implementation details are things the user cannot observe: internal state, which hook holds it, which child receives which prop. Tests that assert on them give **false negatives** (they fail on a correct refactor) and **false positives** (state can be `true` while the dialog is not rendered). The two `getByRole` assertions check what the user sees and interacts with, through roles, so they survive refactors and fail only when behaviour breaks. `wrapper.state()` and shallow rendering are Enzyme APIs, and Enzyme has no official adapter for React 17 or later, so on a React 19 codebase these tests cannot even run. This is the core argument for React Testing Library over Enzyme-style shallow rendering.',
-    hint:
-      'For each assertion, ask whether a user could observe it on screen, or whether it depends on which hook or child component holds the state.',
+    hint: 'Recall what Testing Library means by implementation details, and ask what each assertion would do if you refactored the component\'s internals.',
   },
 ];

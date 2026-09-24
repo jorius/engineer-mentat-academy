@@ -12,7 +12,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Las dependencias solo deben apuntar **hacia abajo**: presentación → negocio → acceso a datos. Un repository que conoce HTTP acopla la persistencia a un único mecanismo de entrega, así que la misma consulta no se puede reutilizar desde un consumidor de cola o un cron job, y no se puede probar sin simular una solicitud. Pasa `tenantId` como un argumento simple. Lanzar un error de dominio y traducirlo a un código HTTP en el borde es la forma correcta de mantener HTTP fuera de la capa de servicios.',
-    hint: 'Sigue la dirección de cada dependencia: ¿qué capa termina conociendo un detalle de una capa superior?',
+    hint: 'Recuerda hacia dónde pueden apuntar las dependencias en una arquitectura por capas, y luego sigue cada llamada o import de las opciones.',
   },
   'architecture-patterns-hexagonal-ports': {
     prompt: 'En una arquitectura hexagonal (puertos y adaptadores), ¿dónde van la interfaz `OrderRepository` y la clase `PostgresOrderRepository`?',
@@ -51,7 +51,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un BFF es una capa delgada del lado del servidor, propiedad de un equipo de frontend (o cercana a él), que llama a los servicios de abajo, agrega y recorta las respuestas, y devuelve exactamente lo que necesita una experiencia, a menudo en un solo viaje de ida y vuelta. Eso importa sobre todo en móvil, donde la latencia y el tamaño del payload duelen. Complementa a un gateway en lugar de reemplazar las responsabilidades transversales del borde, y las reglas de negocio compartidas pertenecen a los servicios de dominio que están detrás: ponerlas en varios BFF duplica lógica que luego diverge. Un servidor de Next.js o una capa GraphQL suelen cumplir el rol de BFF.',
-    hint: 'Piensa en lo distinto que una pantalla móvil y una página de escritorio consumen la misma API de propósito general, y quién da forma al payload.',
+    hint: 'Piensa en lo distinto que consumen la misma API de propósito general una pantalla móvil y una página de escritorio.',
   },
   'architecture-patterns-bff-design': {
     prompt:
@@ -81,7 +81,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Los eventos te dan **desacoplamiento temporal** (el productor no necesita que los consumidores estén arriba) y permiten que nuevos consumidores se suscriban sin cambiar al productor. El precio es la consistencia eventual, la entrega at-least-once (un consumidor puede caerse después de hacer su trabajo pero antes de confirmar, así que el broker lo vuelve a entregar y los handlers deben ser idempotentes) y una depuración más difícil, porque el flujo ya no es un call stack. Brokers como Kafka solo ordenan los mensajes **dentro de una partition**, nunca de forma global.',
-    hint: 'Compara lo que te da un broker (desacoplamiento temporal) con lo que quita: garantías de entrega, consistencia, depuración y dónde se cumple realmente el orden en Kafka.',
+    hint: 'Para cada afirmación, recuerda las garantías de entrega, consistencia y orden que un broker como Kafka da en realidad, y cómo se depura a través de saltos asíncronos.',
   },
   'architecture-patterns-transactional-outbox': {
     prompt:
@@ -94,7 +94,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Escribir en dos sistemas sin una transacción compartida (el **problema de la doble escritura**, dual write) siempre puede fallar entre las escrituras. Publicar primero solo invierte la falla (un evento de una orden que nunca hizo commit); los reintentos en proceso no sobreviven a un crash. El outbox hace atómicos el cambio de estado y la intención de publicar, porque ambos son filas en una sola transacción local. Luego un relay (por polling o con change data capture, como Debezium) publica con semántica at-least-once, así que los consumidores deben ser idempotentes. El two-phase commit entre servicios es frágil, lento y rara vez lo soportan los brokers.\n\n**Dilo en voz alta:** "No puedes escribir de forma atómica en una base de datos y en un broker, así que escribo el evento en una tabla outbox en la misma transacción y dejo que un relay lo publique at-least-once, con consumidores idempotentes aguas abajo."',
-    hint: 'Es el problema de la doble escritura: busca la opción que hace que el cambio de estado y la intención de publicar se confirmen de forma atómica en una sola transacción local.',
+    hint: 'Reconoce aquí el problema de la doble escritura, y luego recorre cada opción con una caída que ocurre entre las dos escrituras.',
   },
   'architecture-patterns-events-vs-commands': {
     prompt: '¿Cuál es la diferencia clave entre los mensajes `PlaceOrder` y `OrderPlaced`?',
@@ -106,6 +106,6 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un comando expresa **intención** y acopla al emisor con un receptor específico que es dueño de la decisión (puede decir que no). Un evento anuncia algo que **ya ocurrió**; al publicador no le importa ni sabe quién escucha, y eso es lo que hace gratis agregar un suscriptor nuevo (puntos de lealtad, analítica). Ambos pueden viajar por colas o por HTTP; el transporte no define la semántica. Nombrar los eventos en tiempo pasado mantiene visible la distinción en las revisiones de código.',
-    hint: 'Fíjate en el tiempo verbal de cada nombre, y pregúntate quién decide el resultado y cuántos receptores espera cada mensaje.',
+    hint: 'Mira el tiempo verbal de cada nombre, y recuerda cómo clasifican los patrones de mensajería esos dos tipos de mensaje.',
   },
 };

@@ -13,7 +13,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '**Over-fetching**: el endpoint devuelve más de lo que necesita la pantalla (40 campos del usuario, líneas completas), lo que desperdicia ancho de banda, algo que importa en móvil. **Under-fetching**: un endpoint no devuelve lo suficiente, así que el cliente hace viajes de ida y vuelta extra (usuario, luego órdenes), lo que suma latencia.\n\nEn GraphQL el **cliente declara la forma** de la respuesta y el servidor resuelve los campos anidados en una sola petición, así que ambos problemas desaparecen desde el punto de vista del cliente. El trabajo no se esfuma; se mueve al servidor, donde los resolvers anidados pueden causar consultas N+1 a menos que agrupes en batch. GraphQL sigue siendo JSON sobre HTTP (normalmente POST); la idea de que cambia a un transporte binario describe gRPC/protobuf, no GraphQL.',
-    hint: 'Define over-fetching y under-fetching en el flujo REST, y luego revisa qué cambia un selection set anidado en los campos y los viajes de ida y vuelta.',
+    hint: 'Define over-fetching y under-fetching en el flujo REST, y luego recuerda quién decide la forma de la respuesta en una consulta GraphQL.',
   },
   'graphql-dataloader-per-request-context': {
     prompt:
@@ -26,7 +26,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '`context` es el objeto por petición que comparten todos los resolvers de una operación: ahí viven el usuario autenticado, los handles de la base de datos y los loaders. Crear los loaders ahí acota tanto la **ventana de batch** como el **caché de memoización** a una sola petición.\n\n- **A nivel de módulo** es el distractor peligroso: un caché compartido nunca se invalida (datos obsoletos después de las escrituras), crece sin límite y puede servirle a un usuario datos cargados con los permisos de otro.\n- **Dentro de cada field resolver** se crea un loader nuevo por cada llamada a un campo, así que no hay nada con qué agrupar y el N+1 vuelve.\n- **`info`** es el AST de la query y metadatos del schema, no un lugar para estado por petición.\n\nPara un caché entre peticiones, pon Redis (o caché HTTP) *debajo* del loader, con TTLs e invalidación explícitos.',
-    hint: 'DataLoader cachea por id: piensa en quién podría ver un registro cacheado si ese caché sobreviviera a una petición, y qué argumento del resolver se construye una vez por petición.',
+    hint: 'DataLoader cachea por id: piensa en quién podría ver un registro cacheado si esa caché viviera más de lo previsto.',
   },
   'graphql-n-plus-one-batching-predict': {
     prompt:
@@ -40,7 +40,7 @@ export const translations: Record<string, QuestionTranslation> = {
       'Una batch function de DataLoader recibe `keys` y debe devolver un array del **mismo largo y en el mismo orden**, una entrada por key. Tu consulta a la base de datos `SELECT * FROM authors WHERE id IN (...)` devuelve `rows` en orden arbitrario, sin duplicados, y omite los ids que no existen.\n\nImplementa `solution(keys, rows)` para que devuelva las filas alineadas con `keys`, con `null` para los ids faltantes. Las keys duplicadas reciben cada una la fila.',
     explanation:
       'DataLoader resuelve la promesa de `keys[i]` con `result[i]`. Si devuelves las filas tal cual, un id faltante desplaza en uno todos los resultados siguientes y **los autores quedan asociados a los posts equivocados**, un bug silencioso de datos en lugar de un crash (DataLoader solo lanza un error cuando los largos difieren).\n\nIndexa las filas en un `Map` (O(n + k)) en lugar de llamar a `rows.find` por cada key (O(n * k)). Devuelve `null` para un registro faltante, o una instancia de `Error` si esa key debe rechazarse individualmente.',
-    hint: 'Indexa las filas en un `Map` por id y luego recorre `keys` con map para que el orden y la longitud sigan a las claves, no a las filas.',
+    hint: 'Deja que el contrato decida la salida: qué arreglo define su longitud y su orden, y en qué se convierte un id que no existe.',
   },
   'graphql-operational-costs': {
     prompt: 'Tu equipo está migrando una API REST pública a GraphQL. ¿Cuáles de estos son **costos operativos reales** que asumes? Selecciona todos los que apliquen.',

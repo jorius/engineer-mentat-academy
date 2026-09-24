@@ -30,8 +30,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Los tests generados a partir de la implementación son **tautológicos**: si la función redondea los reembolsos hacia abajo en lugar de hacia arriba, el valor esperado en el test se calculó de la misma forma equivocada. La cobertura solo demuestra que las líneas se ejecutaron, no que las aserciones sean correctas. Mantén los tests como un contrato independiente: deriva los casos de los requisitos (reembolso parcial después de 30 días, redondeo de moneda, orden ya reembolsada), escríbelos o revísalos antes de generar la implementación y comprueba que cada uno falle cuando rompes el código.',
-    hint:
-      'Pregúntate de dónde salieron los valores esperados de esos tests: ¿de las reglas de negocio o del código que están probando?',
+    hint: 'Recuerda qué mide la cobertura de código y qué no puede decirte, y luego pregúntate cómo se produjeron estas pruebas.',
   },
   'ai-assisted-development-tooling-prompt-constraints': {
     prompt:
@@ -44,8 +43,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Los buenos prompts se leen como un buen ticket: el archivo exacto, el stack y las versiones, un patrón existente a seguir, restricciones explícitas ("sin dependencias nuevas", conservar las props), el caso borde que suele olvidarse (la limpieza al desmontar) y una meta objetiva (que pasen los tests). Los prompts vagos producen código genérico que ignora tus convenciones, mete una biblioteca o apunta a otra versión del framework, y el tiempo ahorrado al teclear se pierde en la revisión.',
-    hint:
-      'Piensa en qué contexto y qué restricciones necesita el asistente para encajar en tu base de código, y en cómo sabría cualquiera que el resultado está terminado.',
+    hint: 'Imagina al asistente leyendo cada prompt sin acceso a tu código ni a tu cabeza: ¿qué tendría que adivinar?',
   },
   'ai-assisted-development-tooling-hallucinated-package': {
     prompt:
@@ -58,7 +56,6 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Los modelos generan nombres y APIs **plausibles**, no verificados. Los atacantes vigilan los nombres de paquetes alucinados y publican paquetes maliciosos con esos nombres ("slopsquatting", un pariente del typosquatting), y un `npm install` ejecuta scripts de instalación en tu máquina y en CI, así que `devDependencies` no protege nada. Pedirle al modelo que responda por su propia salida no es verificar. Revisa el registry y el código fuente, confirma la API contra la documentación real y pregúntate si una dependencia nueva se justifica en absoluto; además, la lógica de refresh de autenticación es código sensible para la seguridad que merece un escrutinio extra.',
-    hint:
-      'Recuerda que los modelos inventan nombres de paquetes plausibles, y piensa en qué puede hacer un atacante con un nombre que nadie ha registrado todavía.',
+    hint: 'Recuerda cómo funcionan la alucinación de nombres de paquetes y los ataques de typosquatting, y qué verifica realmente cada opción.',
   },
 };
