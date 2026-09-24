@@ -65,6 +65,14 @@ TypeScript strict, explicit return types, labeled import groups, no barrel files
 - [ ] Tests per spec §4 (fonts part) and a snapshot-free assertion that the preview contains `interface`, `async` and a regex literal.
 - [ ] Commit: `Add twelve monospace fonts and a richer editor preview`.
 
+### Task 7: Block code inside options (independent of Tasks 2–6; runs any time after Task 6 commits)
+
+**Files:** `src/components/question/OptionButton.tsx` (+ test), `src/components/common/Markdown.tsx` (+ test), `src/index.css`, `src/components/question/SingleChoice.tsx`/`MultiChoice.tsx` only if the role/keyboard change needs it.
+
+- [ ] Implement spec §9 (component part only; no content changes): div with role, tabIndex, Space/Enter handling, compact `pre` styling inside options, grammars and aliases.
+- [ ] Tests: an option whose text is a fenced ```js block renders a `<pre><code class="language-js hljs">` inside the option with highlighted tokens (`hljs-keyword` present); Space and Enter toggle; locked option ignores both; existing OptionButton tests still pass (role/aria unchanged); Markdown test for `csharp`, `java`, `tsx` fences.
+- [ ] Commit: `Support fenced code blocks inside choice options`.
+
 ## Self-review notes
 - Task 1 defines `describeDrill` and may already need `drill.allSubjects/allLevels/allKinds`; Task 3 must reuse them, not redefine.
 - `Home` "Drill unseen" keeps pointing at `/drill?unseen=1`; it creates a drill each click by design.

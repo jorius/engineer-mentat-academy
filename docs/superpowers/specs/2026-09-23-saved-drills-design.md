@@ -70,3 +70,23 @@ records nothing in progress. Keyboard: none (Next stays `N`).
   skipped and scores them 0. The old "Show answer is the skip" behaviour is no longer needed but stays.
 - **Review:** Skip calls the queue's `next`; the question stays in Review since nothing was recorded.
 - **Permalink page:** no `onSkip` (nothing to move on to).
+
+## 9. Code inside choice options (added 2026-09-23, Jose's request)
+
+Options and prompts that contain a statement or more of code use fenced blocks with a language tag
+(```` ```js ````, `ts`, `tsx`, `jsx`, `csharp`, `java`, `sql`, `json`, `bash`), formatted over several
+lines with two-space indentation, so they render highlighted and legible. Inline code spans stay for
+identifiers and short expressions.
+
+- `OptionButton` renders Markdown block content: it becomes a `<div role="radio"|"checkbox" tabIndex={0}
+  aria-checked aria-disabled>` with `onKeyDown` handling Space and Enter (preventDefault, then toggle),
+  because `<pre>` is not allowed inside `<button>`. Everything else (badge letter, selected/locked/correct
+  styles, `aria-label` = option text) is unchanged. Focus ring: `focus-visible:ring-2 ring-accent-500`.
+- Inside an option, `.md pre` is compact: `my-1 p-2 text-xs leading-snug`, no horizontal margin, and the
+  option's flex layout gives the code block the full remaining width (`min-w-0 flex-1`).
+- `Markdown` registers highlight.js grammars `csharp`, `java`, and aliases `jsx` → javascript, `tsx` →
+  typescript in addition to the existing ones.
+- Content pass (done together with the audit fixes, per domain): every option or prompt whose inline
+  code span is longer than about 45 characters or contains `{`, `;` or `=>` becomes a fenced block in
+  the file's language, mirrored in the `.es.ts` (code untranslated). A trailing note such as
+  "(no dependency array)" moves to a line of plain text after the block.
