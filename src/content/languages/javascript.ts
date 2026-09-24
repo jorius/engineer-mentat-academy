@@ -20,6 +20,7 @@ console.log(4);`,
     source: 'notion',
     explanation:
       'Synchronous logs run first (1, 4). The whole microtask queue drains before the next macrotask, so the promise callback (3) beats the timer (2).\n\n**Say this out loud:** "Microtasks always run before the next macrotask, so a flood of promise callbacks can starve timers."',
+    hint: 'Split the work into synchronous code, promise callbacks and timer callbacks, and recall which queue drains completely before the next task.',
   },
   {
     id: 'javascript-this-spread-greet',
@@ -58,6 +59,7 @@ export function solution() {
     source: 'notion',
     explanation:
       '`this` is bound by the call site, not by where the function was defined. `secondSubject.greet()` or `firstSubject.greet.call(secondSubject)` both work; `bind` returns a new function. Arrow functions would ignore all of these because they capture `this` lexically.\n\n**Say this out loud:** "`this` is decided by the call site, not by where the function was defined, so a spread copy shares the function but I still have to call it through the right receiver, with a method call or `call`."',
+    hint: '`this` comes from how the function is called, not where it was defined; think about calling it as a method of the right object or passing the receiver explicitly with `call`.',
   },
   {
     id: 'javascript-closure-counter-independence',
@@ -77,6 +79,7 @@ export function solution() {
     tags: ['closures'],
     source: 'notion',
     explanation: 'Each call to `outer` creates a fresh `n`. `a` and `b` close over different variables, so `b` starts from 0.',
+    hint: 'Ask whether each call to `outer` creates its own copy of `n` or whether both returned functions share one.',
   },
   {
     id: 'javascript-shallow-copy-nested',
@@ -96,6 +99,7 @@ export function solution() {
     tags: ['structuredClone', 'deep-copy'],
     source: 'topic-list',
     explanation: 'Spread and `Object.assign` copy one level. `JSON` round-trips turn a `Date` into a string and drop functions and `undefined`. `structuredClone` handles nested objects, Dates, Maps and Sets, but it throws a `DataCloneError` on functions and drops class prototypes (instances come back as plain objects).',
+    hint: 'Check how many levels each technique copies and what a JSON round trip does to a `Date`.',
   },
   {
     id: 'javascript-array-methods-some-every',
@@ -125,6 +129,7 @@ export function solution(orders: Order[]): boolean {
     tags: ['some', 'every'],
     source: 'topic-list',
     explanation: '`every` on an empty array is `true` (vacuous truth) while `some` is `false`; the empty-list test exists to make you notice that.',
+    hint: 'Reach for `Array.prototype.every` and `Array.prototype.some`, and think about what each returns for an empty array.',
   },
   {
     id: 'javascript-promise-combinators-choice',
@@ -146,6 +151,7 @@ export function solution(orders: Order[]): boolean {
     source: 'notion',
     explanation:
       'Senior signal: choosing the combinator by failure semantics, then adding timeouts so the slowest dependency bounds latency.\n\n**Say this out loud:** "I pick the combinator by failure semantics: `all` fails fast, `allSettled` waits for every result, `any` takes the first success and `race` the first settlement, and I add a timeout so one slow dependency cannot set my latency."',
+    hint: 'Compare the combinators by how they react when one input rejects, then think about how to bound each call so one slow service cannot set the page latency.',
   },
   {
     id: 'javascript-equality-coercion-core',
@@ -165,6 +171,7 @@ console.log(NaN === NaN);`,
     tags: ['coercion', 'core-25'],
     source: 'core-list',
     explanation: '`==` coerces (`""` becomes 0; `null`/`undefined` are loosely equal only to each other). `[] + {}` stringifies both sides. `NaN` is never equal to anything; use `Number.isNaN` or `Object.is`.',
+    hint: 'Recall how loose equality converts an empty string and treats `null`, what `+` does with two objects, and whether `NaN` equals anything.',
   },
   {
     id: 'javascript-hoisting-tdz-core',
@@ -184,6 +191,7 @@ console.log(NaN === NaN);`,
     tags: ['hoisting', 'tdz', 'core-25'],
     source: 'core-list',
     explanation: '`let` is hoisted but uninitialized until its declaration runs, so reading it throws. `var` would print `undefined`; the function declaration is fully hoisted, but the `typeof f` line never runs because the first line already threw.',
+    hint: 'Both declarations are hoisted, but ask whether a `let` binding is initialized before its line runs, and whether later lines run at all if an early one fails.',
   },
   {
     id: 'javascript-null-vs-undefined-core',
@@ -209,6 +217,7 @@ console.log(null + 1, Number.isNaN(undefined + 1));`,
     source: 'core-list',
     explanation:
       '`undefined` is what the **engine** reports for "no value yet": a missing property, an unassigned variable, a missing argument, a function without `return`. `null` is a value a **program** assigns on purpose to mean "empty".\n\n- `typeof null` is `"object"`, a historical bug that can never be fixed.\n- `JSON.stringify` drops keys whose value is `undefined` but keeps `null`, so only `null` survives a network hop.\n- `??` and `?.` treat both as nullish, but **default parameters only fire for `undefined`**: `greet(null)` returns `null`.\n- Numeric coercion differs: `null` becomes `0`, `undefined` becomes `NaN`.\n\nThat asymmetry is why APIs often use it deliberately: in a PATCH body, a missing field means "leave it" and `null` means "clear it".',
+    hint: 'Separate the value the engine reports for something missing from the value a program assigns on purpose, then recall how `typeof`, `JSON.stringify` and default parameters treat each.',
   },
   {
     id: 'javascript-arrow-object-literal-core',
@@ -236,6 +245,7 @@ console.log(size);`,
     source: 'core-list',
     explanation:
       'An **expression** produces a value and can appear anywhere a value is expected (`a + b`, `x ? y : z`, `total = 3`, a function expression). A **statement** performs an action and produces no usable value (`if`, `for`, `return`, declarations, blocks).\n\n- `() => { value: 1 }` parses the braces as a **block statement** containing a *label* `value:` and the expression `1`. There is no `return`, so it yields `undefined`. Wrapping in parentheses forces expression context: `() => ({ value: 1 })`.\n- The IIFE needs the outer parentheses for the same reason: `function () {}` at the start of a statement is a declaration, not an expression you can call.\n- Assignment is an expression whose value is the assigned value, which is why `(total = 3) * 2` is `6`.\n- The ternary is the expression form of `if`, which is why JSX `{...}` slots (expression-only) use ternaries and `&&` instead of `if`.',
+    hint: 'For each snippet, ask whether the braces or parentheses sit in statement position or expression position; an arrow body that opens with `{` is parsed as a block.',
   },
   {
     id: 'javascript-event-loop-async-await-core',
@@ -265,6 +275,7 @@ console.log('end');`,
     source: 'notion',
     explanation:
       'The script itself is one macrotask. Everything synchronous runs first, **including the body of an `async` function up to its first `await`** and the body of `b`: `start`, `a1`, `b`, `end`.\n\n`await b()` suspends `a` and schedules its continuation as a microtask when `b()`\'s promise settles (already, so it is queued immediately, before the later `.then` and `queueMicrotask`). When the stack empties, the **entire** microtask queue drains in FIFO order: `a2`, `then`, `micro`. Only then does the loop take the next macrotask, the timer.\n\n**Say this out loud:** "An async function runs synchronously until its first await; every continuation after that is a microtask, and the whole microtask queue drains before the next timer or I/O callback, so an endless chain of promise callbacks can starve timers and rendering."',
+    hint: 'Code before the first `await` runs synchronously; each continuation after an `await` and each promise reaction is a job queued behind the current script, and those jobs all drain before any timer callback.',
   },
   {
     id: 'javascript-promise-executor-sync-core',
@@ -294,6 +305,7 @@ console.log('H');`,
     source: 'core-list',
     explanation:
       'Synchronous code runs to completion on the call stack; asynchronous code registers a callback that runs **later**, on the same single thread, when the stack is empty.\n\n- The Promise **executor runs synchronously** inside `new Promise`, so `B` and `D` print immediately; `resolve` does not stop the function.\n- An `async` function body also runs synchronously until its first `await` (here there is none), so `F` prints in order.\n- Only the `.then` callbacks are deferred, as microtasks, in registration order: `C`, then `G`.\n\nAsync is not parallel: wrapping CPU-heavy work in a Promise still blocks the thread. Only I/O (or a Worker) actually runs elsewhere.',
+    hint: 'The function you pass to `new Promise` runs immediately, and calling `resolve` does not stop it; only the registered callbacks are deferred.',
   },
   {
     id: 'javascript-stale-closure-getter-core',
@@ -350,6 +362,7 @@ export function solution(steps) {
     source: 'core-list',
     explanation:
       'A closure is a function bundled with the **variables** (bindings) of the scope it was created in, so `increment` keeps updating the same `count` long after `createCounter` returned. But `{ count }` is shorthand for `{ count: count }`: it **copies the current primitive value (0) into a property** at creation time. From then on the property and the closed-over variable are unrelated.\n\nA getter (or a `getCount()` function) reads the live binding on every access and keeps the variable private, since nothing outside can assign it.\n\nA related bug shows up in React as a *stale closure*: a callback created during an old render keeps reading that render\'s bindings. Closures also keep every variable they capture alive, which is how closures holding large objects or DOM nodes cause leaks.\n\n**Say this out loud:** "A closure captures variables, not values, but the moment you copy a primitive into an object property you have taken a snapshot; expose a getter if you want the live value."',
+    hint: 'Shorthand `{ count }` copies the current primitive once; think about exposing the value through a getter so every read goes back to the closed-over variable.',
   },
   {
     id: 'javascript-var-let-const-loop-core',
@@ -384,6 +397,7 @@ try {
     source: 'core-list',
     explanation:
       '- `var` is **function-scoped**: there is one `i` for the whole loop (it even leaks out of it, hence `typeof i` is `"number"`), and all three arrows read its final value, `3`.\n- `let` is **block-scoped** and a `for (let ...)` loop creates a **fresh binding per iteration**, so each arrow captures its own `j`. Outside the loop `j` does not exist, and `typeof` on an undeclared name returns `"undefined"` instead of throwing.\n- `const` forbids **reassigning the binding** (a `TypeError` at runtime), not mutating the value it points to: `list.push(2)` is fine. Use `Object.freeze` or immutable updates for the value.\n\nAlso: `let`/`const` are hoisted but sit in the temporal dead zone until their declaration runs, and `var` at the top level of a classic script becomes a property of `window`.',
+    hint: 'Count how many bindings of the loop variable exist with `var` versus `let`, check whether `var` leaks out of the loop, and remember `const` blocks reassignment, not mutation.',
   },
   {
     id: 'javascript-prototype-shared-state-core',
@@ -417,6 +431,7 @@ console.log(Object.getPrototypeOf(a) === Team.prototype, 'add' in a, Object.hasO
     source: 'notion',
     explanation:
       'Every object has an internal `[[Prototype]]` link; `new Team()` sets it to `Team.prototype`. **Reads** walk the chain until a property is found (ending at `null`). **Writes** create or update an **own** property on the receiver, unless an inherited setter or a non-writable inherited property intercepts them.\n\n- `a.add(\'x\')` *reads* `this.members`, finds the one array on the prototype and mutates it, so every instance sees `["x"]`. Mutable state on a prototype is shared state.\n- `b.members = [\'y\']` *writes*, creating an own property on `b` that **shadows** the prototype one. Deleting it uncovers the shared array again.\n- `in` checks the whole chain; `Object.hasOwn` checks only the object itself. Methods live once on the prototype, which is why they are shared cheaply.\n\n`class` syntax is sugar over exactly this: methods go on `Class.prototype`, and per-instance state belongs in the constructor or class fields.\n\n**Say this out loud:** "Property reads walk the prototype chain but writes land on the object itself, so put behavior on the prototype and state on the instance; mutable data on a prototype is shared across every instance."',
+    hint: 'Ask where the array actually lives: reads walk the prototype chain, `push` mutates whatever object it finds there, and plain assignment creates an own property.',
   },
   {
     id: 'javascript-static-vs-instance-core',
@@ -451,6 +466,7 @@ console.log(Object.hasOwn(Temperature, 'fromFahrenheit'), Object.hasOwn(Temperat
     source: 'core-list',
     explanation:
       'A **static** method is a property of the constructor function itself (`Temperature.fromFahrenheit`); an **instance** method lives on `Temperature.prototype` and is reached by instances through the prototype chain. Instances therefore cannot see statics (`typeof t.fromFahrenheit` is `"undefined"`), and statics have no instance `this`.\n\nInside a static method `this` is **the class it was called on**. `extends` links the constructors too (`Object.getPrototypeOf(Reading) === Temperature`), so `Reading.fromFahrenheit` is inherited and `new this(...)` builds a `Reading`. That makes statics the idiomatic home for factory methods, parsers and caches that belong to the type rather than to one object.',
+    hint: 'Locate each method: statics sit on the constructor, instance methods on its prototype, and inside a static `this` is the class it was called on.',
   },
   {
     id: 'javascript-this-call-site-core',
@@ -490,6 +506,7 @@ console.log(bound.call({ owner: 'di' }));`,
     source: 'notion',
     explanation:
       'For regular functions `this` is decided **at the call site**, by these rules in priority order: `new` > explicit `bind` > `call`/`apply` > method call `obj.fn()` > plain call (`undefined` in strict mode, the global object in sloppy scripts).\n\n- `regular()` is a plain call after destructuring: the receiver is gone.\n- `arrow` was created at module top level, where `this` is `undefined`; arrows never get their own `this`, and an object literal is not a scope.\n- The `function` callback inside `map` is a plain call, so it loses `account`; the arrow inside `nestedArrow` inherits `this` from `nestedArrow`, which was called as a method.\n- A bound function ignores later `call`/`apply`: the first `bind` wins.\n\n**Say this out loud:** "`this` is not where the function is written but how it is called; arrows opt out and take `this` from the enclosing scope, and `bind` fixes it permanently."',
+    hint: 'Apply the `this` rules in priority order to each call: `new`, `bind`, `call`/`apply`, a method call, then a plain call in strict mode; arrows skip them all.',
   },
   {
     id: 'javascript-method-vs-function-core',
@@ -511,6 +528,7 @@ console.log(bound.call({ owner: 'di' }));`,
     source: 'core-list',
     explanation:
       'JavaScript has no separate method type: a method is a function-valued property (`typeof` is `"function"`) that usually reads `this`. The binding to the object happens only in the call expression `cart.count()`. Passing `cart.count` hands over the bare function; the timer then calls it with a receiver of its own, not `cart` (`window` in browsers, a `Timeout` object in Node), so `this.items` is `undefined` and reading `.length` throws a `TypeError` inside the timer callback.\n\nFixes: `setTimeout(() => cart.count(), 0)` or `setTimeout(cart.count.bind(cart), 0)`. An arrow function as a method does *not* help: arrows take `this` from the surrounding scope, not from the object literal. Shorthand methods do differ in two small ways: they cannot be used with `new`, and they can use `super`.',
+    hint: 'Ask what `typeof` reports for a method and what receiver a function gets when a timer calls it without the object in front.',
   },
   {
     id: 'javascript-promise-chain-recovery-core',
@@ -551,6 +569,7 @@ Promise.resolve(1)
     source: 'core-list',
     explanation:
       'A promise is a placeholder for a future value with three states: **pending**, then exactly once **fulfilled** or **rejected**. After it settles it is immutable, so the later `reject` and `resolve` calls are ignored.\n\nEvery `.then`/`.catch`/`.finally` returns a **new** promise:\n- A `throw` inside `then` rejects that new promise; rejection skips fulfillment handlers until a `catch`.\n- `catch` that **returns** a value recovers the chain with that value (2). Rethrow if you only meant to log.\n- `finally` receives no argument and **passes the previous value through**; its return value is ignored (unless it throws or returns a rejected promise).\n\n`first` prints first because its handler was queued before the other chain needed several microtask hops.',
+    hint: 'A promise settles only once and ignores later calls; each handler returns a new promise, a `throw` jumps to the nearest `catch`, and a cleanup handler passes the value through unchanged.',
   },
   {
     id: 'javascript-async-foreach-fix-core',
@@ -596,6 +615,7 @@ export async function solution(ids) {
     source: 'core-list',
     explanation:
       '`forEach` ignores the promises its callback returns, so `solution` returns before any price arrives. Two more problems hide here:\n- **Lost updates:** `total += await x` reads `total` *before* the await. With concurrent callbacks every one reads `0`, so even if you waited, the last writer wins.\n- **Unhandled rejections:** a failing callback rejects a promise nobody observes.\n\nJavaScript handles async work with callbacks, promises and `async`/`await` (sugar over promises). Pick the shape deliberately: `for...of` with `await` for **sequential** work (ordering, rate limits), `Promise.all(items.map(...))` for **concurrent** fail-fast work, `Promise.allSettled` when partial failure is acceptable, and a concurrency limiter (p-limit style) when the list is large.\n\n**Say this out loud:** "`forEach` is not promise-aware; I map to promises and await `Promise.all` for concurrency, or use `for...of` with `await` when order or rate limits matter, and I never accumulate shared state across concurrent awaits."',
+    hint: '`forEach` ignores the promises its callback returns; map the ids to promises, wait for them together with `Promise.all`, then sum the results.',
   },
   {
     id: 'javascript-promisify-callback-core',
@@ -669,6 +689,7 @@ export async function solution(a, b) {
     source: 'core-list',
     explanation:
       'This is the whole history of async JavaScript in one function: **callbacks** (error-first by Node convention), wrapped into a **Promise**, consumed with **async/await**.\n\n- The Promise constructor is the bridge: call the old API inside the executor, and route `error` to `reject` and the value to `resolve`.\n- Rest/spread (`...args`) keeps the wrapper generic for any arity.\n- `await` turns the rejection into an exception, so `try/catch` works like synchronous code.\n\nCallbacks compose badly (nesting, no single error channel, easy to call twice); promises settle once and chain. Node ships `util.promisify` and most core modules have promise variants (`fs/promises`); if `fn` relies on `this`, the wrapper must be a regular `function` (an arrow has no own `this`) and forward it with `fn.call(this, ...args, callback)`.',
+    hint: 'Return a function that builds a `new Promise`, calls the original with the arguments plus an error-first callback, and routes the error and the result to the right settle function.',
   },
   {
     id: 'javascript-map-parseint-core',
@@ -697,6 +718,7 @@ console.log(result.length, result[0]);`,
     source: 'core-list',
     explanation:
       '`map` builds a **new array of the same length** by calling the callback with `(element, index, array)`.\n\n- `parseInt` accepts `(string, radix)`, so it receives the index as the radix: `parseInt(\'2\', 1)` and `parseInt(\'3\', 2)` are `NaN`. Pass an explicit arrow, `(s) => parseInt(s, 10)`, or use `Number`.\n- `map` skips holes in sparse arrays and keeps them as holes.\n- `map` does not mutate the *array*, but it does nothing to stop the callback mutating the *elements*: the result shares the same objects. Return `{ ...item, n: item.n + 1 }` for a real immutable transform.\n- A callback that does not return yields `undefined` slots; `map` is never a filter. Use `filter` then `map`, `flatMap`, or `reduce`, and use `forEach` when you only want side effects.',
+    hint: 'List the three arguments `map` passes to its callback and what `parseInt` does with a second argument; also think about how `map` treats holes in a sparse array.',
   },
   {
     id: 'javascript-pipe-functional-core',
@@ -745,6 +767,7 @@ export function solution(input) {
     source: 'core-list',
     explanation:
       'Functional programming builds programs from **pure functions** (same input, same output, no side effects) combined by **higher-order functions**, avoiding shared mutable state. JavaScript supports it because functions are first-class values: you can pass them, return them and store them.\n\n`pipe` is `reduce` over functions: the accumulator is the value flowing through. `compose` is the same thing right to left (`reduceRight`). Each step here is pure and trivially unit-testable; the pipeline is just data.\n\nIn day-to-day JavaScript this shows up as `map`/`filter`/`reduce` instead of loops with mutation, immutable state updates in Redux reducers, and small composable utilities. The pragmatic stance: keep the core pure and push side effects (I/O, logging, time) to the edges.',
+    hint: 'Think of `pipe` as a fold: `Array.prototype.reduce` over the functions, with the input as the initial value.',
   },
   {
     id: 'javascript-memoize-cache-key-core',
@@ -800,6 +823,7 @@ export function solution(calls) {
     source: 'core-list',
     explanation:
       'Memoization caches a function\'s result per input, trading memory for time. The cache lives in a **closure**, private to the returned function.\n\nThe hard part is the **key**:\n- `args.join(\',\')` or `String(args)` collide (`[1, 2]` and `[\'1,2\']` both become `"1,2"`). `JSON.stringify(args)` keeps types and boundaries for serializable input.\n- Object arguments compared by identity belong in a `WeakMap` (entries are collected with the key); structural keys need a stable serializer.\n- Use `cache.has`, not a truthiness check, or cached `0`, `""` and `undefined` results are recomputed.\n\nOnly memoize **pure** functions: a cached impure call returns stale data. An unbounded `Map` is a memory leak in a long-running process, so production caches need an LRU bound or a TTL. For async functions, cache the **promise** so concurrent callers share one in-flight request, and evict it on rejection.\n\n**Say this out loud:** "Memoization is only correct for pure functions, the cache key is the real design decision, and in a server every cache needs an eviction policy or it is a leak."',
+    hint: 'Keep a `Map` in a closure, and choose a cache key that preserves argument types and boundaries, such as `JSON.stringify` of the whole arguments array.',
   },
   {
     id: 'javascript-immutability-freeze-core',
@@ -829,6 +853,7 @@ console.log(numbers.join(','), sorted.join(','));`,
     source: 'core-list',
     explanation:
       'Primitives are already immutable; objects and arrays are mutable by default. Immutability means producing **new** values instead of changing existing ones.\n\n- `Object.freeze` is **shallow**: the nested `hosts` array is still mutable. A deep freeze must recurse.\n- In strict mode, writing to a frozen property **throws**; in sloppy mode it fails silently, which is worse.\n- Spreading creates a new, unfrozen object that **shares** nested references (structural sharing). That is the model Redux, React state and Immer use: copy the path you change, share the rest.\n- ES2023 added non-mutating array methods (`toSorted`, `toReversed`, `toSpliced`, `with`) for exactly this; `sort` and `reverse` mutate in place.\n\nWhy bother: predictable data flow, cheap change detection by reference (`prev !== next`), safe sharing between modules, and fewer "who changed this" bugs.\n\n**Say this out loud:** "`const` and `Object.freeze` are shallow; real immutability is a discipline of returning new objects with structural sharing, which is what makes reference-equality change detection in React and Redux work."',
+    hint: '`Object.freeze` is shallow and only throws on writes in strict mode; also check which array methods change the array in place and which return a copy.',
   },
   {
     id: 'javascript-arrow-vs-regular-core',
@@ -863,6 +888,7 @@ console.log(widget.describe());`,
     source: 'core-list',
     explanation:
       'Arrow functions are not just shorter syntax. They have **no own** `this`, `arguments`, `super` or `new.target`; all of these resolve lexically from the enclosing function.\n\n- No `arguments` object: use rest parameters.\n- No `prototype` and no `[[Construct]]`, so `new` throws a `TypeError`.\n- `call`, `apply` and `bind` cannot change an arrow\'s `this`; `viaArrow` keeps the `this` of `describe`.\n\nRule of thumb: arrows for callbacks that need the outer `this` (array methods, promise handlers, React handlers); regular functions or method shorthand for object methods, prototype methods and constructors. An arrow as an object-literal method is a bug because it captures the outer `this`, not the object.',
+    hint: 'Arrows have no own `this`, `arguments` or `[[Construct]]`, and `call` or `bind` cannot change their receiver.',
   },
   {
     id: 'javascript-destructuring-defaults-core',
@@ -894,6 +920,7 @@ try {
     source: 'core-list',
     explanation:
       'Destructuring unpacks array items (by **position**, via the iterator) or object properties (by **name**) into bindings.\n\n- Defaults apply **only when the value is `undefined`**, not `null`: `b` stays `null`. This is the most common production surprise with API data.\n- `c: renamed = 3` renames and defaults at once; holes (`, ,`) skip positions; `...rest` collects the remainder.\n- Nested patterns need their own fallback (`= {}`), otherwise destructuring a missing object throws.\n- Destructuring `null` or `undefined` throws a `TypeError`, which is why function signatures often write `({ page = 1 } = {})`.\n- Swapping with `[p, q] = [q, p]` needs the previous statement to end with a semicolon, or ASI joins the lines.',
+    hint: 'Defaults apply only for one kind of missing value, not for `null`; also ask what happens when the value being destructured is itself missing.',
   },
   {
     id: 'javascript-spread-shallow-core',
@@ -917,6 +944,7 @@ console.log([...'hey', ...[1, 2]]);`,
     source: 'core-list',
     explanation:
       'Spread expands an iterable into elements (array literals, call arguments) or an object\'s own enumerable properties into a new object literal.\n\n- The copy is **shallow**: `copy.tags` is the same array as `base.tags`, so `push` shows up in both. **Reassigning** `copy.meta` only rebinds the copy\'s property. For a real deep copy use `structuredClone`.\n- Later properties override earlier ones, which is the idiom for defaults plus overrides.\n- Spreading `null`/`undefined` into an **object** is a no-op, but into an **array** or call it throws, because they are not iterable.\n- Strings are iterable by code point, and spread into a call replaces `fn.apply(null, arr)`.\n\nThe mirror syntax, `...rest` in parameters and destructuring, collects instead of expanding.',
+    hint: 'Spread copies one level: nested arrays stay shared, reassigning a property touches only the copy, later keys overwrite earlier ones, and a string spreads into its characters.',
   },
   {
     id: 'javascript-set-semantics-core',
@@ -940,6 +968,7 @@ console.log(seen.add(1) === seen, seen.has(1), seen.has('1'));`,
     source: 'core-list',
     explanation:
       'A `Set` stores **unique values in insertion order**, with O(1) average `add`, `has` and `delete`.\n\n- Uniqueness uses **SameValueZero**: like `===`, except `NaN` equals `NaN` (so it is stored once) and `0`/`-0` are the same. No coercion: `1` and `\'1\'` are different.\n- Objects are compared **by reference**; two look-alike objects are two entries. To dedupe records by id, use a `Map` keyed by id.\n- The constructor takes any iterable, so `[...new Set(arr)]` is the idiomatic dedupe that keeps first-seen order.\n- `add` returns the set, so calls chain.\n\nPrefer `set.has(x)` over `array.includes(x)` inside loops: it turns an O(n*m) intersection into O(n+m). `WeakSet` holds objects weakly for "already visited" tracking without leaks.',
+    hint: '`Set` uniqueness uses SameValueZero: no type coercion, `NaN` equals itself, and objects compare by reference; iteration follows insertion order.',
   },
   {
     id: 'javascript-strict-mode-core',
@@ -984,6 +1013,7 @@ console.log(alias(1));`,
     source: 'core-list',
     explanation:
       'Strict mode (`\'use strict\'`, or **automatically** in ES modules and `class` bodies) turns silent failures into errors and removes legacy semantics:\n\n- Assigning to an undeclared name throws `ReferenceError` instead of creating an accidental global.\n- Writes to read-only or frozen properties, and deleting non-configurable ones, throw `TypeError` instead of doing nothing.\n- A plain function call gets `this === undefined` instead of the global object, so a lost receiver fails loudly.\n- `arguments` no longer aliases named parameters, and `with`, octal literals and duplicate parameter names are syntax errors.\n\nThese rules also let engines optimize better. In practice, modern code is strict by default because it is written as modules and classes; the leftover risk is old concatenated scripts and inline `<script>` tags.\n\n**Say this out loud:** "ES modules and class bodies are always strict; strict mode turns silent failures like accidental globals or writes to frozen objects into thrown errors, and makes an unbound `this` undefined instead of the global object."',
+    hint: 'Strict mode turns silent failures into errors and changes the receiver of a plain function call; remember ES modules are strict automatically.',
   },
   {
     id: 'javascript-event-delegation-closest-core',
@@ -1005,6 +1035,7 @@ console.log(alias(1));`,
     source: 'core-list',
     explanation:
       'Event delegation puts **one listener on a common ancestor** and relies on **bubbling**: a click on any descendant travels up through its ancestors, so the ancestor sees it. It works for elements added later and avoids attaching (and cleaning up) one listener per item.\n\n- `event.target` is the element where the event originated, often a child of the thing you care about; `event.currentTarget` is the element the listener is on (the `<ul>`, which is what the "always the `<ul>`" option confuses it with).\n- `closest` walks up from the target; the `list.contains` guard stops a match *outside* the list (for example when lists are nested).\n- `matches` works fine on new elements; it just fails when the click landed on a child.\n\nCaveats: `focus`/`blur`/`mouseenter` do not bubble (use `focusin`/`focusout`, `mouseover`), and a child calling `stopPropagation()` silently breaks the delegated handler. React itself delegates: it attaches its listeners at the root container.',
+    hint: 'Think about which element `event.target` is when the click lands on something nested inside the button.',
   },
   {
     id: 'javascript-data-binding-core',
@@ -1028,6 +1059,7 @@ console.log(alias(1));`,
     source: 'core-list',
     explanation:
       'The common answer ("synchronization between model and view") is the junior version. The senior version shows you know the **mechanism** (events in one direction, observation via Proxy/setters/subscriptions in the other), the **failure modes** (feedback loops, cascading updates, over-rendering) and why the ecosystem converged on unidirectional flow.\n\n**Say this out loud:** "Two-way binding is just two one-way bindings, events into the model and observation back into the view; React makes the second half explicit with controlled components so every state change has one traceable source."',
+    hint: 'Cover both directions separately (DOM events into the model, observation via setters, `Proxy` or subscriptions back to the view), the feedback-loop risk, and why React made data flow one way.',
   },
   {
     id: 'javascript-coercion-to-primitive-core',
@@ -1056,6 +1088,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'When an object meets an operator it is converted with **ToPrimitive** and a hint: `+` and `==` use the *default* hint (`valueOf` first), template literals and `String()` use the *string* hint (`toString` first). `Symbol.toPrimitive` overrides both.\n\n- `==` then compares primitives, so `price == 42` is `true`; `===` never converts, so different types are simply unequal.\n- `[] == false`: `false` becomes `0`, `[]` becomes `""` then `0`, so it is `true`, while `!![]` is `true` because every object is truthy. The same value is "equal to false" and truthy.\n- `null == 0` is `false` because `==` special-cases `null`: it only equals `undefined`. But relational operators convert with ToNumber, so `null >= 0` is `true`.\n\nThis inconsistency is the argument for `===` everywhere, with one accepted exception: `x == null` as a deliberate check for both `null` and `undefined`.\n\n**Say this out loud:** "`===` compares without conversion; `==` runs the abstract equality algorithm with ToPrimitive and ToNumber, and the only `==` I allow in code review is `x == null`."',
+    hint: 'Track which ToPrimitive hint each operator uses (`valueOf` or `toString` first), the `null` special case in loose equality, and the ToNumber step relational operators apply.',
   },
   {
     id: 'javascript-async-operations-explain',
@@ -1079,6 +1112,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common reference answer lists callbacks, promises and async/await. A senior answer starts one level lower, with **who does the waiting** (the host, not the JavaScript thread), treats the three styles as an evolution of the same continuation idea, and finishes with production concerns: parallelism, error propagation, cancellation, and I/O-bound versus CPU-bound work.\n\n**Say this out loud:** "JavaScript never waits on the main thread: the host does the I/O and queues a continuation. Callbacks, promises and async/await are three ways of writing that continuation, and async/await wins because errors and control flow read like synchronous code."',
+    hint: 'Start with who actually does the waiting (the host, not the JS thread), present callbacks, promises and async/await as one evolution, then cover parallelism, cancellation and error handling.',
   },
   {
     id: 'javascript-equality-explain',
@@ -1101,6 +1135,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer stops at "`==` coerces, `===` does not". Interviewers push for the **algorithm** (ToNumber, ToPrimitive, the `null`/`undefined` special case), for **`NaN` and `Object.is`**, and for a **policy** you would actually enforce.\n\n**Say this out loud:** "`===` compares type and value with no conversion; `==` runs a coercion algorithm with enough edge cases that I ban it by lint except for `x == null`, and I reach for `Object.is` when `NaN` or signed zero matter."',
+    hint: 'Go past the one-liner: the conversion steps loose equality runs, the `null`/`undefined` special case, `NaN` and `Object.is`, and a review policy you would enforce.',
   },
   {
     id: 'javascript-closures-explain',
@@ -1123,6 +1158,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common reference answer describes access to outer scopes. The senior layer is that closures capture **live bindings**, which explains both the `var` loop bug and React\'s stale closures, plus the **lifetime** consequence: whatever a closure references stays reachable.\n\n**Say this out loud:** "A closure is a function plus the scope it was created in; it captures variables by reference, which is what makes private state possible and also what causes stale-closure bugs when the captured binding is not the one you think."',
+    hint: 'Stress that closures capture live bindings rather than values, then connect that to a real use (private state, factories), the `var` loop and stale React closures, and memory lifetime.',
   },
   {
     id: 'javascript-null-undefined-explain',
@@ -1145,6 +1181,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer is the definition. A senior answer adds the **observable differences** that cause bugs (defaults ignore `null`, JSON drops `undefined`, `typeof null`) and a **convention** that survives serialization boundaries.\n\n**Say this out loud:** "`undefined` means nobody set it, `null` means someone set it to empty; defaults and JSON treat them differently, so I use `??` to handle both and keep a clear convention at the API boundary, like absent versus `null` in a PATCH."',
+    hint: 'Name the observable differences that cause bugs (defaults, JSON serialization, `typeof`) and propose a team convention that survives API boundaries.',
   },
   {
     id: 'javascript-event-loop-explain',
@@ -1168,6 +1205,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common reference answer describes a single "callback queue". That is the junior model; the senior model has **two queues with different drain rules** plus **rendering opportunities**, and it predicts real output.\n\n**Say this out loud:** "After every task the engine drains the entire microtask queue before it renders or takes the next task, so promise callbacks beat timers, and both a long task and an endless chain of microtasks will freeze the page."',
+    hint: 'Describe two queues with different drain rules plus rendering opportunities, and show the model predicts real ordering and can starve rendering.',
   },
   {
     id: 'javascript-var-let-const-explain',
@@ -1191,6 +1229,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer covers scope and redeclaration. Interviewers follow up on the **TDZ**, **`const` versus immutability** and the **loop binding** behavior, because that is where the bugs live.\n\n**Say this out loud:** "`var` is function-scoped and silently `undefined` before its line; `let` and `const` are block-scoped and throw in the temporal dead zone. I default to `const`, knowing it freezes the binding, not the object."',
+    hint: 'Cover scope and redeclaration, then the follow-ups: the temporal dead zone, `const` versus real immutability, per-iteration loop bindings, and your default.',
   },
   {
     id: 'javascript-prototypal-inheritance-explain',
@@ -1214,6 +1253,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common reference answer describes the chain. The senior layer is the **read versus write asymmetry** (lookup walks the chain, assignment shadows), what **`new`** does step by step, and that **classes are the same mechanism**.\n\n**Say this out loud:** "Reads walk the prototype chain and writes land on the object itself; classes are just a nicer way to wire the same chain, which is why mutable state on a prototype leaks across every instance."',
+    hint: 'Explain the read-versus-write asymmetry on the chain, what `new` does step by step, and how `class` syntax maps onto the same mechanism.',
   },
   {
     id: 'javascript-this-explain',
@@ -1236,6 +1276,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common reference answer lists contexts (method, alone, function, event) and says a plain function gets the global object, which is **wrong in strict mode, modules and classes**, where a plain call gives `undefined`. A senior answer states the rules in precedence order and names the lost-receiver bug.\n\n**Say this out loud:** "For regular functions `this` is decided by how the function is called: `new`, then `call`/`apply`/`bind`, then the object before the dot, otherwise `undefined` in strict code; arrow functions skip all of that and use the surrounding `this`."',
+    hint: 'State the binding rules in precedence order, correct the global-object myth for strict code, modules and classes, and name the lost-receiver bug with its fixes.',
   },
   {
     id: 'javascript-hoisting-explain',
@@ -1258,6 +1299,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common reference answer says declarations are "moved to the top". Interviewers probing seniority want the **creation-phase** explanation and the **TDZ**, including its shadowing effect and the different errors for early calls.\n\n**Say this out loud:** "Hoisting is the engine creating a scope\'s bindings before running it: function declarations are ready to call, `var` starts as `undefined`, and `let`, `const` and `class` sit in the temporal dead zone and throw until their line runs."',
+    hint: 'Replace the "moved to the top" story with the creation phase of a scope, and cover the temporal dead zone, its shadowing effect and the different errors on early use.',
   },
   {
     id: 'javascript-method-vs-function-explain',
@@ -1280,6 +1322,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer ("a method is a function assigned to an object property") is correct but shallow. The senior version is that the difference lives in **the call**, not the function, plus the concrete semantics of **method definitions** and the prototype-versus-field trade-off in classes.\n\n**Say this out loud:** "A method is just a function called through an object, so `this` is that object; pull it off the object and it is a plain function again, which is why I choose between prototype methods and arrow class fields deliberately."',
+    hint: 'Argue that the difference lives in the call expression, then cover what method definition syntax changes and the prototype method versus arrow field trade-off in classes.',
   },
   {
     id: 'javascript-promises-explain',
@@ -1303,6 +1346,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer covers the three states. A senior answer adds **chaining semantics** (what the handler returns decides the next promise), **microtask timing**, **combinator choice** by failure behavior, and the mistakes you catch in review.\n\n**Say this out loud:** "A promise settles once, and every `then` returns a new promise shaped by what its handler returns or throws; that one rule explains chaining, error propagation and recovery."',
+    hint: 'Go beyond the states: what a handler\'s return value does to the next promise, microtask timing, choosing combinators by failure behavior, and the mistakes you catch in review.',
   },
   {
     id: 'javascript-sync-vs-async-explain',
@@ -1325,6 +1369,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer explains blocking versus non-blocking. The senior distinction is **concurrency without parallelism** and the **I/O-bound versus CPU-bound** decision, including the myth that marking a function `async` stops it from blocking.\n\n**Say this out loud:** "Async in JavaScript is concurrency, not parallelism: it frees the thread while the host waits on I/O, but CPU work still blocks unless I chunk it or move it to a worker."',
+    hint: 'Distinguish concurrency from parallelism on one thread, sort the work into I/O-bound and CPU-bound, and address the myth that `async` makes code non-blocking.',
   },
   {
     id: 'javascript-event-delegation-explain',
@@ -1348,6 +1393,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer explains delegation and bubbling. The senior details are **`closest` plus containment** for nested targets, the **events that do not bubble**, and how **`stopPropagation`** silently breaks delegates.\n\n**Say this out loud:** "I put one listener on the container and resolve the real target with `event.target.closest(selector)`, which handles nested markup and elements added later; for focus I listen to `focusin`, because `focus` does not bubble."',
+    hint: 'Cover how you find the real target inside nested markup and confirm it belongs to the container, which events do not bubble, and how `stopPropagation` elsewhere breaks you.',
   },
   {
     id: 'javascript-array-map-explain',
@@ -1370,6 +1416,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer calls `map` pure. Precisely: `map` does not mutate the array, but it is only as pure as its callback, and the result is a **shallow** new array. Seniors are expected to know the callback-signature traps and to catch misuse in review.\n\n**Say this out loud:** "`map` is for one-to-one transformations that return a new array; if I am ignoring the result I want `forEach`, and if the callback is async I need `Promise.all` around it."',
+    hint: 'Be precise about purity and shallowness, recall the three callback arguments and the traps they cause, and list the misuses you would flag in review.',
   },
   {
     id: 'javascript-functional-programming-explain',
@@ -1393,6 +1440,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer lists first-class, higher-order and pure functions. A senior shows **where** they apply it (a pure core, reducers, React components) and **where they stop** (I/O at the edges, readability over cleverness).\n\n**Say this out loud:** "I keep business logic as pure functions over immutable data and push side effects to the edges; that makes the core trivial to test, and it is exactly the model reducers and React components already use."',
+    hint: 'Show where you apply it day to day (a pure core, reducers, components) and where you stop (I/O at the edges, readability over cleverness).',
   },
   {
     id: 'javascript-arrow-vs-regular-explain',
@@ -1415,6 +1463,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer lists the differences. The senior value is turning them into a **decision rule** and knowing the **gotchas** that show up in real code.\n\n**Say this out loud:** "Arrow functions take `this` and `arguments` from where they are written, so I use them for callbacks and regular methods where the receiver matters; an arrow can never be a constructor or a correct object-literal method."',
+    hint: 'Turn the list of differences into a decision rule for callbacks versus methods and constructors, and name the gotchas that show up in real code.',
   },
   {
     id: 'javascript-destructuring-explain',
@@ -1438,6 +1487,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer shows the basic syntax. Interviewers check the **edge semantics**: defaults and `null`, destructuring `undefined`, the block-versus-object brace ambiguity, and that nothing is deep-copied.\n\n**Say this out loud:** "Destructuring defaults only kick in for `undefined`, and destructuring `undefined` itself throws, so for option parameters I write `function f({ timeout = 1000 } = {})`."',
+    hint: 'Focus on the edge semantics: when defaults apply, destructuring a missing value, the block-versus-object brace ambiguity, and that nothing is deep-copied.',
   },
   {
     id: 'javascript-spread-explain',
@@ -1460,6 +1510,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer defines spread. A senior answer is about **copy semantics**: shallow, own enumerable properties only, prototype lost. That is where production bugs come from, especially in state updates.\n\n**Say this out loud:** "Spread makes a shallow copy of own enumerable properties, so it is perfect for immutable top-level updates, but nested objects are still shared; for a real deep copy I use `structuredClone`."',
+    hint: 'Center the answer on copy semantics: how deep the copy goes, which properties come along, what happens to the prototype, and where that bites in state updates.',
   },
   {
     id: 'javascript-static-vs-instance-explain',
@@ -1482,6 +1533,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer says where each method is called. The senior additions are **where each one lives** (prototype versus constructor), **static inheritance** with `this` pointing at the subclass, and the **design judgment** about factories versus hidden global state.\n\n**Say this out loud:** "Instance methods live on the prototype and work with one object\'s state; static methods live on the class, which makes them right for factories like `User.fromJson` and wrong for anything that quietly stores shared mutable state."',
+    hint: 'Cover where each kind lives (prototype versus constructor), how statics are inherited and what `this` means inside them, and when a static factory beats hidden global state.',
   },
   {
     id: 'javascript-expression-vs-statement-explain',
@@ -1504,6 +1556,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer gives definitions. Seniors are expected to connect the distinction to **parsing**: the same characters mean different things in statement and expression position, which explains the object-literal arrow bug, ASI after `return`, and JSX\'s `{}` rule.\n\n**Say this out loud:** "Expressions produce values and statements do things; JSX braces and template literals only take expressions, and a leading `{` is parsed as a block in statement position, which is why an arrow returning an object needs parentheses."',
+    hint: 'Connect the distinction to parsing: the same characters mean different things in each position, which explains the object-literal arrow bug, ASI after `return` and JSX braces.',
   },
   {
     id: 'javascript-immutability-explain',
@@ -1526,6 +1579,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer is one line. A senior connects immutability to **reference equality**, which is what makes React and Redux change detection work, and knows the **limits of each tool**: `freeze` is shallow and only throws in strict mode, `readonly` disappears at runtime.\n\n**Say this out loud:** "React and Redux detect change by reference, so I never mutate state; I create new objects with spread or the `toSorted`-style methods, or let Immer do it, and I remember that `Object.freeze` is shallow."',
+    hint: 'Tie immutability to reference equality and change detection in React and Redux, and know the limits of each tool, from `Object.freeze` to `readonly`.',
   },
   {
     id: 'javascript-strict-mode-explain',
@@ -1548,6 +1602,7 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer is the definition. The senior answer names **specific behavior changes** and knows that **modules and classes are strict by default**, which is why most modern code is strict without the directive.\n\n**Say this out loud:** "Strict mode turns silent failures into errors, like writes to frozen objects and accidental globals, and makes `this` `undefined` in plain calls; ES modules and classes are always strict, so modern code gets it for free."',
+    hint: 'Name specific behavior changes rather than the definition, and explain which code is already strict without the directive.',
   },
   {
     id: 'javascript-set-explain',
@@ -1570,5 +1625,6 @@ console.log(null == 0, null >= 0);`,
     source: 'core-list',
     explanation:
       'The common answer defines uniqueness. A senior knows **how** uniqueness is decided (SameValueZero, reference identity), **why** a `Set` beats an array for membership, and the **serialization gotcha** at API boundaries.\n\n**Say this out loud:** "A `Set` gives me constant-time membership and deduplication by SameValueZero, which means objects are unique by reference, so to dedupe records I key a `Map` by id, and I convert to an array before `JSON.stringify`."',
+    hint: 'Explain how uniqueness is decided, why membership checks beat arrays, and the serialization gotcha when a `Set` crosses an API boundary.',
   },
 ];
