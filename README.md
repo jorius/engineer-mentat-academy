@@ -46,6 +46,8 @@ a glyph and one content file per language.
 - **Review** collects what you missed or marked.
 - **Browse** walks the catalogue with mastery per subject and a Drill button on every topic.
 
+![Mock setup: number of questions, timed or untimed, and the domains, levels and kinds to draw from](docs/screenshots/mock.png)
+
 ![Browse: a subject page with level, kind and only filters, and a Drill button per topic](docs/screenshots/browse.png)
 
 On every question: up to three attempts (configurable), a hint, Show answer when you give up,
@@ -55,6 +57,8 @@ shown in a stable shuffled order so the answer's position never helps.
 
 Keyboard: `Ctrl+Enter` submits, `Ctrl+Shift+Enter` runs, `N` next, `H` hint, `M` mark, `Esc`
 closes the notes.
+
+![An open question: say the answer out loud, reveal the model answer and tick the rubric](docs/screenshots/explain.png)
 
 ![Home: the nine domains with your progress, and shortcuts to drill, mock and review](docs/screenshots/home.png)
 
