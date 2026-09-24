@@ -19,16 +19,16 @@ export function normalizeOutput(text: string): string {
 }
 
 function looseLine(line: string): string {
-  return line.replace(/\s+/g, '').replace(/'/g, '"');
+  return line.replace(/\s+/g, '').replace(/['"]/g, '');
 }
 
-// Loose (whitespace/quote-insensitive) comparison only applies when both lines
-// look like an array or object literal (start with `[` or `{` after trimming).
-// Otherwise space-separated values (e.g. two console.log args like "4 0")
-// must match exactly, so they aren't conflated with a single value like "40".
+// Loose comparison (whitespace and quotes ignored) applies only when both lines carry an
+// array or object literal, so Node's `{ value: 1 }` and `[ 'a', 'b' ]` match the runner's
+// `{"value":1}` and `["a","b"]`, including inside a line such as `10 x [ 40, 50 ]`.
+// Lines without brackets must match exactly, so two console.log args like "4 0" are never
+// conflated with a single value like "40".
 function isArrayOrObjectLine(line: string): boolean {
-  const trimmed = line.trim();
-  return trimmed.startsWith('[') || trimmed.startsWith('{');
+  return line.includes('[') || line.includes('{');
 }
 
 function linesMatch(expected: string | undefined, actual: string | undefined): boolean {
