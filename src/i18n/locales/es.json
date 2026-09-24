@@ -36,7 +36,8 @@
     "tagline": "Entrena como un Mentat: {{total}} preguntas, {{attempted}} intentadas, {{missed}} por repasar.",
     "drillUnseen": "Practicar las no vistas",
     "mockInterview": "Entrevista simulada",
-    "reviewMissed": "Repasar ({{count}})"
+    "reviewMissed": "Repasar ({{count}})",
+    "continueDrill": "Continuar: {{name}} · {{done}} / {{total}}"
   },
   "filters": {
     "all": "Todos",
@@ -78,7 +79,13 @@
     "allKinds": "todos los tipos",
     "missing": "Esta práctica ya no existe.",
     "restart": "Reiniciar",
-    "myDrills": "Mis prácticas"
+    "myDrills": "Mis prácticas",
+    "resume": "Continuar",
+    "rename": "Renombrar",
+    "delete": "Eliminar",
+    "noDrills": "Las prácticas que empieces aparecen aquí.",
+    "progressLabel": "{{done}} / {{total}}",
+    "nameLabel": "Nombre de la práctica"
   },
   "mock": {
     "title": "Entrevista simulada",

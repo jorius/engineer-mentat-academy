@@ -16,7 +16,10 @@ Live: https://jorius.github.io/engineer-mentat-academy/
   Drill button.
 - **Drill**: filtered stream with instant grading and explanations. Opening Drill without
   a filter shows a setup card: pick domain, subject and topic, levels, kinds and whether to
-  include only unseen, marked or missed questions.
+  include only unseen, marked or missed questions. Every drill you start is saved and picks
+  up at the next unanswered question; "My drills", under the setup card, lists them with
+  their progress so you can resume, rename, restart or delete them, and Home links to the
+  latest unfinished one. Skip moves a question to the end of the drill.
 - **Mock**: random, mixed-level session with a results page. Choose the number of
   questions, timed or untimed, and the domains, levels and kinds to draw from.
 - **Review**: everything you missed or marked for review.

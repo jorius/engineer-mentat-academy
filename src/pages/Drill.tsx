@@ -1,5 +1,5 @@
 // packages
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { JSX } from 'react';
@@ -26,6 +26,7 @@ import { QuestionView } from '../components/question/QuestionView';
 import { Button } from '../components/primitives/Button';
 import { Card } from '../components/primitives/Card';
 import { Glyph } from '../components/primitives/Glyph';
+import { ProgressBar } from '../components/primitives/ProgressBar';
 import { ChipGroup } from '../components/filters/ChipGroup';
 import { OnlyChips } from '../components/filters/OnlyChips';
 
@@ -33,9 +34,10 @@ import { OnlyChips } from '../components/filters/OnlyChips';
 import { drillQuery, inScope, matchesOnly, narrowing, parseDrillFilter } from '../utils/drillFilter';
 import type { DrillFilter, Only } from '../utils/drillFilter';
 import { facets } from '../utils/filterFacets';
-import { doneInDrill, drillStatus } from '../utils/drillProgress';
+import { describeDrill, doneInDrill, drillStatus } from '../utils/drillProgress';
 
 const SELECT_CLASS = 'rounded-md border border-zinc-300 px-2 py-1 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900';
+const PRIMARY_LINK_CLASS = 'rounded-md bg-accent-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-accent-600';
 
 function DrillSetup(): JSX.Element {
   const { t } = useTranslation();
@@ -144,7 +146,99 @@ function DrillSetup(): JSX.Element {
           <Button className="ml-auto" disabled={matched.length === 0} onClick={start}>{t('drill.start')}</Button>
         </div>
       </Card>
+      <MyDrills />
     </div>
+  );
+}
+
+function DrillRow({ drill }: { drill: SavedDrill }): JSX.Element {
+  const { t } = useTranslation();
+  const locale = useLocale();
+  const { byId } = useQuestionBank();
+  const { progress } = useProgress();
+  const { store } = useDrills();
+  // `null` while the name is not being edited; otherwise the text in the rename input.
+  const [draft, setDraft] = useState<string | null>(null);
+  const status = drillStatus(drill, progress, (id) => byId.has(id));
+  const scope = describeDrill(drill.query, t, locale);
+  const progressText = t('drill.progressLabel', { done: status.done, total: status.total });
+  const restart = (): void => store.restart(drill.id);
+  const save = (): void => {
+    const name = (draft ?? '').trim();
+    store.rename(drill.id, name === '' ? undefined : name);
+    setDraft(null);
+  };
+
+  return (
+    <li>
+      <Card className="space-y-3">
+        {draft === null ? (
+          <div>
+            <p className="font-medium">{drill.name ?? scope}</p>
+            {drill.name === undefined ? null : <p className="text-sm text-zinc-500">{scope}</p>}
+          </div>
+        ) : (
+          <form
+            className="flex flex-wrap items-end gap-2"
+            onSubmit={(event): void => {
+              event.preventDefault();
+              save();
+            }}
+          >
+            <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+              {t('drill.nameLabel')}
+              <input
+                autoFocus
+                className="rounded-md border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+                value={draft}
+                placeholder={scope}
+                onChange={(e): void => setDraft(e.target.value)}
+              />
+            </label>
+            <Button type="submit">{t('common.save')}</Button>
+            <Button variant="ghost" onClick={(): void => setDraft(null)}>{t('common.cancel')}</Button>
+          </form>
+        )}
+        <div className="flex items-center gap-3">
+          <ProgressBar value={status.total === 0 ? 0 : status.done / status.total} label={progressText} />
+          <span aria-hidden="true" className="shrink-0 text-xs tabular-nums text-zinc-500">{progressText}</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {status.finished ? (
+            <Button onClick={restart}>{t('drill.restart')}</Button>
+          ) : (
+            <Link to={`/drill/${drill.id}`} className={PRIMARY_LINK_CLASS}>{t('drill.resume')}</Link>
+          )}
+          {draft === null ? (
+            <Button variant="ghost" onClick={(): void => setDraft(drill.name ?? '')}>{t('drill.rename')}</Button>
+          ) : null}
+          {status.done > 0 && !status.finished ? (
+            <Button variant="ghost" onClick={restart}>{t('drill.restart')}</Button>
+          ) : null}
+          <Button variant="ghost" onClick={(): void => store.remove(drill.id)}>{t('drill.delete')}</Button>
+        </div>
+      </Card>
+    </li>
+  );
+}
+
+function MyDrills(): JSX.Element {
+  const { t } = useTranslation();
+  const { drills } = useDrills();
+  const headingId = useId();
+  return (
+    <section aria-labelledby={headingId} className="space-y-3">
+      <h2 id={headingId} className="text-lg font-medium">{t('drill.myDrills')}</h2>
+      {drills.length === 0 ? (
+        <p className="text-sm text-zinc-500">{t('drill.noDrills')}</p>
+      ) : (
+        <ul className="space-y-3">
+          {drills.map((drill) => (
+            <DrillRow key={drill.id} drill={drill} />
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

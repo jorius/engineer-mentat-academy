@@ -36,7 +36,8 @@
     "tagline": "Train like a Mentat: {{total}} questions, {{attempted}} attempted, {{missed}} to revisit.",
     "drillUnseen": "Drill unseen",
     "mockInterview": "Mock interview",
-    "reviewMissed": "Review ({{count}})"
+    "reviewMissed": "Review ({{count}})",
+    "continueDrill": "Continue: {{name}} · {{done}} / {{total}}"
   },
   "filters": {
     "all": "All",
@@ -78,7 +79,13 @@
     "allKinds": "all kinds",
     "missing": "This drill no longer exists.",
     "restart": "Restart",
-    "myDrills": "My drills"
+    "myDrills": "My drills",
+    "resume": "Resume",
+    "rename": "Rename",
+    "delete": "Delete",
+    "noDrills": "Drills you start show up here.",
+    "progressLabel": "{{done}} / {{total}}",
+    "nameLabel": "Drill name"
   },
   "mock": {
     "title": "Mock interview",
