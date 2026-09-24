@@ -1,0 +1,46 @@
+# Saved Drills Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Drills become saved, resumable objects listed on the Drill page.
+
+**Architecture:** A localStorage-backed `DrillsStore` (mirror of the progress store) plus a pure `drillStatus` derived from progress timestamps; the Drill page gains a creator redirect, a `/drill/:drillId` route and a list.
+
+**Spec:** `docs/superpowers/specs/2026-09-23-saved-drills-design.md` (binding).
+
+## Global Constraints
+
+TypeScript strict, explicit return types, labeled import groups, no barrel files, no commented-out code, no eslint-disable, React Compiler lint rules on; new strings via i18next in both `en.json` and `es.json`; commit subjects start with a verb from the commit-msg hook allowlist (Add|Fix|Update|Create|Remove|Improve|Refactor|Move|Rename|Configure|Enable|Extract|Simplify|Implement|Replace|Support|Use|Set|Reduce|Test|Seed|Wire), no trailing period; every commit ends with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`; never push; never touch `.superpowers/`; branch `feature/academy-v1`; gate `npm run lint && npx vitest run && npm run build` (3 pre-existing react-refresh warnings ok, 0 errors).
+
+---
+
+### Task 1: Drills store, hook and derived status
+
+**Files:** `src/engine/drills.ts` (+ `drills.test.ts`), `src/hooks/useDrills.ts`, `src/utils/drillProgress.ts` (+ test), `src/App.tsx` (provider), every test file that renders `routes` with the provider stack (add `DrillsProvider`; grep for `ProgressProvider`), `src/pages/Settings.tsx` (+ test: both danger actions call `drillsStore.reset()`).
+
+- [ ] Implement spec §2 exactly (types, key, store API, validation on load, newest-first `all()`, `subscribe`), `useDrills` mirroring `useProgress`, `drillStatus` and `describeDrill` per §2/§4 with tests in both locales.
+- [ ] Wire `DrillsProvider` in `App.tsx` inside `ProgressProvider`; add it to the provider stacks in tests so nothing breaks.
+- [ ] Settings danger actions reset drills too.
+- [ ] Commit: `Add a saved drills store with derived progress`.
+
+### Task 2: Creator redirect, `/drill/:drillId` route and resume
+
+**Files:** `src/App.tsx` (route), `src/pages/Drill.tsx` (+ `Drill.test.tsx`), `src/hooks/useDrillQueue.ts` (delete if unused), locales.
+
+- [ ] Implement spec §3: `DrillCreator` for `/drill?…` (compute matched + shuffled list as today, `store.create`, `navigate(…, { replace: true })`; zero matches → existing no-match screen), `SavedDrillPage` for `/drill/:drillId` (derive `nextIndex` from `drillStatus`, position `{ index: done, total }`, unknown id message `drill.missing`, skip ids not in the bank), completion screen with Restart (`drill.restart`) and "My drills" link (`drill.myDrills`).
+- [ ] Keys: `drill.missing` ("This drill no longer exists." / "Esta práctica ya no existe."), `drill.restart` ("Restart" / "Reiniciar"), `drill.myDrills` ("My drills" / "Mis prácticas").
+- [ ] Tests per spec §6 (creator creates exactly one drill and redirects; reload after one answer resumes at 2 / N; finished → completion + Restart resets `startedAt`).
+- [ ] Commit: `Resume drills from a saved id`.
+
+### Task 3: The list and the Home continue link
+
+**Files:** `src/pages/Drill.tsx` (+ test), `src/pages/Home.tsx` (+ test), locales, `README.md`.
+
+- [ ] Implement spec §4: "My drills" section under the setup card with rows (name, scope line, ProgressBar "done / total", Resume/Rename/Restart/Delete per the rules), empty state; Home "Continue" link to the most recent unfinished drill.
+- [ ] Keys: `drill.resume` ("Resume"/"Continuar"), `drill.rename` ("Rename"/"Renombrar"), `drill.delete` ("Delete"/"Eliminar"), `drill.noDrills` ("Drills you start show up here." / "Las prácticas que empieces aparecen aquí."), `drill.progressLabel` ("{{done}} / {{total}}"), `drill.nameLabel` ("Drill name"/"Nombre de la práctica"), `home.continueDrill` ("Continue: {{name}} · {{done}} / {{total}}" / "Continuar: {{name}} · {{done}} / {{total}}"), `drill.allSubjects` ("All subjects"/"Todos los temas"), `drill.allLevels` ("all levels"/"todos los niveles"), `drill.allKinds` ("all kinds"/"todos los tipos") if `describeDrill` needs them (Task 1 may add these first; keep the same names).
+- [ ] README: Modes → Drill paragraph mentions saved drills and resume.
+- [ ] Commit: `Add the saved drills list and a Home continue link`.
+
+## Self-review notes
+- Task 1 defines `describeDrill` and may already need `drill.allSubjects/allLevels/allKinds`; Task 3 must reuse them, not redefine.
+- `Home` "Drill unseen" keeps pointing at `/drill?unseen=1`; it creates a drill each click by design.
