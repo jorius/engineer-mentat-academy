@@ -81,6 +81,14 @@ TypeScript strict, explicit return types, labeled import groups, no barrel files
 - [ ] Tests per spec §10; update existing Settings tests that typed RESET into the inline field to type it inside the dialog.
 - [ ] Commit: `Add a confirmation dialog for destructive actions`.
 
+### Task 9: Run and the debug console
+
+**Files:** `src/components/question/ConsolePanel.tsx` (+ test), `src/components/question/QuestionView.tsx` (+ test), `src/components/question/ActionBar.tsx`, `src/components/question/CodeExercise.tsx` (only if the panel is placed there), locales, README (Question kinds or Modes paragraph: one sentence on Run and the console).
+
+- [ ] Implement spec §11 exactly; reuse `formatJsValue` from `src/engine/format.ts`; use the `runJs` worker runner (not `executeSource` on the main thread).
+- [ ] Tests per spec §11.
+- [ ] Commit: `Add a run button and a debug console to code exercises`.
+
 ## Self-review notes
 - Task 1 defines `describeDrill` and may already need `drill.allSubjects/allLevels/allKinds`; Task 3 must reuse them, not redefine.
 - `Home` "Drill unseen" keeps pointing at `/drill?unseen=1`; it creates a drill each click by design.

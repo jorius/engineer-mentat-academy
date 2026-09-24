@@ -109,3 +109,34 @@ Spanish: "¿Eliminar esta práctica?" / "\"{{name}}\" se quita de Mis prácticas
 - Pages keep a single `pending` state describing which action awaits confirmation and render one `ConfirmDialog`; confirming runs the action, then clears `pending`.
 - jsdom lacks `showModal`; the component guards with `typeof dialog.showModal === 'function'` and falls back to the `open` attribute, so tests can assert on `getByRole('dialog')`.
 - Tests: the dialog renders title/body/labels and calls the right callback; Esc cancels; Delete/Restart/Import/Clear/Reset each do nothing until confirmed and run once confirmed; the typed gate still blocks the two Danger-zone actions.
+
+## 11. Run and the debug console (added 2026-09-24, Jose's request)
+
+For `code` and `fix` questions the learner can see what their program prints.
+
+- **Run** (`question.run` "Run" / "Ejecutar", tooltip `question.runHint` "Run the hidden tests without
+  using an attempt" / "Ejecuta las pruebas ocultas sin gastar un intento"): a ghost button in the action
+  bar at the left of Skip, shown only for `code`/`fix`, enabled whenever the editor holds source (also
+  after the question is resolved, so the reference solution can be run). It calls the same worker runner
+  the grader uses (`runJs` from `src/engine/runner/runJs.ts` with the canonical question's tests and
+  language) and stores the `RunResult` in `QuestionView` state as `lastRun`; it dispatches nothing to the
+  attempt reducer and records nothing. While it runs the button is disabled (`question.running`
+  "Running…" / "Ejecutando…"). Keyboard: `Ctrl+Shift+Enter`.
+- **Submit** keeps grading as today; when the grade result carries `run`, that run also becomes
+  `lastRun`, so the console reflects the latest execution whichever button caused it.
+- **Console panel** (`src/components/question/ConsolePanel.tsx`): rendered in the answer pane under the
+  hidden-tests block for `code`/`fix`. Header row: a toggle button `console.title` ("Console" /
+  "Consola") with `aria-expanded` and `aria-controls`, a count badge `console.lines` ("{{count}} lines",
+  plural rules in both locales) when there is output, and a `console.clear` ("Clear" / "Limpiar") ghost
+  button that empties `lastRun`. Body (`<pre>` in the editor font, `max-h-64 overflow-auto`, same
+  block styling as code blocks): the captured console lines in order, then, when the run had tests, one
+  line per test: `✓ name` or `✗ name — expected X, got Y` (values through `formatJsValue`), then the
+  runtime error or timeout message if any (`status !== 'ok'`) in the danger colour. Empty state
+  `console.empty` ("Nothing logged yet. Run the tests to see console output." / "Todavía no hay
+  salida. Ejecuta las pruebas para ver la consola."). The panel opens automatically after a Run and
+  keeps whatever state the learner set afterwards; it starts collapsed and resets when the question
+  changes.
+- Nothing changes for predict, sql, choice or open questions.
+- Tests: Run executes without recording (progress store untouched, attempts pill unchanged), the panel
+  opens with the logged lines and test outcomes, Clear empties it, a runtime error shows its message,
+  Submit's run also fills the panel, `Ctrl+Shift+Enter` runs, Run is absent on a single-choice question.
