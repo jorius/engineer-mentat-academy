@@ -27,7 +27,7 @@ function ConfirmContent({ title, body, confirmLabel, cancelLabel, danger = false
   const blocked = typeToConfirm !== undefined && typed.trim() !== typeToConfirm;
 
   return (
-    <div className="space-y-3 p-4">
+    <div className="space-y-3 p-6">
       <h2 id={titleId} className="text-lg font-semibold">{title}</h2>
       <p id={bodyId} className="text-sm text-zinc-600 dark:text-zinc-300">{body}</p>
       {typeToConfirm === undefined ? null : (
@@ -89,11 +89,14 @@ export function ConfirmDialog({ open, onCancel, ...rest }: Props): JSX.Element {
   };
 
   return (
+    // fixed + inset-0 + m-auto + h-fit centre the dialog without relying on the UA sheet; `!m-auto` wins over
+    // the parent's `space-y-*` top margin. Padding lives on the inner div so a click on the dialog element
+    // itself is always a backdrop click.
     <dialog
       ref={dialogRef}
       aria-labelledby={titleId}
       aria-describedby={bodyId}
-      className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-xl border border-zinc-200 bg-white p-0 text-zinc-900 shadow-xl backdrop:bg-black/50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+      className="fixed inset-0 !m-auto h-fit max-h-[calc(100dvh-2rem)] w-[min(28rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-zinc-200 bg-white p-0 text-zinc-900 shadow-xl backdrop:bg-black/50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
       onCancel={cancel}
       onClose={(): void => {
         // A close the parent did not ask for (Esc without a cancel event) still counts as Cancel.
