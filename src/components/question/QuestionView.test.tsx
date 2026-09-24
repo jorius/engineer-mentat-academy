@@ -1,6 +1,6 @@
 // packages
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { JSX } from 'react';
@@ -79,6 +79,15 @@ const code: Question = {
   solution: 'export function solution() { return 1; }',
 };
 
+const logging: Question = {
+  ...code,
+  id: 'javascript-test-code-logging',
+  starter: "export function solution() { console.log('hi', 2); return 0; }",
+  tests: [{ name: 'one', args: [], expected: 1 }, { name: 'zero', args: [], expected: 0 }],
+};
+
+const throwing: Question = { ...code, id: 'javascript-test-code-throwing', kind: 'fix', starter: "throw new Error('boom');" };
+
 const open: Question = { ...single, id: 'javascript-test-open', kind: 'open', modelAnswer: 'Model.', rubric: ['one', 'two'] };
 
 type SetupOptions = { maxAttempts?: MaxAttempts; onNext?: (() => void) | null; onSkip?: () => void; grader?: Grader; store?: ProgressStore };
@@ -123,6 +132,15 @@ function button(name: RegExp): HTMLElement {
   return within(actionBar()).getByRole('button', { name });
 }
 
+function consoleToggle(): HTMLElement {
+  return screen.getByRole('button', { name: 'Console' });
+}
+
+function consoleLines(): (string | null)[] {
+  const body = document.getElementById(consoleToggle().getAttribute('aria-controls') ?? '');
+  return Array.from(body?.querySelectorAll('[data-console-line]') ?? []).map((line) => line.textContent);
+}
+
 describe('QuestionView', () => {
   afterEach(async () => {
     await i18n.changeLanguage('en');
@@ -153,12 +171,12 @@ describe('QuestionView', () => {
 
   it('hides Next when the caller passes no onNext and offers Reset only for editable answers', () => {
     setup(code, { onNext: null });
-    expect(within(actionBar()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Reset', 'Show answer', 'Submit']);
+    expect(within(actionBar()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Run', 'Reset', 'Show answer', 'Submit']);
   });
 
   it('offers Skip at the left of Reset only when the caller passes onSkip, with a hint', () => {
     setup(code, { onSkip: vi.fn() });
-    expect(within(actionBar()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Skip', 'Reset', 'Show answer', 'Submit', 'Next →']);
+    expect(within(actionBar()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Run', 'Skip', 'Reset', 'Show answer', 'Submit', 'Next →']);
     expect(button(/skip/i)).toHaveAttribute('title', 'Move on without answering; nothing is recorded.');
     expect(button(/skip/i)).toBeEnabled();
   });
@@ -567,6 +585,93 @@ describe('QuestionView', () => {
     expect(store.get(single.id)).toBeUndefined();
     expect(within(actionBar()).getByText('3 attempts left')).toBeInTheDocument();
     expect(button(/submit/i)).toBeEnabled();
+  });
+
+  it('Run executes the hidden tests without recording and opens the console with logs and outcomes', async () => {
+    const user = userEvent.setup();
+    const { store } = setup(logging);
+    expect(consoleToggle()).toHaveAttribute('aria-expanded', 'false');
+    expect(button(/^run$/i)).toHaveAttribute('title', 'Run the hidden tests without using an attempt');
+    await user.click(button(/^run$/i));
+    await waitFor(() => expect(consoleToggle()).toHaveAttribute('aria-expanded', 'true'));
+    expect(consoleLines()).toEqual(['hi 2', 'hi 2', '✗ failed: one — expected 1, got 0', '✓ passed: zero']);
+    expect(screen.getByText('4 lines')).toBeInTheDocument();
+    expect(store.all()).toEqual({});
+    expect(within(actionBar()).getByText('3 attempts left')).toBeInTheDocument();
+    expect(screen.queryByText('Not yet. Try again, or show the answer.')).not.toBeInTheDocument();
+  });
+
+  it('disables Run and says Running while it runs', async () => {
+    const user = userEvent.setup();
+    const grader: Grader = { grade: async () => new Promise(() => undefined), run: async () => new Promise(() => undefined) };
+    setup(code, { grader });
+    await user.click(button(/^run$/i));
+    expect(button(/running/i)).toBeDisabled();
+  });
+
+  it('Clear empties the console', async () => {
+    const user = userEvent.setup();
+    setup(logging);
+    await user.click(button(/^run$/i));
+    await waitFor(() => expect(consoleLines()).toHaveLength(4));
+    await user.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(consoleLines()).toEqual([]);
+    expect(screen.getByText('Nothing logged yet. Run the tests to see console output.')).toBeInTheDocument();
+    expect(consoleToggle()).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('shows a runtime error in the console', async () => {
+    const user = userEvent.setup();
+    setup(throwing);
+    await user.click(button(/^run$/i));
+    expect(await screen.findByText('Error: boom', { selector: '[data-console-line]' })).toHaveClass('text-red-600');
+  });
+
+  it("fills the console with Submit's run as well", async () => {
+    const user = userEvent.setup();
+    setup(logging);
+    await user.click(button(/submit/i));
+    await screen.findByText('Not yet. Try again, or show the answer.');
+    expect(consoleToggle()).toHaveAttribute('aria-expanded', 'false');
+    await user.click(consoleToggle());
+    expect(consoleLines()).toEqual(['hi 2', 'hi 2', '✗ failed: one — expected 1, got 0', '✓ passed: zero']);
+  });
+
+  it('runs with Ctrl+Shift+Enter while Ctrl+Enter still submits', async () => {
+    const user = userEvent.setup();
+    const { store } = setup(logging);
+    await user.keyboard('{Control>}{Shift>}{Enter}{/Shift}{/Control}');
+    await waitFor(() => expect(consoleLines()).toHaveLength(4));
+    expect(within(actionBar()).getByText('3 attempts left')).toBeInTheDocument();
+    await user.keyboard('{Control>}{Enter}{/Control}');
+    expect(await screen.findByText('Not yet. Try again, or show the answer.')).toBeInTheDocument();
+    expect(store.get(logging.id)).toBeUndefined();
+  });
+
+  it('runs the reference solution once the answer is shown', async () => {
+    const user = userEvent.setup();
+    setup(code);
+    await user.click(button(/show answer/i));
+    expect(button(/^run$/i)).toBeEnabled();
+    await user.click(button(/^run$/i));
+    await waitFor(() => expect(consoleLines()).toEqual(['✓ passed: one']));
+  });
+
+  it('resets the console when the question changes', async () => {
+    const user = userEvent.setup();
+    const store = createProgressStore(null);
+    const { rerender } = render(tree(logging, {}, store, undefined));
+    await user.click(button(/^run$/i));
+    await waitFor(() => expect(consoleLines()).toHaveLength(4));
+    rerender(tree(code, {}, store, undefined));
+    expect(consoleToggle()).toHaveAttribute('aria-expanded', 'false');
+    expect(consoleLines()).toEqual([]);
+  });
+
+  it('offers no Run or console on a single-choice question', () => {
+    setup(single);
+    expect(within(actionBar()).queryByRole('button', { name: /^run$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Console' })).not.toBeInTheDocument();
   });
 
   it('shows the active language but grades the canonical English question', async () => {

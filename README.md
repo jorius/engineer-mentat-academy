@@ -50,7 +50,9 @@ everything after you confirm and type `RESET` in the dialog.
 
 `single`, `multi`, `predict` (type the program output), `code` and `fix` (hidden tests
 run in the browser), `sql` (rows compared against the expected set), `open` (model
-answer plus a rubric you self-score).
+answer plus a rubric you self-score). On `code` and `fix`, Run (`Ctrl+Shift+Enter`) executes the
+hidden tests without spending an attempt and opens a console with what the program logged and
+each test's result; Submit fills the same console.
 
 ## Development
 

@@ -167,5 +167,6 @@ export function createStaticGrader(deps: StaticGraderDeps): Grader {
           return gradeOpen(question, answer);
       }
     },
+    run: deps.runJs,
   };
 }

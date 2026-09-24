@@ -9,6 +9,8 @@ import type { AttemptEvent, AttemptState } from '../../engine/attempts';
 import type { GradeResult } from '../../engine/grader';
 import type { Answer, Question } from '../../engine/question';
 import { kindLabel } from '../../engine/labels';
+import { runJs } from '../../engine/runner/runJs';
+import type { RunResult } from '../../engine/runner/execute';
 
 // contexts
 import { useGrader } from '../../contexts/GraderContext';
@@ -25,6 +27,7 @@ import { Card } from '../primitives/Card';
 import { ActionBar } from './ActionBar';
 import { AttemptsPill } from './AttemptsPill';
 import { CodeExercise } from './CodeExercise';
+import { ConsolePanel } from './ConsolePanel';
 import { Feedback } from './Feedback';
 import { HeaderStrip } from './HeaderStrip';
 import { MultiChoice } from './MultiChoice';
@@ -140,6 +143,10 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable);
 }
 
+function isCodeKind(question: Question): boolean {
+  return question.kind === 'code' || question.kind === 'fix';
+}
+
 function hasResettableInput(question: Question): boolean {
   return question.kind === 'predict' || question.kind === 'code' || question.kind === 'fix' || question.kind === 'sql';
 }
@@ -233,6 +240,10 @@ export function QuestionView({ question: given, onNext, onSkip, position }: Prop
   const [answers, setAnswers] = useState<Answers>(() => initialAnswers(question));
   const [grading, setGrading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The latest execution of the learner's code, from Run or Submit, shown in the debug console.
+  const [lastRun, setLastRun] = useState<RunResult | null>(null);
+  const [running, setRunning] = useState(false);
+  const [consoleOpen, setConsoleOpen] = useState(false);
   const hasSavedNotes = (id: string): boolean => (progress[id]?.notes ?? '').trim().length > 0;
   // Saved notes open with their question so they are seen on a revisit.
   const [notesOpen, setNotesOpen] = useState(() => hasSavedNotes(question.id));
@@ -252,6 +263,9 @@ export function QuestionView({ question: given, onNext, onSkip, position }: Prop
     setAnswers(initialAnswers(question));
     setGrading(false);
     setError(null);
+    setLastRun(null);
+    setRunning(false);
+    setConsoleOpen(false);
     setNotesOpen(hasSavedNotes(question.id));
     dispatch({ type: 'NEW_QUESTION' });
   }
@@ -290,6 +304,8 @@ export function QuestionView({ question: given, onNext, onSkip, position }: Prop
   // Show answer and running out of attempts both reveal the reference answer, read-only.
   const referenceShown = resolved && (attempt.outcome === 'shown' || attempt.outcome === 'exhausted');
   const displayedAnswers = referenceShown ? shownAnswers(canonical, answers) : answers;
+  const codeKind = isCodeKind(question);
+  const runDisabled = running || displayedAnswers.source.trim().length === 0;
 
   const update = (patch: Partial<Answers>): void => setAnswers((current) => ({ ...current, ...patch }));
 
@@ -315,6 +331,9 @@ export function QuestionView({ question: given, onNext, onSkip, position }: Prop
       if (activeId.current !== id) {
         return;
       }
+      if (result.run !== undefined) {
+        setLastRun(result.run);
+      }
       dispatch({ type: 'SUBMIT_START' });
       dispatch({ type: 'SUBMIT_RESULT', result, kind: question.kind, submittedOptionId: pending.kind === 'single' ? pending.optionId : undefined });
       if (pending.kind === 'single' && result.verdict === 'fail') {
@@ -327,6 +346,33 @@ export function QuestionView({ question: given, onNext, onSkip, position }: Prop
     } finally {
       if (activeId.current === id) {
         setGrading(false);
+      }
+    }
+  };
+
+  // Run executes the canonical question's hidden tests on whatever the editor shows (the reference
+  // solution once revealed) and only fills the console: nothing reaches the attempt reducer or progress.
+  const run = async (): Promise<void> => {
+    if (!codeKind || runDisabled || (canonical.kind !== 'code' && canonical.kind !== 'fix')) {
+      return;
+    }
+    const id = question.id;
+    const request = { source: displayedAnswers.source, tests: canonical.tests, language: canonical.language };
+    setRunning(true);
+    try {
+      const result = await (grader.run ?? runJs)(request);
+      if (activeId.current === id) {
+        setLastRun(result);
+        setConsoleOpen(true);
+      }
+    } catch (err) {
+      if (activeId.current === id) {
+        setLastRun({ status: 'error', logs: [], tests: [], error: err instanceof Error ? err.message : String(err) });
+        setConsoleOpen(true);
+      }
+    } finally {
+      if (activeId.current === id) {
+        setRunning(false);
       }
     }
   };
@@ -352,6 +398,14 @@ export function QuestionView({ question: given, onNext, onSkip, position }: Prop
         event.preventDefault();
         notesButtonRef.current?.focus();
         setNotesOpen(false);
+      }
+      return;
+    }
+    if (event.key === 'Enter' && event.ctrlKey && event.shiftKey && !event.altKey && !event.metaKey) {
+      if (codeKind) {
+        event.preventDefault();
+        event.stopPropagation();
+        void run();
       }
       return;
     }
@@ -425,6 +479,15 @@ export function QuestionView({ question: given, onNext, onSkip, position }: Prop
             lockedOptionIds={attempt.lockedOptionIds}
             correctOptionIds={resolved ? correctOptionIds(canonical) : undefined}
           />
+          {codeKind && (
+            <ConsolePanel
+              run={lastRun}
+              tests={canonical.kind === 'code' || canonical.kind === 'fix' ? canonical.tests : []}
+              open={consoleOpen}
+              onToggle={(): void => setConsoleOpen((isOpen) => !isOpen)}
+              onClear={(): void => setLastRun(null)}
+            />
+          )}
           {grading && <p className="text-sm text-zinc-500">{t('question.grading')}</p>}
           {error !== null && (
             <p role="alert" className="text-sm text-red-600 dark:text-red-400">
@@ -448,6 +511,9 @@ export function QuestionView({ question: given, onNext, onSkip, position }: Prop
         pill={<AttemptsPill kind={question.kind} state={attempt} maxAttempts={maxAttempts} />}
         resolved={resolved}
         busy={grading}
+        onRun={codeKind ? (): void => void run() : undefined}
+        runDisabled={runDisabled}
+        running={running}
         onSkip={onSkip}
         onReset={hasResettableInput(question) ? reset : undefined}
         onShowAnswer={isOpen ? undefined : showAnswer}

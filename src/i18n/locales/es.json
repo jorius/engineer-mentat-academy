@@ -242,7 +242,19 @@
     "unlimitedAttempts": "Intentos ilimitados",
     "selfScored": "Autoevaluada",
     "copied": "Enlace copiado",
-    "actions": "Acciones de respuesta"
+    "actions": "Acciones de respuesta",
+    "run": "Ejecutar",
+    "runHint": "Ejecuta las pruebas ocultas sin gastar un intento",
+    "running": "Ejecutando…"
+  },
+  "console": {
+    "title": "Consola",
+    "lines_one": "{{count}} línea",
+    "lines_other": "{{count}} líneas",
+    "clear": "Limpiar",
+    "empty": "Todavía no hay salida. Ejecuta las pruebas para ver la consola.",
+    "passed": "pasó",
+    "failed": "falló"
   },
   "feedback": {
     "pass": "Correcto",

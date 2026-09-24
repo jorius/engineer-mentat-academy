@@ -242,7 +242,19 @@
     "unlimitedAttempts": "Unlimited attempts",
     "selfScored": "Self-scored",
     "copied": "Link copied",
-    "actions": "Answer actions"
+    "actions": "Answer actions",
+    "run": "Run",
+    "runHint": "Run the hidden tests without using an attempt",
+    "running": "Running…"
+  },
+  "console": {
+    "title": "Console",
+    "lines_one": "{{count}} line",
+    "lines_other": "{{count}} lines",
+    "clear": "Clear",
+    "empty": "Nothing logged yet. Run the tests to see console output.",
+    "passed": "passed",
+    "failed": "failed"
   },
   "feedback": {
     "pass": "Correct",

@@ -9,6 +9,10 @@ type Props = {
   pill: ReactNode;
   resolved: boolean;
   busy: boolean;
+  // Run appears only with `onRun` (code and fix); it never spends an attempt.
+  onRun?: () => void;
+  runDisabled?: boolean;
+  running?: boolean;
   onSkip?: () => void;
   onReset?: () => void;
   onShowAnswer?: () => void;
@@ -22,11 +26,12 @@ type Props = {
 };
 
 /**
- * The workbench's single row of actions, pinned to the bottom of the card. Order: Skip (only with
+ * The workbench's single row of actions, pinned to the bottom of the card. Order: Run (only with
+ * `onRun`, also once resolved), Skip (only with
  * `onSkip`, until resolved), Reset (only when the caller passes `onReset`), Show answer (only with
  * `onShowAnswer`), Submit (primary until resolved), Next (primary once resolved; hidden without `onNext`).
  */
-export function ActionBar({ pill, resolved, busy, onSkip, onReset, onShowAnswer, showAnswerDisabled, submitLabel, onSubmit, submitDisabled, onNext, nextRef }: Props): JSX.Element {
+export function ActionBar({ pill, resolved, busy, onRun, runDisabled = false, running = false, onSkip, onReset, onShowAnswer, showAnswerDisabled, submitLabel, onSubmit, submitDisabled, onNext, nextRef }: Props): JSX.Element {
   const { t } = useTranslation();
   return (
     <div
@@ -36,6 +41,11 @@ export function ActionBar({ pill, resolved, busy, onSkip, onReset, onShowAnswer,
     >
       <div className="empty:hidden">{pill}</div>
       <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+        {onRun !== undefined && (
+          <Button variant="ghost" className="disabled:opacity-40" onClick={onRun} disabled={runDisabled || running} title={t('question.runHint')}>
+            {running ? t('question.running') : t('question.run')}
+          </Button>
+        )}
         {onSkip !== undefined && !resolved && (
           <Button variant="ghost" className="disabled:opacity-40" onClick={onSkip} disabled={busy} title={t('question.skipHint')}>
             {t('question.skip')}
