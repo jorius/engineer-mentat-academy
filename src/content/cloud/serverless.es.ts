@@ -12,8 +12,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Siguen existiendo servidores; simplemente no los administras tú. Los rasgos que lo definen son **sin gestión de capacidad**, **escalado automático** (incluso a cero), **pago por solicitud o por unidad de trabajo** en lugar de por hora aprovisionada, y un uso intensivo de piezas administradas: Lambda, API Gateway, DynamoDB, SQS, SNS, EventBridge, Step Functions, S3. Los contenedores son un formato de empaquetado y pueden ser serverless (Fargate, Cloud Run) o no (un cluster de Kubernetes autoadministrado).',
-    hint:
-      'Sigue habiendo servidores en algún lado; fíjate en quién gestiona la capacidad, cómo escala y cómo te cobran.',
+    hint: 'Fíjate en quién opera y gestiona las máquinas, cómo escala la capacidad y cómo te cobran.',
   },
   'serverless-cold-start-mitigation': {
     prompt:
@@ -48,8 +47,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'El precio de Lambda es una tarifa por solicitud más **duración x memoria** (GB-segundo), redondeada al milisegundo; desde agosto de 2025 también se cobra la fase de init. Eso es ideal cuando el tráfico llega en ráfagas o está inactivo gran parte del tiempo, porque la inactividad no cuesta nada. Con una carga alta y constante, en la práctica estás pagando un sobreprecio por capacidad que podrías correr con alta utilización en Fargate o EC2 con Savings Plans. Palancas antes de migrar: ajusta la memoria con Lambda Power Tuning (más memoria puede terminar más rápido y costar lo mismo o menos), usa Graviton (arm64) y procesa el trabajo en lotes. Aquí los cold starts son raros: 2,000 solicitudes por segundo a 150 ms mantienen unos 300 entornos ocupados todo el tiempo. De hecho, la provisioned concurrency es una palanca de costo con esta utilización: su precio por GB-segundo (reserva más duración) es menor que el on-demand por encima de aproximadamente un 60% de utilización, y los Compute Savings Plans también aplican a Lambda. Recuerda también los costos ocultos alrededor de la función: las solicitudes de API Gateway, los datos del NAT gateway y la ingesta de CloudWatch Logs.',
-    hint:
-      'Recuerda los dos componentes de la factura de Lambda y compáralos con capacidad que podrías correr cerca de su uso máximo cuando el tráfico nunca baja.',
+    hint: 'Recuerda los dos componentes de la factura de Lambda, haz cuentas aproximadas para esta carga y pregúntate cómo se compara el total con otras formas de alojarla.',
   },
   'serverless-when-it-fits': {
     prompt:
@@ -79,7 +77,6 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'El código del handler es la parte barata de mover; las partes caras son las integraciones a su alrededor: las formas de los eventos y los disparadores, las políticas de IAM, los patrones de acceso de DynamoDB, las máquinas de estado de Step Functions, las reglas de EventBridge, además de los dashboards y los runbooks. Una estructura hexagonal mantiene las reglas de negocio en módulos sin framework y convierte al handler de Lambda en un adaptador delgado que parsea el evento y llama al dominio, lo que además facilita las pruebas unitarias y ejecutarlo en un contenedor si hace falta. La neutralidad total entre nubes suele costar más (servicios del mínimo común denominador, más cosas que operar) que el costo de cambio contra el que te asegura, así que decide de forma deliberada qué acoplamientos valen la pena.\n\n**Dilo en voz alta:** "El lock-in está en los servicios administrados y las integraciones, no en el handler, así que mantengo la lógica de dominio detrás de adaptadores delgados y acepto el acoplamiento a servicios administrados donde el ahorro operativo supera el costo de cambio."',
-    hint:
-      'Estima el costo de migrar cada capa de una app serverless, desde el código del handler hasta todo lo que está conectado a su alrededor, y qué acoplamientos vale la pena evitar.',
+    hint: 'Estima el costo de migrar cada capa de una app serverless, y pregúntate qué acoplamientos vale la pena evitar.',
   },
 };

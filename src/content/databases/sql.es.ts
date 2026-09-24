@@ -41,7 +41,7 @@ export const translations: Record<string, QuestionTranslation> = {
       'En una sola fila, devuelve: el número de empleados (`employees`), el número de empleados que tienen manager (`with_manager`) y el número de personas distintas que son manager de alguien (`managers`).',
     explanation:
       '`COUNT(*)` cuenta filas. `COUNT(col)` cuenta las filas donde `col` no es `NULL`, así que Ada queda fuera. `COUNT(DISTINCT col)` también ignora los `NULL` y elimina los duplicados: los ids de manager son 1, 2 y 4. Todos los agregados excepto `COUNT(*)` ignoran los `NULL`, y por eso `AVG(col)` no es lo mismo que `SUM(col) / COUNT(*)`.',
-    hint: 'Recuerda cómo tratan `COUNT(*)`, `COUNT(col)` y `COUNT(DISTINCT col)` los `NULL` y los duplicados.',
+    hint: 'Recuerda cómo tratan las funciones de agregación los `NULL` y los duplicados; una sola fila puede combinar varias formas del mismo agregado.',
   },
   'sql-payroll-share-integer-division': {
     prompt:
@@ -75,7 +75,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'El SQL estándar solo permite en la lista del select columnas agrupadas, agregadas o funcionalmente dependientes de la clave de agrupación (Postgres acepta columnas no agrupadas de una tabla cuya primary key está agrupada). SQLite tiene un caso especial documentado: con un solo `MIN()` o `MAX()`, las columnas sueltas salen de la fila que produjo el valor extremo; si hay empates, o con cualquier otro agregado, la fila es arbitraria. MySQL sin `ONLY_FULL_GROUP_BY` devuelve un valor arbitrario. La respuesta portable es una subconsulta correlacionada, un join con una subconsulta agrupada o `RANK()` sobre una partición.\n\n**Dilo en voz alta:** "Una columna suelta en una consulta agrupada no es portable y no es determinista cuando hay empates; resuelvo el greatest-per-group con una window function o con un join de vuelta al máximo agrupado."',
-    hint: 'Recuerda la regla estándar para las columnas no agregadas en una consulta agrupada, y que cada motor la aplica con distinta rigidez.',
+    hint: 'Recuerda la regla estándar para las columnas no agregadas en una consulta agrupada, y luego revisa qué documentan SQLite, Postgres y MySQL al respecto.',
   },
   'sql-top-earner-per-department-ties': {
     prompt:
@@ -106,7 +106,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "`LIKE 'ana%'` se reescribe como el rango `email >= 'ana' AND email < 'anb'`, que es un seek. `'%@example.com'` podría empezar en cualquier parte, así que el motor tiene que evaluar cada fila (en el mejor caso, un full index scan). Soluciones para buscar por sufijo: indexar una copia invertida de la columna y buscar `LIKE reverse('%@example.com')` como prefijo, guardar el dominio en su propia columna indexada, o usar un índice de trigramas (`pg_trgm` GIN en Postgres) o búsqueda de texto completo para coincidencias en medio del texto. Salvedades según el motor: el `LIKE` por prefijo también necesita una collation compatible (Postgres necesita `text_pattern_ops` con un locale distinto de C; SQLite necesita que la collation del índice coincida con su `LIKE`, que no distingue mayúsculas de minúsculas).",
-    hint: 'Piensa en qué necesita un B-tree para empezar una búsqueda y si cada patrón le da una clave inicial conocida.',
+    hint: 'Piensa en cómo está ordenado un índice B-tree y qué necesita el motor para poder buscar en vez de recorrer.',
   },
   'sql-covering-index-tradeoffs': {
     prompt:
@@ -134,14 +134,14 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Este es el patrón N+1: una consulta para la lista de padres más una por cada padre. Cada sentencia paga un viaje de ida y vuelta por la red, el parseo y la planificación, así que la latencia crece linealmente con N aunque cada consulta sea rápida. La solución elimina viajes de ida y vuelta: un solo `JOIN`, o dos consultas en total (los padres y luego `IN (...)` para los hijos, que es lo que hacen el eager loading de los ORM y el DataLoader de GraphQL). El índice sobre `orders.customer_id` vale la pena, pero sigue dejando N viajes de ida y vuelta. Ejecutar las consultas en paralelo con `Promise.all` y agrandar el pool trasladan la carga a la base de datos y agotan las conexiones cuando hay concurrencia.',
-    hint: 'Cuenta los viajes de ida y vuelta a medida que crece la lista de clientes, y pregúntate qué cambio reduce ese número en vez de acelerar cada consulta.',
+    hint: 'Nombra el patrón de consultas de este log y cuánto cuesta cada cliente extra, y luego pregúntate si cada opción elimina ese costo o solo lo esconde.',
   },
   'sql-non-sargable-predicates': {
     prompt:
       '`orders.created_at` (un `TIMESTAMP`) y `customers.email` (un `VARCHAR`) tienen cada uno un índice B-tree simple, y no hay índices de expresión. ¿Qué predicados **impiden** que el motor haga seek sobre esos índices? Selecciona todos los que apliquen.',
     explanation:
       'Un índice guarda el valor crudo de la columna, así que un predicado solo puede hacer seek cuando la columna aparece sola en un lado de la comparación ("sargable"). Envolver la columna en una función (`DATE(created_at)`, `LOWER(email)`) o hacer aritmética con ella (`created_at + INTERVAL ...`) obliga al motor a calcular la expresión en cada fila. Reescribe el filtro con `DATE(created_at)` como el rango semiabierto `created_at >= ... AND created_at < ...`, y el de aritmética como `created_at > NOW() - INTERVAL \'1 day\'`. Para búsquedas de email que no distingan mayúsculas de minúsculas, agrega un índice de expresión sobre `LOWER(email)` o usa un tipo o una collation que no las distinga (`citext` en Postgres). Otra causa silenciosa es un cast implícito, como comparar una columna `VARCHAR` con un número en MySQL.',
-    hint: 'Pregúntate si la columna indexada queda sola en un lado de la comparación o está envuelta en una función o una operación aritmética.',
+    hint: 'Recuerda cómo está ordenado un índice B-tree sobre una columna, y qué debe poder calcular el motor a partir de cada predicado antes de buscar en ese orden.',
   },
   'sql-diagnose-slow-query-explain': {
     prompt:

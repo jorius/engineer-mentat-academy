@@ -13,8 +13,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Si reconstruyes por entorno, lo que probaste en staging no es lo que corre en producción: la resolución de dependencias, las actualizaciones de la imagen base o los flags de build pueden diferir. **Construye una vez, despliega muchas**: produce un artefacto inmutable y versionado, guárdalo en un registry y promuévelo por referencia (tag o digest), mientras la configuración y los secretos específicos de cada entorno vienen del propio entorno (parameter store, secrets manager, variables de entorno). `latest` es mutable, así que no puedes saber qué está corriendo ni hacer rollback de forma confiable.',
-    hint:
-      'Pregúntate si lo que probaste en staging es, byte por byte, lo que llega a producción, y de dónde debería salir la configuración específica de cada entorno.',
+    hint: 'Compara qué implica cada enfoque para los bits exactos que probaste frente a los que publicas, y para cómo se entrega la configuración específica de cada entorno.',
   },
   'cicd-blue-green-vs-canary': {
     prompt:
@@ -41,8 +40,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Los buenos gates son **rápidos, deterministas y significativos**: corrección (tipos, tests), capacidad de build, seguridad (SCA, SAST, escaneo de secretos, escaneo de imágenes) y, para la promoción a producción, también un smoke test y métricas de salud o de canary después del despliegue. Las aprobaciones manuales en todas partes frenan la entrega sin aportar señal; resérvalas para producción (o reemplázalas por automated canary analysis). El 100% de cobertura invita a escribir tests que no verifican nada; usa un umbral razonable o cobertura sobre las líneas cambiadas. Los tests inestables (flaky) se deben corregir o poner en cuarentena, porque un gate que la gente aprende a volver a ejecutar no es un gate.',
-    hint:
-      'Un buen gate es rápido, determinista y aporta señal real; pregúntate de cada verificación si detecta problemas o solo frena la entrega e invita a hacer trampa.',
+    hint: 'Piensa en qué hace que valga la pena correr un gate automático en cada cambio: rapidez, repetibilidad y si un fallo de verdad significa que algo está mal.',
   },
   'cicd-canary-gate-decision': {
     prompt:
@@ -66,7 +64,6 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'Señal de senior: reconocer que la base de datos es la parte que no puedes revertir al instante, así que cada cambio de esquema debe ser compatible tanto con la versión anterior como con la siguiente del código.\n\n**Dilo en voz alta:** "Construyo una vez, promuevo la misma imagen, despliego de forma progresiva con rollback automático, y hago que cada migración sea expand-then-contract para que el código viejo y el nuevo puedan correr contra el mismo esquema; el código hace rollback, el esquema avanza."',
-    hint:
-      'Recuerda que el código viejo y el nuevo corren contra el mismo esquema durante un rollout; cubre un único artefacto promovido, expand and contract y por qué el esquema avanza hacia adelante.',
+    hint: 'Recuerda que el código viejo y el nuevo corren contra el mismo esquema durante un rollout; cubre un único artefacto promovido, el patrón expand and contract y por qué el esquema se corrige hacia adelante (roll forward) en vez de revertirse.',
   },
 };

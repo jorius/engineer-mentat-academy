@@ -22,8 +22,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'A cold start is the time to create an execution environment: fetch and unpack the code (function **plus** layers), start the runtime, then run your init code (top-level imports, SDK clients). Layers change *where* the bytes live, not how many are loaded, so init time is essentially the same. Layers are for **sharing** code or binaries across functions and keeping the function artifact small to deploy; limits are 5 layers per function and 250 MB unzipped for function plus layers (container images go up to 10 GB). What actually shortens cold starts: a smaller bundle (tree-shaken, only the SDK v3 clients you use), lazy imports on rare paths, more memory (CPU scales with it), or provisioned concurrency. SnapStart is not an option here: it covers the Java, Python and .NET managed runtimes, not a Node.js zip function. Layers are not reloaded per invocation, so the claim that each layer adds a network round trip on every invocation is also wrong.',
-    hint:
-      'Think about what a cold start actually spends its time on, and whether moving bytes into a layer changes how much gets unpacked and loaded during init.',
+    hint: 'Think about what a cold start actually spends its time on, and where a layer\'s contents end up when an execution environment is created.',
   },
   {
     id: 'aws-lambda-concurrency-controls',
@@ -68,8 +67,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'The visibility timeout is how long a received message stays hidden. If processing outlasts it, the message reappears and a concurrent invocation receives it again. Lambda checks that the function timeout does not exceed the visibility timeout when you create or update the event source mapping, but it does not watch the queue afterwards, so a later change to the queue silently reintroduces the problem. AWS recommends a queue visibility timeout of **at least 6x the function timeout** (plus any batching window) so retries after throttling still fit. Even then SQS standard is at-least-once, so the handler must be idempotent (for example a conditional write on the order id), and partial batch failures should be reported with `ReportBatchItemFailures` instead of failing the whole batch. FIFO reduces duplicates within a 5-minute deduplication window but does not fix a visibility timeout that is shorter than the work. Lowering the function timeout to 30 s would just kill 2-minute batches. Remember the ceilings: Lambda max timeout is 15 minutes, and API Gateway integrations time out far sooner (29 s default on REST, 30 s max on HTTP APIs).\n\n**Say this out loud:** "Visibility timeout must comfortably exceed processing time, AWS says six times the function timeout, and the consumer must be idempotent anyway because SQS is at-least-once."',
-    hint:
-      'Compare how long a batch takes with how long a received message stays hidden, and ask what happens when the second number is smaller.',
+    hint: 'Recall what the SQS visibility timeout controls, and what happens to a received message that has not been deleted in time.',
   },
   {
     id: 'aws-api-gateway-rest-vs-http-features',
@@ -91,8 +89,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'HTTP APIs are the cheaper, lower-latency option (roughly $1.00 vs $3.50 per million requests) with a **native JWT authorizer**, simple Lambda proxy and HTTP proxy integrations, and automatic deployments. REST APIs keep the richer feature set: API keys and usage plans, stage caching, direct WAF association, request validation, mapping templates (VTL) for request/response transformation, private endpoints inside a VPC, edge-optimized endpoints and direct integrations with many AWS services. Rule of thumb: start with HTTP API unless you need one of those REST-only features. Validating JWTs from any OIDC issuer is the one HTTP APIs do natively; REST only has a Cognito-specific authorizer, otherwise you write a Lambda authorizer.',
-    hint:
-      'HTTP APIs are the lean, cheaper option; recall which gateway features they left out and which kind of authorizer they added natively.',
+    hint: 'HTTP APIs are the lean, cheaper option; recall which gateway features each API type supports, authorization included.',
   },
   {
     id: 'aws-api-gateway-throttling-status',
@@ -114,8 +111,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'API Gateway throttles with a **token bucket**: the *rate* is the steady refill in requests per second and the *burst* is the bucket size. Limits apply at several levels: the account per region (10,000 rps steady with a 5,000 burst by default), stage and method settings, and per-client usage plans on REST APIs. Excess requests are rejected with `429` before they reach Lambda, so they cost nothing downstream. Clients should back off exponentially with jitter. `504` means the integration took longer than the integration timeout, a different problem.',
-    hint:
-      'Ask which status code says the problem is the caller\'s own request rate rather than a backend failure, and how a well-behaved client should retry.',
+    hint: 'Recall which status codes API Gateway itself returns when it rejects a request, what each one means, and how a well-behaved client should react.',
   },
   {
     id: 'aws-api-gateway-authorizer-choice',
@@ -162,8 +158,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Since December 2020 every S3 read after a successful write returns the latest data, for new objects, overwrites, deletes and list operations, at no extra cost. The "eventually consistent overwrites" answer describes the old model that many blog posts still repeat. Strong consistency does not mean locking: two concurrent writers still produce last-writer-wins. For optimistic concurrency use **conditional writes** (`If-None-Match: *` to create only if absent, `If-Match` with an ETag to update only the version you read).',
-    hint:
-      'Check whether you are remembering the S3 consistency model from before or after its December 2020 change.',
+    hint: 'Recall the current S3 consistency model for overwrite PUTs, and check that what you remember is not outdated.',
   },
   {
     id: 'aws-s3-static-spa-hosting',
@@ -185,8 +180,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'The modern setup is a **private** bucket, CloudFront with OAC (the successor to Origin Access Identity), and a bucket policy that allows `s3:GetObject` only for the `cloudfront.amazonaws.com` service principal with `aws:SourceArn` set to your distribution. You then do not need the website endpoint at all. Client-side routes do not exist as objects, so S3 returns 403/404; you fix it with a CloudFront custom error response (403 and 404 to `/index.html` with status 200) or a CloudFront Function rewrite. Website hosting only changes how the bucket is served; objects become public only if you also disable Block Public Access and add a public-read policy. Deploys should upload hashed assets with long `Cache-Control` and `index.html` with `no-cache`, then invalidate `/index.html`.',
-    hint:
-      'Separate the website endpoint from the REST endpoint behind CloudFront, and remember that client-side routes do not exist as objects in the bucket.',
+    hint: 'Separate the S3 website endpoint from the REST endpoint behind CloudFront, and trace what S3 returns when a browser requests a deep link directly.',
   },
   {
     id: 'aws-s3-presigned-url-behavior',
@@ -307,8 +301,7 @@ export function solution(event: S3Event): { bucket: string; key: string }[] {
     source: 'topic-list',
     explanation:
       'S3 notifications are **at-least-once** and usually arrive within seconds, but can take longer and can be duplicated. Ordering is not guaranteed: object-create and delete records carry a `sequencer` hex string; left-pad the shorter one with zeros and compare lexicographically to discard stale events for the same key. Writing output to the prefix that triggers the function creates a recursive loop that scales and bills fast (Lambda\'s recursive loop detection now stops S3 loops after about 16 invocations, but do not rely on it); write to a different prefix or bucket and filter by prefix/suffix. S3 rejects overlapping prefix/suffix filters for the same event type, so to fan out to several consumers either publish to one SNS topic (and subscribe several queues) or enable **EventBridge** on the bucket and use rules, which also gives you content filtering, archive and replay.\n\n**Say this out loud:** "S3 events are at-least-once and unordered, so I make consumers idempotent, use the sequencer for ordering, never write back to the triggering prefix, and use SNS or EventBridge when more than one consumer needs the same event."',
-    hint:
-      'Recall the S3 notification delivery guarantee and what the `sequencer` field exists for, then trace where the function writes its output relative to its trigger prefix.',
+    hint: 'Recall the delivery and ordering guarantees of S3 notifications, the rules for overlapping notification configurations, and what the function\'s own writes can trigger.',
   },
   {
     id: 'aws-sns-fan-out-vs-sqs',
@@ -330,8 +323,7 @@ export function solution(event: S3Event): { bucket: string; key: string }[] {
     source: 'topic-list',
     explanation:
       '**SNS** is push-based pub/sub: one publish is copied to every subscription, but SNS does not store messages for later reading. **SQS** is a pull-based queue with retention (up to 14 days); consumers of one queue *compete*, so each message goes to only one of them (the single shared queue gives each order to one service, not all three). The fan-out pattern combines them: SNS copies the event, each SQS queue buffers it for its own service, and each service scales and fails independently. Direct HTTPS subscriptions have limited retries, so a service down for an hour loses events. Topics cannot be polled at all.',
-    hint:
-      'Separate push pub/sub, which copies a message to every subscriber, from a queue that buffers messages and whose consumers compete for them.',
+    hint: 'Split the requirement in two, every service gets every event and nothing is lost while a service is down, and recall which AWS messaging service provides each property.',
   },
   {
     id: 'aws-s3-to-sns-required-wiring',

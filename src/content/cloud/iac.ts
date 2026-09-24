@@ -21,8 +21,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '**IaaS / PaaS / SaaS** describe *what* you buy from a provider and how much of the stack you manage. **IaC** describes *how* you manage infrastructure of any kind: declarative files in Git, reviewed in pull requests, applied by automation, so environments are reproducible and changes are auditable instead of hand-clicked in a console. You can use IaC to manage IaaS resources, PaaS services, DNS, SaaS configuration (GitHub, Datadog) and more.',
-    hint:
-      'One term describes what you buy from a provider, the other how you manage infrastructure; match each to its category.',
+    hint: 'Expand both acronyms, then ask what the "as a Service" and "as Code" endings each describe.',
   },
   {
     id: 'iac-terraform-saved-plan-apply',
@@ -44,8 +43,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '`terraform plan` refreshes state, compares it with your configuration and proposes create, update, replace or destroy actions without changing anything. A bare `terraform apply` computes a **new** plan at apply time, which may differ from what was reviewed if code, state or real infrastructure changed in between. A saved plan pins the reviewed actions, and Terraform rejects it as stale if state moved on. Plan files can contain sensitive values in plain text, so treat them as secret build artifacts, not commits; render them for review with `terraform show`.',
-    hint:
-      'Think about what a saved plan file guarantees about the changes that get applied, and what should happen if the world moved between review and apply.',
+    hint: 'Compare what `apply` executes when given a saved plan file with what it does when it computes a fresh plan itself.',
   },
   {
     id: 'iac-terraform-remote-state-locking',
@@ -67,8 +65,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'State maps your resource addresses to real resource IDs and stores their attributes, so Terraform knows what it owns and what to change. It must be **shared** (everyone sees the latest), **locked** (one writer at a time) and **protected** (it contains secrets in plain text, such as generated passwords). A remote backend gives all three. For S3, Terraform 1.11+ supports native locking with a `.tflock` object in the bucket (experimental in 1.10); the older DynamoDB lock table is deprecated since 1.11. Enable bucket versioning to recover from a bad write. Workspaces with the same backend just create separate states for the same config; they do not solve concurrent applies to one environment.',
-    hint:
-      'The root problem is two writers on one shared file with no mutual exclusion; ask which change actually adds a lock and keeps state out of Git.',
+    hint: 'Ask what Terraform state needs in order to be safe with several writers, and whether each option solves the concurrency or only works around it.',
   },
   {
     id: 'iac-terraform-module-practices',
@@ -89,8 +86,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'A module is a function: typed inputs, outputs, and no hidden global configuration. Version pinning keeps a module change from silently rolling into every environment. Provider configuration belongs in the **root** module and is passed down (implicitly, or with `providers = { aws = aws.us_east_1 }`); a child module with its own `provider` block cannot be used with `count`, `for_each` or `depends_on`, and removing it later orphans resources. One giant root means huge plans, slow applies, and a large blast radius; split state by lifecycle and ownership (network, data, services) and connect them through outputs or data sources.',
-    hint:
-      'Think about what makes a module safe to reuse across callers: versioning, a clear typed interface, and who should configure providers.',
+    hint: 'Think about what a module\'s callers need to rely on as the module evolves, and which settings belong to the caller rather than to the module.',
   },
   {
     id: 'iac-terraform-plan-diff',

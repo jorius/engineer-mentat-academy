@@ -13,8 +13,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un cold start es el tiempo que toma crear un entorno de ejecución: descargar y descomprimir el código (la función **más** las layers), arrancar el runtime y luego ejecutar tu código de init (imports de nivel superior, clientes del SDK). Las layers cambian *dónde* viven los bytes, no cuántos se cargan, así que el tiempo de init es prácticamente el mismo. Las layers sirven para **compartir** código o binarios entre funciones y mantener pequeño el artefacto de la función al desplegar; los límites son 5 layers por función y 250 MB descomprimidos para la función más las layers (las imágenes de contenedor llegan hasta 10 GB). Lo que de verdad acorta los cold starts: un bundle más pequeño (con tree-shaking, solo los clientes del SDK v3 que usas), imports diferidos en rutas poco frecuentes, más memoria (la CPU escala con ella) o provisioned concurrency. SnapStart no es una opción aquí: cubre los runtimes administrados de Java, Python y .NET, no una función zip de Node.js. Las layers no se recargan en cada invocación, así que la afirmación de que cada layer agrega un viaje de red en cada invocación también es incorrecta.',
-    hint:
-      'Piensa en qué se gasta realmente el tiempo de un cold start y si mover los bytes a una layer cambia cuánto se descomprime y se carga durante el init.',
+    hint: 'Piensa en qué se gasta realmente el tiempo de un cold start y dónde terminan los contenidos de una layer cuando se crea un entorno de ejecución.',
   },
   'aws-lambda-concurrency-controls': {
     prompt:
@@ -41,8 +40,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'El visibility timeout es el tiempo que un mensaje recibido permanece oculto. Si el procesamiento dura más, el mensaje reaparece y una invocación concurrente lo vuelve a recibir. Lambda verifica que el timeout de la función no supere el visibility timeout cuando creas o actualizas el event source mapping, pero no vigila la cola después, así que un cambio posterior en la cola reintroduce el problema en silencio. AWS recomienda un visibility timeout de la cola de **al menos 6 veces el timeout de la función** (más cualquier ventana de batching) para que los reintentos después de un throttling también quepan. Aun así, SQS estándar es at-least-once, así que el handler debe ser idempotente (por ejemplo, una escritura condicional sobre el id del pedido), y los fallos parciales del lote se deben reportar con `ReportBatchItemFailures` en lugar de fallar el lote completo. FIFO reduce los duplicados dentro de una ventana de deduplicación de 5 minutos, pero no corrige un visibility timeout más corto que el trabajo. Bajar el timeout de la función a 30 s solo mataría los lotes de 2 minutos. Recuerda los techos: el timeout máximo de Lambda es de 15 minutos, y las integraciones de API Gateway expiran mucho antes (29 s por defecto en REST, 30 s como máximo en HTTP APIs).\n\n**Dilo en voz alta:** "El visibility timeout debe superar con holgura el tiempo de procesamiento, AWS dice seis veces el timeout de la función, y el consumidor tiene que ser idempotente de todos modos porque SQS es at-least-once."',
-    hint:
-      'Compara cuánto tarda un lote con cuánto tiempo permanece oculto un mensaje recibido, y pregúntate qué pasa cuando el segundo número es menor.',
+    hint: 'Recuerda qué controla el visibility timeout de SQS y qué pasa con un mensaje recibido que no se borra a tiempo.',
   },
   'aws-api-gateway-rest-vs-http-features': {
     prompt:
@@ -55,8 +53,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Las HTTP APIs son la opción más barata y de menor latencia (aproximadamente $1.00 frente a $3.50 por millón de solicitudes), con un **JWT authorizer nativo**, integraciones simples de proxy a Lambda y proxy HTTP, y despliegues automáticos. Las REST APIs conservan el conjunto de funciones más rico: API keys y usage plans, caché por stage, asociación directa con WAF, validación de solicitudes, mapping templates (VTL) para transformar solicitudes y respuestas, endpoints privados dentro de una VPC, endpoints edge-optimized e integraciones directas con muchos servicios de AWS. Regla práctica: empieza con HTTP API salvo que necesites una de esas funciones exclusivas de REST. Validar JWTs de cualquier emisor OIDC es lo que las HTTP APIs hacen de forma nativa; REST solo tiene un authorizer específico de Cognito, y fuera de eso escribes un Lambda authorizer.',
-    hint:
-      'Las HTTP APIs son la opción ligera y más barata; recuerda qué funciones del gateway dejaron fuera y qué tipo de authorizer agregaron de forma nativa.',
+    hint: 'Las HTTP APIs son la opción ligera y más barata; recuerda qué funciones del gateway soporta cada tipo de API, incluida la autorización.',
   },
   'aws-api-gateway-throttling-status': {
     prompt:
@@ -69,8 +66,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'API Gateway aplica throttling con un **token bucket**: el *rate* es la recarga constante en solicitudes por segundo y el *burst* es el tamaño del bucket. Los límites se aplican en varios niveles: la cuenta por región (10,000 rps constantes con un burst de 5,000 por defecto), la configuración del stage y del método, y los usage plans por cliente en las REST APIs. Las solicitudes excedentes se rechazan con `429` antes de llegar a Lambda, así que no cuestan nada aguas abajo. Los clientes deberían hacer backoff exponencial con jitter. `504` significa que la integración tardó más que el timeout de integración, que es otro problema.',
-    hint:
-      'Pregúntate qué código de estado indica que el problema es el ritmo de solicitudes del propio cliente y no una falla del backend, y cómo debería reintentar un cliente bien portado.',
+    hint: 'Recuerda qué códigos de estado devuelve el propio API Gateway cuando rechaza una solicitud, qué significa cada uno y cómo debería reaccionar un cliente bien portado.',
   },
   'aws-api-gateway-authorizer-choice': {
     prompt:
@@ -100,8 +96,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Desde diciembre de 2020, toda lectura en S3 después de una escritura exitosa devuelve los datos más recientes, para objetos nuevos, sobrescrituras, borrados y operaciones de listado, sin costo adicional. La respuesta de "sobrescrituras eventualmente consistentes" describe el modelo antiguo que muchos posts de blog todavía repiten. Consistencia fuerte no significa bloqueo: dos escritores concurrentes siguen produciendo last-writer-wins. Para concurrencia optimista usa **escrituras condicionales** (`If-None-Match: *` para crear solo si no existe, `If-Match` con un ETag para actualizar solo la versión que leíste).',
-    hint:
-      'Verifica si recuerdas el modelo de consistencia de S3 de antes o de después de su cambio de diciembre de 2020.',
+    hint: 'Recuerda el modelo de consistencia actual de S3 para los PUT que sobrescriben, y verifica que lo que recuerdas no esté desactualizado.',
   },
   'aws-s3-static-spa-hosting': {
     prompt:
@@ -114,8 +109,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'La configuración moderna es un bucket **privado**, CloudFront con OAC (el sucesor de Origin Access Identity) y una bucket policy que permite `s3:GetObject` solo al service principal `cloudfront.amazonaws.com` con `aws:SourceArn` igual a tu distribución. Así ya no necesitas el website endpoint. Las rutas del lado del cliente no existen como objetos, así que S3 devuelve 403/404; lo corriges con una custom error response de CloudFront (403 y 404 hacia `/index.html` con status 200) o con una reescritura en una CloudFront Function. El website hosting solo cambia cómo se sirve el bucket; los objetos se vuelven públicos solo si además desactivas Block Public Access y agregas una política de lectura pública. Los despliegues deberían subir los assets con hash con un `Cache-Control` largo e `index.html` con `no-cache`, y luego invalidar `/index.html`.',
-    hint:
-      'Separa el website endpoint del REST endpoint detrás de CloudFront, y recuerda que las rutas del lado del cliente no existen como objetos en el bucket.',
+    hint: 'Separa el website endpoint de S3 del REST endpoint detrás de CloudFront, y sigue qué devuelve S3 cuando un navegador pide un deep link directamente.',
   },
   'aws-s3-presigned-url-behavior': {
     prompt:
@@ -150,8 +144,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Las notificaciones de S3 son **at-least-once** y suelen llegar en segundos, pero pueden tardar más y pueden duplicarse. El orden no está garantizado: los registros de creación y borrado traen un `sequencer` hexadecimal; rellena con ceros a la izquierda el más corto y compáralos lexicográficamente para descartar eventos obsoletos de la misma key. Escribir la salida en el prefijo que dispara la función crea un bucle recursivo que escala y factura rápido (la detección de bucles recursivos de Lambda ya corta los bucles con S3 tras unas 16 invocaciones, pero no dependas de ella); escribe en otro prefijo o bucket y filtra por prefijo/sufijo. S3 rechaza filtros de prefijo/sufijo superpuestos para el mismo tipo de evento, así que para repartir a varios consumidores publica en un topic de SNS (y suscribe varias colas) o habilita **EventBridge** en el bucket y usa reglas, lo que además te da filtrado por contenido, archivo y replay.\n\n**Dilo en voz alta:** "Los eventos de S3 son at-least-once y sin orden, así que hago idempotentes a los consumidores, uso el sequencer para el orden, nunca escribo de vuelta en el prefijo que dispara, y uso SNS o EventBridge cuando más de un consumidor necesita el mismo evento."',
-    hint:
-      'Recuerda la garantía de entrega de las notificaciones de S3 y para qué existe el campo `sequencer`, y luego sigue dónde escribe la función su salida respecto al prefijo que la dispara.',
+    hint: 'Recuerda las garantías de entrega y de orden de las notificaciones de S3, las reglas para configuraciones de notificación que se solapan y qué pueden disparar las escrituras de la propia función.',
   },
   'aws-sns-fan-out-vs-sqs': {
     prompt:
@@ -164,8 +157,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '**SNS** es pub/sub basado en push: una publicación se copia a cada suscripción, pero SNS no guarda mensajes para leerlos después. **SQS** es una cola basada en pull con retención (hasta 14 días); los consumidores de una misma cola *compiten*, así que cada mensaje va solo a uno de ellos (la cola única compartida le da cada pedido a un servicio, no a los tres). El patrón fan-out los combina: SNS copia el evento, cada cola SQS lo guarda para su propio servicio, y cada servicio escala y falla de forma independiente. Las suscripciones HTTPS directas tienen reintentos limitados, así que un servicio caído durante una hora pierde eventos. Los topics no se pueden consultar en absoluto.',
-    hint:
-      'Separa el pub/sub push, que copia un mensaje a cada suscriptor, de una cola que guarda los mensajes y cuyos consumidores compiten por ellos.',
+    hint: 'Divide el requisito en dos, cada servicio recibe cada evento y nada se pierde mientras un servicio está caído, y recuerda qué servicio de mensajería de AWS da cada propiedad.',
   },
   'aws-s3-to-sns-required-wiring': {
     prompt:

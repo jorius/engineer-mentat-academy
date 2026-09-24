@@ -22,8 +22,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'An **image** is an immutable, layered filesystem plus metadata (entrypoint, env, exposed ports). A **container** is a runtime instance of an image with a thin writable layer on top (copy-on-write) and its own process namespace. Everything written at runtime goes to that layer and disappears with the container. Changes you want to keep belong in the Dockerfile (rebuild the image), and data you want to keep belongs in a volume or an external store. `docker commit` exists but produces unreproducible images; treat containers as disposable.',
-    hint:
-      'Separate the immutable image from the thin copy-on-write layer each container gets, and ask what happens to that layer on removal.',
+    hint: 'Recall where a running container\'s file changes are stored, and how that storage relates to the image and to the container\'s lifecycle.',
   },
   {
     id: 'containers-dockerfile-layer-cache-order',
@@ -45,8 +44,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Each instruction produces a layer, and a layer is reused only if the instruction **and everything before it** is unchanged; for `COPY`, the cache key includes the checksums of the copied files. `COPY . .` changes on every edit, so every layer after it rebuilds. Copying only the manifests first means the expensive `npm ci` layer stays cached until dependencies change. General rule: order instructions from least to most frequently changing. `--no-cache` makes things slower, `npm install` in a build is less reproducible than `npm ci`, and BuildKit cache mounts (`RUN --mount=type=cache,target=/root/.npm npm ci`) are a further speed-up on top of the right order.',
-    hint:
-      'A layer is reused only if its instruction and everything before it are unchanged; ask which files the expensive step really depends on.',
+    hint: 'Recall how Docker decides whether a cached layer can be reused, and what a cache miss at one step does to every step after it.',
   },
   {
     id: 'containers-multi-stage-build-benefits',
@@ -68,8 +66,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Only the **last** stage (or the one selected with `--target`) becomes the image; earlier stages exist only in the build cache. That shrinks the image and its attack surface: no compilers, no dev tooling, no source, no build-time secrets. `COPY --from=<stage>` pulls specific artifacts across. Reproducibility is separate: pin base images by digest (`node:22-slim@sha256:...`) and use a lockfile. Multi-stage also lets you run tests in a dedicated stage that CI targets without shipping test tooling.',
-    hint:
-      'Remember which stage actually becomes the image and what `COPY --from` brings across; judge any reproducibility claim on its own.',
+    hint: 'Remember which stage actually becomes the image, what `COPY --from` brings across, and what it takes to pin a base image to an exact digest.',
   },
   {
     id: 'containers-dockerignore-purpose',
@@ -91,8 +88,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'The **build context** is the directory tree sent to the builder; `.dockerignore` filters it before any `COPY` or `ADD` can see it. That speeds up builds, keeps the cache stable (a changing `.git` would otherwise bust `COPY . .`), avoids shipping native modules compiled for macOS or Windows into a Linux image, and keeps secrets out of layers, where they stay recoverable even if a later layer deletes them. It only affects building: runtime bind mounts and volumes are unaffected. Pass real secrets at runtime, or at build time with BuildKit `--mount=type=secret`.',
-    hint:
-      '`.dockerignore` filters the build context; ask what that changes at build time and whether it has any effect once the container runs.',
+    hint: 'Recall what `.dockerignore` filters, then trace each of these files through a `docker build` that runs `COPY . .` and through a later `docker run`.',
   },
   {
     id: 'containers-pid1-sigterm-graceful-shutdown',

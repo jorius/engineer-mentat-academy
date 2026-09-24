@@ -12,8 +12,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '**IaaS / PaaS / SaaS** describen *qué* le compras a un proveedor y cuánto del stack administras tú. **IaC** describe *cómo* administras infraestructura de cualquier tipo: archivos declarativos en Git, revisados en pull requests y aplicados por automatización, de modo que los entornos sean reproducibles y los cambios auditables en lugar de hacerse a mano con clics en una consola. Puedes usar IaC para administrar recursos IaaS, servicios PaaS, DNS, configuración de SaaS (GitHub, Datadog) y más.',
-    hint:
-      'Un término describe lo que compras a un proveedor y el otro cómo gestionas la infraestructura; asigna cada uno a su categoría.',
+    hint: 'Expande ambos acrónimos, y luego pregúntate qué describe cada terminación: "as a Service" y "as Code".',
   },
   'iac-terraform-saved-plan-apply': {
     prompt:
@@ -26,8 +25,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '`terraform plan` refresca el state, lo compara con tu configuración y propone acciones de crear, actualizar, reemplazar o destruir sin cambiar nada. Un `terraform apply` a secas calcula un plan **nuevo** en el momento del apply, que puede diferir de lo que se revisó si el código, el state o la infraestructura real cambiaron entre medio. Un plan guardado fija las acciones revisadas, y Terraform lo rechaza por obsoleto si el state avanzó. Los archivos de plan pueden contener valores sensibles en texto plano, así que trátalos como artefactos de build secretos, no como commits; muéstralos para revisión con `terraform show`.',
-    hint:
-      'Piensa en qué garantiza un archivo de plan guardado sobre los cambios que se aplican, y qué debería pasar si algo cambió entre la revisión y el apply.',
+    hint: 'Compara lo que ejecuta `apply` cuando recibe un archivo de plan guardado con lo que hace cuando calcula un plan nuevo por su cuenta.',
   },
   'iac-terraform-remote-state-locking': {
     prompt:
@@ -40,8 +38,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'El state mapea las direcciones de tus recursos a los IDs de los recursos reales y guarda sus atributos, para que Terraform sepa qué le pertenece y qué debe cambiar. Tiene que estar **compartido** (todos ven lo más reciente), **bloqueado** (un solo escritor a la vez) y **protegido** (contiene secretos en texto plano, como contraseñas generadas). Un backend remoto da las tres cosas. Para S3, Terraform 1.11+ soporta locking nativo con un objeto `.tflock` en el bucket (experimental en 1.10); la antigua tabla de lock en DynamoDB está deprecada desde 1.11. Habilita el versionado del bucket para recuperarte de una escritura errónea. Los workspaces con el mismo backend solo crean states separados para la misma configuración; no resuelven los applies concurrentes sobre un mismo entorno.',
-    hint:
-      'El problema de fondo son dos escritores sobre un mismo archivo compartido sin exclusión mutua; pregúntate qué cambio agrega realmente un lock y saca el estado de Git.',
+    hint: 'Pregúntate qué necesita el estado de Terraform para ser seguro con varios escritores, y si cada opción resuelve la concurrencia o solo le da la vuelta.',
   },
   'iac-terraform-module-practices': {
     prompt: '¿Cuáles son buenas prácticas para módulos reutilizables de Terraform? Selecciona todas las que apliquen.',
@@ -53,8 +50,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un módulo es una función: entradas tipadas, salidas y ninguna configuración global oculta. Fijar versiones evita que un cambio en un módulo se propague en silencio a todos los entornos. La configuración del provider pertenece al módulo **raíz** y se pasa hacia abajo (de forma implícita, o con `providers = { aws = aws.us_east_1 }`); un módulo hijo con su propio bloque `provider` no se puede usar con `count`, `for_each` ni `depends_on`, y quitarlo después deja recursos huérfanos. Una sola raíz gigante significa plans enormes, applies lentos y un blast radius grande; divide el state por ciclo de vida y por dueño (red, datos, servicios) y conéctalos mediante outputs o data sources.',
-    hint:
-      'Piensa en qué hace que un módulo sea seguro de reutilizar entre llamadores: el versionado, una interfaz clara y tipada, y quién debería configurar los providers.',
+    hint: 'Piensa en qué necesitan dar por seguro los llamadores de un módulo a medida que evoluciona, y qué configuraciones le corresponden al llamador y no al módulo.',
   },
   'iac-terraform-plan-diff': {
     prompt:

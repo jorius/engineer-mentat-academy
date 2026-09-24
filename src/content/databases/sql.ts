@@ -155,7 +155,7 @@ FROM employees`,
     source: 'topic-list',
     explanation:
       '`COUNT(*)` counts rows. `COUNT(col)` counts rows where `col` is not `NULL`, so Ada is skipped. `COUNT(DISTINCT col)` also ignores `NULL` and collapses duplicates: the manager ids are 1, 2 and 4. Every aggregate except `COUNT(*)` ignores `NULL`s, which is also why `AVG(col)` is not the same as `SUM(col) / COUNT(*)`.',
-    hint: 'Recall how `COUNT(*)`, `COUNT(col)` and `COUNT(DISTINCT col)` each treat `NULL`s and duplicates.',
+    hint: 'Recall how aggregate functions treat `NULL`s and duplicates; one row can mix several forms of the same aggregate.',
   },
   {
     id: 'sql-payroll-share-integer-division',
@@ -262,7 +262,7 @@ GROUP BY band`,
     source: 'topic-list',
     explanation:
       'Standard SQL only allows columns in the select list that are grouped, aggregated, or functionally dependent on the group key (Postgres accepts non-grouped columns of a table whose primary key is grouped). SQLite has a documented special case: with a single `MIN()` or `MAX()`, bare columns come from the row that produced the extreme value; with ties, or with any other aggregate, the row is arbitrary. MySQL without `ONLY_FULL_GROUP_BY` returns an arbitrary value. The portable answer is a correlated subquery, a join to a grouped subquery, or `RANK()` over a partition.\n\n**Say this out loud:** "A bare column in a grouped query is non-portable and non-deterministic on ties; I solve greatest-per-group with a window function or a join back to the grouped max."',
-    hint: 'Recall the standard rule for non-aggregated columns in a grouped query, and remember that engines differ in how strictly they enforce it.',
+    hint: 'Recall the standard rule for non-aggregated columns in a grouped query, then check what SQLite, Postgres and MySQL each document about it.',
   },
   {
     id: 'sql-top-earner-per-department-ties',
@@ -339,7 +339,7 @@ ORDER BY department, e.name`,
     source: 'topic-list',
     explanation:
       "`LIKE 'ana%'` is rewritten as the range `email >= 'ana' AND email < 'anb'`, a seek. `'%@example.com'` could start anywhere, so the engine must test every row (at best a full index scan). Fixes for suffix search: index a reversed copy of the column and search `LIKE reverse('%@example.com')` as a prefix, store the domain in its own indexed column, or use a trigram index (`pg_trgm` GIN in Postgres) or full-text search for infix matches. Engine caveats: prefix `LIKE` also needs a compatible collation (Postgres needs `text_pattern_ops` under a non-C locale; SQLite needs the index collation to match its case-insensitive `LIKE`).",
-    hint: 'Think about what a B-tree needs to start a seek, and whether each pattern gives it a known first key.',
+    hint: 'Think about how a B-tree index is ordered and what the engine needs before it can seek instead of scan.',
   },
   {
     id: 'sql-covering-index-tradeoffs',
@@ -387,7 +387,7 @@ ORDER BY department, e.name`,
     source: 'topic-list',
     explanation:
       'This is the N+1 pattern: one query for the parent list plus one per parent. Each statement pays a network round trip, parsing and planning, so latency grows linearly with N even when every query is fast. The fix removes round trips: one `JOIN`, or two queries total (parents, then `IN (...)` for children, which is what ORM eager loading and GraphQL DataLoader do). The index on `orders.customer_id` is worth having but still leaves N round trips. Running the queries in parallel with `Promise.all` and raising the pool size move the load onto the database and exhaust connections under concurrency.',
-    hint: 'Count the round trips as the customer list grows, and ask which change reduces that count rather than speeding up each query.',
+    hint: 'Name the query pattern in this log and what each extra customer costs, then ask whether each option removes that cost or only hides it.',
   },
   {
     id: 'sql-non-sargable-predicates',
@@ -410,7 +410,7 @@ ORDER BY department, e.name`,
     source: 'topic-list',
     explanation:
       'An index stores the raw column value, so a predicate can seek only when the column stands alone on one side of the comparison ("sargable"). Wrapping the column in a function (`DATE(created_at)`, `LOWER(email)`) or doing arithmetic on it (`created_at + INTERVAL ...`) forces the engine to compute the expression for every row. Rewrite the `DATE(created_at)` filter as the half-open range `created_at >= ... AND created_at < ...`, and the arithmetic one as `created_at > NOW() - INTERVAL \'1 day\'`. For case-insensitive email lookups, add an expression index on `LOWER(email)` or use a case-insensitive type or collation (`citext` in Postgres). Another quiet cause is an implicit cast, such as comparing a `VARCHAR` column with a number in MySQL.',
-    hint: 'Ask whether the indexed column stands alone on one side of the comparison or is wrapped in a function or arithmetic.',
+    hint: 'Recall how a B-tree index on a column is ordered, and what the engine must be able to compute from each predicate before it can seek into that order.',
   },
   {
     id: 'sql-diagnose-slow-query-explain',

@@ -72,7 +72,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Engine configuration on RDS is managed through parameter groups. Default groups cannot be modified, so you create a custom group (ideally in infrastructure as code) and attach it. **Dynamic** parameters apply without a restart; **static** ones wait for a reboot, which in production you schedule or perform with Multi-AZ to minimize downtime. RDS gives no host access, and the master user is not a true superuser, so `ALTER SYSTEM` is not available. Because a group can be shared by many instances, changing it changes all of them.',
-    hint: 'Recall what RDS lets you modify (default groups, host access, superuser rights) and when a static parameter takes effect.',
+    hint: 'Recall how engine settings are managed on a managed RDS instance, and what separates a static parameter from a dynamic one.',
   },
   {
     id: 'rds-when-to-choose-aurora',

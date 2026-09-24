@@ -13,8 +13,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Una **imagen** es un sistema de archivos inmutable por capas más metadatos (entrypoint, env, puertos expuestos). Un **contenedor** es una instancia en ejecución de una imagen con una capa escribible delgada encima (copy-on-write) y su propio namespace de procesos. Todo lo que se escribe en tiempo de ejecución va a esa capa y desaparece con el contenedor. Los cambios que quieres conservar van en el Dockerfile (reconstruye la imagen), y los datos que quieres conservar van en un volumen o en un almacenamiento externo. `docker commit` existe, pero produce imágenes no reproducibles; trata los contenedores como desechables.',
-    hint:
-      'Separa la imagen inmutable de la capa delgada copy-on-write que recibe cada contenedor, y pregúntate qué le pasa a esa capa cuando lo eliminas.',
+    hint: 'Recuerda dónde se guardan los cambios de archivos de un contenedor en ejecución, y cómo se relaciona ese almacenamiento con la imagen y con el ciclo de vida del contenedor.',
   },
   'containers-dockerfile-layer-cache-order': {
     prompt:
@@ -27,8 +26,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Cada instrucción produce una capa, y una capa se reutiliza solo si la instrucción **y todo lo anterior** no cambió; para `COPY`, la clave de caché incluye los checksums de los archivos copiados. `COPY . .` cambia con cada edición, así que todas las capas posteriores se reconstruyen. Copiar primero solo los manifiestos hace que la costosa capa de `npm ci` siga en caché hasta que cambien las dependencias. Regla general: ordena las instrucciones de la que cambia con menos frecuencia a la que cambia con más. `--no-cache` hace todo más lento, `npm install` en un build es menos reproducible que `npm ci`, y los cache mounts de BuildKit (`RUN --mount=type=cache,target=/root/.npm npm ci`) son una aceleración adicional sobre el orden correcto.',
-    hint:
-      'Una capa se reutiliza solo si su instrucción y todo lo anterior no cambiaron; pregúntate de qué archivos depende realmente el paso costoso.',
+    hint: 'Recuerda cómo decide Docker si puede reutilizar una capa en caché, y qué le hace un fallo de caché en un paso a todos los pasos siguientes.',
   },
   'containers-multi-stage-build-benefits': {
     prompt:
@@ -41,8 +39,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Solo el **último** stage (o el que se selecciona con `--target`) se convierte en la imagen; los stages anteriores existen solo en la caché del build. Eso reduce la imagen y su superficie de ataque: sin compiladores, sin herramientas de desarrollo, sin código fuente, sin secretos de tiempo de build. `COPY --from=<stage>` trae artefactos específicos de un stage a otro. La reproducibilidad es otro tema: fija las imágenes base por digest (`node:22-slim@sha256:...`) y usa un lockfile. Multi-stage también te permite ejecutar los tests en un stage dedicado que CI usa como target sin distribuir las herramientas de testing.',
-    hint:
-      'Recuerda qué etapa se convierte realmente en la imagen y qué trae `COPY --from`; evalúa por separado cualquier afirmación sobre reproducibilidad.',
+    hint: 'Recuerda qué etapa se convierte realmente en la imagen, qué trae `COPY --from` y qué hace falta para fijar una imagen base a un digest exacto.',
   },
   'containers-dockerignore-purpose': {
     prompt:
@@ -55,8 +52,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'El **build context** es el árbol de directorios que se envía al builder; `.dockerignore` lo filtra antes de que cualquier `COPY` o `ADD` pueda verlo. Eso acelera los builds, mantiene estable la caché (un `.git` que cambia invalidaría `COPY . .`), evita meter en una imagen Linux módulos nativos compilados para macOS o Windows, y mantiene los secretos fuera de las capas, donde se pueden recuperar aunque una capa posterior los borre. Solo afecta al build: los bind mounts y volúmenes en tiempo de ejecución no se ven afectados. Pasa los secretos reales en tiempo de ejecución, o en tiempo de build con `--mount=type=secret` de BuildKit.',
-    hint:
-      '`.dockerignore` filtra el build context; pregúntate qué cambia eso al construir y si tiene algún efecto cuando el contenedor ya está corriendo.',
+    hint: 'Recuerda qué filtra `.dockerignore`, y luego sigue cada uno de estos archivos a través de un `docker build` que ejecuta `COPY . .` y de un `docker run` posterior.',
   },
   'containers-pid1-sigterm-graceful-shutdown': {
     prompt:

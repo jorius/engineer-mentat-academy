@@ -12,7 +12,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Los document stores brillan cuando la unidad que lees y escribes es un agregado autocontenido y de forma variable: un documento guarda el producto, sus variantes y sus especificaciones, así que la página se resuelve con una sola lectura y sin joins. El libro contable necesita invariantes ACID sobre varias filas y restricciones, el terreno natural de una base de datos relacional (MongoDB tiene transacciones multidocumento, pero no son su punto fuerte). La analítica ad hoc pide SQL y un data warehouse columnar. Recorrer relaciones de varios saltos es justo para lo que están hechas las bases de datos de grafos como Neo4j o Neptune.',
-    hint: 'Piensa en el agregado autocontenido que un document store lee de una vez, y en qué cargas necesitan joins, transacciones de varias filas o recorrer un grafo.',
+    hint: 'Piensa en el patrón de acceso para el que está pensado un document store, y en qué necesita cada carga de la base de datos además de leer un registro.',
   },
   'nosql-store-families': {
     prompt: '¿Qué combinación de familia NoSQL y caso de uso es la más adecuada?',
@@ -24,7 +24,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Redis es un key-value store en memoria con TTL por clave y operaciones atómicas como `INCR`, que es justo lo que necesitan las sesiones, las cachés y los rate limiters. La ingesta de series de tiempo encaja en un wide-column store como Cassandra o en una base de datos de series de tiempo, con clave por dispositivo y bloque de tiempo. Los wide-column stores se diseñan en torno a consultas conocidas y no tienen joins. Los document stores pueden guardar contadores, pero un contador compartido y muy disputado con latencia de menos de un milisegundo es trabajo de un key-value store.',
-    hint: 'Relaciona cada familia con aquello para lo que está hecha: búsquedas por clave con expiración, recorrido de relaciones, escrituras por intervalos de tiempo o documentos flexibles.',
+    hint: 'Para cada pareja, recuerda el patrón de acceso para el que está diseñada esa familia, y luego pregúntate si el caso de uso de verdad encaja con él.',
   },
   'nosql-schemaless-myth': {
     prompt:
@@ -49,7 +49,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'En una red real las particiones no son opcionales, así que "CA" no es una opción para un sistema distribuido. CAP solo obliga a decidir mientras ocurre una partición: rechazar algunas peticiones (CP) o responder con datos posiblemente desactualizados (AP). PACELC agrega el caso cotidiano: si no hay partición (la "E" de else), cambias latencia por consistencia. Los productos son configurables en lugar de etiquetas fijas: las lecturas de DynamoDB son eventualmente consistentes por defecto y fuertemente consistentes si lo pides; Cassandra decide por consulta con niveles de consistencia; MongoDB usa read concerns y write concerns. La consistencia de CAP significa linealizabilidad, que no tiene relación con la consistencia de ACID.\n\n**Dilo en voz alta:** "CAP solo aprieta durante una partición, y ahí elijo entre rechazar peticiones o servir datos desactualizados; el resto del tiempo el verdadero trade-off es latencia contra consistencia, y la mayoría de los stores modernos me dejan ajustarlo por petición."',
-    hint: 'Recuerda cuándo CAP obliga realmente a elegir, cuál es el trade-off el resto del tiempo y qué significa la C de CAP.',
+    hint: 'Recuerda el enunciado preciso de CAP: la condición bajo la que aplica y qué significa cada una de sus tres letras.',
   },
   'nosql-embed-vs-reference': {
     prompt:

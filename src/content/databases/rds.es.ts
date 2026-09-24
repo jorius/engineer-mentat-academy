@@ -40,7 +40,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'En RDS, la configuración del motor se gestiona con parameter groups. Los grupos por defecto no se pueden modificar, así que creas un grupo personalizado (idealmente con infraestructura como código) y lo asocias. Los parámetros **dinámicos** se aplican sin reiniciar; los **estáticos** esperan a un reboot, que en producción programas o haces con Multi-AZ para minimizar el tiempo de inactividad. RDS no da acceso al host, y el usuario maestro no es un superusuario real, así que `ALTER SYSTEM` no está disponible. Como un mismo grupo puede estar compartido por muchas instancias, cambiarlo las cambia a todas.',
-    hint: 'Recuerda qué te deja modificar RDS (grupos por defecto, acceso al host, permisos de superusuario) y cuándo entra en vigor un parámetro estático.',
+    hint: 'Recuerda cómo se administra la configuración del motor en una instancia administrada de RDS, y qué distingue a un parámetro estático de uno dinámico.',
   },
   'rds-when-to-choose-aurora': {
     prompt: '¿Cuándo elegirías Amazon Aurora en lugar de RDS estándar para PostgreSQL o MySQL, y cuándo te quedarías con RDS estándar?',

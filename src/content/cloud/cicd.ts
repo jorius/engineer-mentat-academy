@@ -22,8 +22,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'If you rebuild per environment, what you tested in staging is not what runs in production: dependency resolution, base image updates or build flags can differ. **Build once, deploy many**: produce an immutable, versioned artifact, store it in a registry, and promote it by reference (tag or digest) while environment-specific configuration and secrets come from the environment (parameter store, secrets manager, env vars). `latest` is mutable, so you cannot tell what is running or roll back reliably.',
-    hint:
-      'Ask whether what you tested in staging is byte for byte what reaches production, and where environment-specific config should come from.',
+    hint: 'Compare what each approach means for the exact bits you tested versus the bits you release, and for how environment-specific config is supplied.',
   },
   {
     id: 'cicd-blue-green-vs-canary',
@@ -68,8 +67,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Good gates are **fast, deterministic and meaningful**: correctness (types, tests), buildability, security (SCA, SAST, secret scanning, image scanning), and for production promotion also a smoke test and health or canary metrics after deploy. Manual approvals everywhere slow delivery without adding signal; reserve them for production (or replace them with automated canary analysis). 100% coverage invites tests that assert nothing; use a sensible threshold or coverage on changed lines instead. Flaky tests must be fixed or quarantined, because a gate people learn to re-run is not a gate.',
-    hint:
-      'A good gate is fast, deterministic and adds real signal; ask of each check whether it catches problems or just slows delivery and invites gaming.',
+    hint: 'Think about what makes an automated gate worth running on every change: speed, repeatability, and whether a failure really means something is wrong.',
   },
   {
     id: 'cicd-canary-gate-decision',
