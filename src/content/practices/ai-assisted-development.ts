@@ -24,6 +24,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Interviewers are not testing enthusiasm or scepticism; they want to hear that you get the speed without giving up verification and accountability.\n\n**Say this out loud:** "AI writes a draft; I own the result. Tests are the contract, I review every diff as if a new colleague wrote it, and I never trust it blindly on security, on APIs it might invent, or on dependencies."',
+    hint:
+      'Cover where assistants help and where they mislead, who owns and reviews the output, and what must never be pasted into a prompt.',
   },
   {
     id: 'ai-assisted-development-tooling-tautological-tests',
@@ -45,6 +47,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Tests generated from the implementation are **tautological**: if the function rounds refunds down instead of up, the expected value in the test was computed the same wrong way. Coverage only proves lines ran, not that the assertions are right. Keep tests as an independent contract: derive the cases from the requirements (partial refund after 30 days, currency rounding, already-refunded order), write or review them before generating the implementation, and check that each one fails when you break the code.',
+    hint:
+      'Ask where the expected values in those tests came from: the business rules, or the code they are testing?',
   },
   {
     id: 'ai-assisted-development-tooling-prompt-constraints',
@@ -65,6 +69,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Good prompts read like a good ticket: the exact file, the stack and versions, an existing pattern to follow, explicit constraints ("no new dependencies", keep the props), the edge case that usually gets missed (cleanup on unmount), and an objective finish line (the tests pass). Vague prompts get generic code that ignores your conventions, pulls in a library, or targets a different framework version, and the time saved typing is lost in review.',
+    hint:
+      'Think about what context and constraints the assistant needs to fit your codebase, and how anyone would know the result is done.',
   },
   {
     id: 'ai-assisted-development-tooling-hallucinated-package',
@@ -86,5 +92,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Models generate **plausible** names and APIs, not verified ones. Attackers watch for hallucinated package names and publish malicious packages under them ("slopsquatting", a cousin of typosquatting), and an `npm install` runs install scripts on your machine and in CI, so `devDependencies` is no protection. Asking the model to vouch for its own output is not verification. Check the registry and source, confirm the API against real documentation, and ask whether a new dependency is justified at all; auth refresh logic is also security-sensitive code that deserves extra scrutiny.',
+    hint:
+      'Remember that models invent plausible package names, and think about what an attacker can do with a name nobody has registered yet.',
   },
 ];

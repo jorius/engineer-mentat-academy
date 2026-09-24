@@ -12,6 +12,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Las dependencias solo deben apuntar **hacia abajo**: presentación → negocio → acceso a datos. Un repository que conoce HTTP acopla la persistencia a un único mecanismo de entrega, así que la misma consulta no se puede reutilizar desde un consumidor de cola o un cron job, y no se puede probar sin simular una solicitud. Pasa `tenantId` como un argumento simple. Lanzar un error de dominio y traducirlo a un código HTTP en el borde es la forma correcta de mantener HTTP fuera de la capa de servicios.',
+    hint: 'Sigue la dirección de cada dependencia: ¿qué capa termina conociendo un detalle de una capa superior?',
   },
   'architecture-patterns-hexagonal-ports': {
     prompt: 'En una arquitectura hexagonal (puertos y adaptadores), ¿dónde van la interfaz `OrderRepository` y la clase `PostgresOrderRepository`?',
@@ -23,6 +24,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'El núcleo define los puertos que necesita, en su propio lenguaje (`findById`, `save`), y no sabe nada de Postgres, HTTP ni Kafka. Los adaptadores viven afuera y dependen hacia adentro: los adaptadores **primarios** (driving), como un controller REST o una CLI, llaman al núcleo; los adaptadores **secundarios** (driven), como el repository de Postgres o un cliente de email, implementan puertos que define el núcleo. Es el principio de inversión de dependencias aplicado a escala de arquitectura, y por eso el núcleo se puede probar con adaptadores en memoria.',
+    hint: 'Pregúntate quién es dueño del contrato en puertos y adaptadores, y hacia dónde deben apuntar las flechas de dependencia respecto al núcleo.',
   },
   'architecture-patterns-hexagonal-vs-layered': {
     prompt: 'Compara una arquitectura clásica por capas con la arquitectura hexagonal. ¿Cuándo elegirías cada una para un servicio nuevo en Node/TypeScript?',
@@ -37,6 +39,7 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'Los entrevistadores buscan la idea de la dirección de las dependencias y una regla de decisión pragmática, no que recites un diagrama. La arquitectura limpia (clean architecture) y la arquitectura cebolla (onion) son variaciones de la misma idea de dependencias hacia adentro.\n\n**Dilo en voz alta:** "La hexagonal es inversión de dependencias a nivel de arquitectura: el dominio es dueño de los puertos y cada tecnología es un adaptador. La uso cuando la lógica de dominio es rica o hay varios puntos de entrada; para un CRUD delgado, basta con capas simples."',
+    hint: 'Cubre la dirección de las dependencias en cada estilo, qué te da invertirla (testabilidad, más puntos de entrada), cuánto cuesta y una regla para elegir.',
   },
   'architecture-patterns-bff-purpose': {
     prompt: '¿Qué problema resuelve principalmente el patrón Backend-for-Frontend (BFF)?',
@@ -48,6 +51,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un BFF es una capa delgada del lado del servidor, propiedad de un equipo de frontend (o cercana a él), que llama a los servicios de abajo, agrega y recorta las respuestas, y devuelve exactamente lo que necesita una experiencia, a menudo en un solo viaje de ida y vuelta. Eso importa sobre todo en móvil, donde la latencia y el tamaño del payload duelen. Complementa a un gateway en lugar de reemplazar las responsabilidades transversales del borde, y las reglas de negocio compartidas pertenecen a los servicios de dominio que están detrás: ponerlas en varios BFF duplica lógica que luego diverge. Un servidor de Next.js o una capa GraphQL suelen cumplir el rol de BFF.',
+    hint: 'Piensa en lo distinto que una pantalla móvil y una página de escritorio consumen la misma API de propósito general, y quién da forma al payload.',
   },
   'architecture-patterns-bff-design': {
     prompt:
@@ -63,6 +67,7 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'La señal senior es la propiedad y los límites: un BFF es tanto un patrón organizacional (los equipos de frontend son dueños de su contrato de backend) como uno técnico.\n\n**Dilo en voz alta:** "Un BFF por experiencia, propiedad del equipo de frontend, delgado por diseño: orquesta y da forma a los datos, y las reglas de negocio se quedan en los servicios que tiene detrás."',
+    hint: 'Cubre cuántos BFF, qué va dentro de uno frente a los servicios de atrás, qué equipo es su dueño y cómo manejas llamadas lentas o fallidas aguas abajo.',
   },
   'architecture-patterns-event-driven-consequences': {
     prompt:
@@ -76,6 +81,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Los eventos te dan **desacoplamiento temporal** (el productor no necesita que los consumidores estén arriba) y permiten que nuevos consumidores se suscriban sin cambiar al productor. El precio es la consistencia eventual, la entrega at-least-once (un consumidor puede caerse después de hacer su trabajo pero antes de confirmar, así que el broker lo vuelve a entregar y los handlers deben ser idempotentes) y una depuración más difícil, porque el flujo ya no es un call stack. Brokers como Kafka solo ordenan los mensajes **dentro de una partition**, nunca de forma global.',
+    hint: 'Compara lo que te da un broker (desacoplamiento temporal) con lo que quita: garantías de entrega, consistencia, depuración y dónde se cumple realmente el orden en Kafka.',
   },
   'architecture-patterns-transactional-outbox': {
     prompt:
@@ -88,6 +94,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Escribir en dos sistemas sin una transacción compartida (el **problema de la doble escritura**, dual write) siempre puede fallar entre las escrituras. Publicar primero solo invierte la falla (un evento de una orden que nunca hizo commit); los reintentos en proceso no sobreviven a un crash. El outbox hace atómicos el cambio de estado y la intención de publicar, porque ambos son filas en una sola transacción local. Luego un relay (por polling o con change data capture, como Debezium) publica con semántica at-least-once, así que los consumidores deben ser idempotentes. El two-phase commit entre servicios es frágil, lento y rara vez lo soportan los brokers.\n\n**Dilo en voz alta:** "No puedes escribir de forma atómica en una base de datos y en un broker, así que escribo el evento en una tabla outbox en la misma transacción y dejo que un relay lo publique at-least-once, con consumidores idempotentes aguas abajo."',
+    hint: 'Es el problema de la doble escritura: busca la opción que hace que el cambio de estado y la intención de publicar se confirmen de forma atómica en una sola transacción local.',
   },
   'architecture-patterns-events-vs-commands': {
     prompt: '¿Cuál es la diferencia clave entre los mensajes `PlaceOrder` y `OrderPlaced`?',
@@ -99,5 +106,6 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un comando expresa **intención** y acopla al emisor con un receptor específico que es dueño de la decisión (puede decir que no). Un evento anuncia algo que **ya ocurrió**; al publicador no le importa ni sabe quién escucha, y eso es lo que hace gratis agregar un suscriptor nuevo (puntos de lealtad, analítica). Ambos pueden viajar por colas o por HTTP; el transporte no define la semántica. Nombrar los eventos en tiempo pasado mantiene visible la distinción en las revisiones de código.',
+    hint: 'Fíjate en el tiempo verbal de cada nombre, y pregúntate quién decide el resultado y cuántos receptores espera cada mensaje.',
   },
 };

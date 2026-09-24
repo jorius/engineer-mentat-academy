@@ -31,6 +31,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Good names answer *what* and *why* so comments become unnecessary: a predicate reads as a question (`isInactive`, `hasAccess`, `canRetry`), units live in the name (`MS_PER_DAY`, `lastLoginAt`), and the business number gets a name so it is not a magic `30`. `check` hides what is checked, comments that restate code drift out of date, and names that narrate the implementation are noise that must change whenever the code does.',
+    hint: 'Good names state what and why: predicates read as questions, units live in the name, and business numbers are not magic. Beware both cryptic and narrating names.',
   },
   {
     id: 'clean-code-positional-flags-to-options',
@@ -95,6 +96,7 @@ export function solution(request) {
     source: 'topic-list',
     explanation:
       'A call like `createUser(n, e, false, true, false)` is unreadable, and swapping two booleans compiles, type-checks and ships. A parameter object names every argument at the call site, makes order irrelevant, and destructuring defaults document the default behavior in the signature. Destructuring defaults only apply to `undefined`, so an explicit `false` is respected. Beyond three parameters, or with any boolean, prefer an options object. A boolean that switches between two *behaviors* (not two values) is a stronger smell: split it into two functions.',
+    hint: 'Reach for object destructuring with default values in the signature, and remember those defaults only apply when a field is `undefined`.',
   },
   {
     id: 'clean-code-pure-discount',
@@ -167,6 +169,7 @@ export function solution(cart, percent) {
     source: 'core-list',
     explanation:
       "The starter mutates the caller's cart, so the second call discounts already-discounted prices (22.5 becomes 20.25). A pure function depends only on its inputs and has no side effects, so calling it twice gives the same answer and it is trivially testable. Note that `{ ...cart }` alone is not enough: it is a shallow copy and `items` would still be shared, so each item is copied too.\n\nThis is the functional-core idea: keep calculations pure and push mutation and I/O to the edges. Immutability is also what makes React and Redux change detection by reference work.",
+    hint: 'Build new objects with `map` and spread instead of assigning to the input, and remember a spread copy of the cart is shallow: `items` would still be shared.',
   },
   {
     id: 'clean-code-function-split-signals',
@@ -188,6 +191,7 @@ export function solution(cart, percent) {
     source: 'topic-list',
     explanation:
       "A flag argument means the function does two things; split it into two named functions. Mixing calculation with I/O makes the logic impossible to test without mocks: extract the pure part. Section comments are extract-function candidates whose names are already written. A single return is a style choice (guard clauses with early returns are often clearer), and being widely used is a sign of a useful function, not a bad one. Functions should do one thing at one level of abstraction.",
+    hint: 'Ask whether each signal means the function does more than one thing or mixes levels of abstraction, rather than being a style choice or a sign of reuse.',
   },
   {
     id: 'clean-code-refactor-legacy-function',
@@ -211,5 +215,6 @@ export function solution(cart, percent) {
     source: 'topic-list',
     explanation:
       'Senior signal: refactoring is a risk-management exercise. Tests first, small steps, and a business reason the team and product can agree with.\n\n**Say this out loud:** "I pin current behavior with characterization tests, then extract pure logic from I/O in small PRs, so every step is behavior-preserving and reversible."',
+    hint: 'Cover the evidence that justifies the work, the safety net you add before touching it, how you separate pure logic from I/O, and how small each step is.',
   },
 ];

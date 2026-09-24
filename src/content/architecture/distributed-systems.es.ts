@@ -16,6 +16,7 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'Los microservicios son ante todo una herramienta de escalado organizacional: permiten que equipos independientes desplieguen de forma independiente. Sin esa presión, dominan sus costos.\n\n**Dilo en voz alta:** "Los microservicios resuelven el acoplamiento de equipos y de despliegues a cambio de los problemas de los sistemas distribuidos. Empiezo con un monolito modular con una propiedad de datos clara y extraigo un servicio cuando un límite de escalado, de confiabilidad o de equipo realmente lo exige."',
+    hint: 'Cubre qué resuelven realmente los microservicios (independencia de equipos y despliegues), cuánto le cuestan a un equipo chico, el antipatrón a evitar y disparadores concretos para dividir.',
   },
   'distributed-systems-shared-database': {
     prompt:
@@ -28,6 +29,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Cada microservicio debería ser dueño de sus datos y exponerlos solo a través de su API o de eventos (base de datos por servicio). Una tabla compartida filtra la estructura interna: renombrar una columna, agregar una restricción o cambiar un índice pasa a ser un release coordinado entre equipos, y un servicio puede saltarse las invariantes del otro. Si `invoicing` necesita datos de las órdenes, `orders` debería publicar eventos (e `invoicing` mantener su propio modelo de lectura) o exponer una API. El trade-off de consistencia va en sentido contrario: una base de datos compartida es fuertemente consistente, y justamente por eso resulta tentadora.',
+    hint: 'Piensa en qué se convierte el esquema de la tabla cuando dos servicios dependen de él, y qué le hace eso a desplegarlos de forma independiente.',
   },
   'distributed-systems-kafka-ordering-keys': {
     prompt:
@@ -40,6 +42,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Kafka solo garantiza el orden **dentro de una partition**. Sin key, los mensajes se reparten entre partitions y se consumen en paralelo, así que se pierde el orden de los eventos de cada orden. Usar como key la entidad cuyo orden importa (`orderId`) envía por hash todos sus eventos a una sola partition, mientras que las distintas órdenes se siguen repartiendo entre las 12, lo que mantiene el paralelismo. Una sola partition restauraría el orden, pero descarta el paralelismo que exige el enunciado (un solo consumidor para todo el topic), y además Kafka no permite reducir las partitions de un topic existente: habría que crear un topic nuevo y migrar. Los timestamps de distintos productores no son un orden confiable. Dos detalles más: mantén habilitado el productor idempotente para que los reintentos no reordenen ni dupliquen dentro de una partition, y recuerda que agregar partitions más adelante cambia el mapeo de key a partition.',
+    hint: 'Kafka ordena los mensajes solo dentro de una partition. Pregúntate cómo decide el productor en qué partition cae cada mensaje.',
   },
   'distributed-systems-kafka-consumer-groups': {
     prompt: 'Un topic tiene 4 partitions. Levantas 6 instancias consumidoras, todas en el mismo consumer group. ¿Qué pasa?',
@@ -51,6 +54,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Dentro de un consumer group, cada partition se asigna a **exactamente un** consumidor, así que la cantidad de partitions limita el paralelismo del grupo; los consumidores extra quedan ociosos hasta que un rebalance les asigna una partition (por ejemplo, cuando otra instancia muere). Distintos consumer groups reciben cada uno todos los mensajes de forma independiente, y así es como varios servicios se suscriben al mismo topic. Para escalar más un consumidor agregas partitions, teniendo en cuenta que eso cambia la ubicación de las keys.',
+    hint: 'Dentro de un consumer group, ¿cuántos consumidores pueden ser dueños de una misma partition al mismo tiempo?',
   },
   'distributed-systems-kafka-delivery-semantics': {
     prompt: '¿Qué afirmaciones sobre las garantías de entrega de Kafka son verdaderas? Selecciona todas las que apliquen.',
@@ -63,12 +67,14 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Hacer commit después de procesar es **at-least-once** (puede haber duplicados); hacer commit antes de procesar es **at-most-once** (puede haber pérdidas). El productor idempotente elimina los duplicados de los reintentos por partition usando IDs de productor y números de secuencia. Las transacciones de Kafka dan exactly-once solo para leer-procesar-escribir **dentro de Kafka**; en cuanto un efecto secundario sale de Kafka (una fila en una base de datos, un email, un pago), logras effectively-once haciendo idempotente al consumidor, por ejemplo guardando los IDs de mensajes procesados o el offset consumido en la misma transacción de base de datos. Los consumidores que exceden la cantidad de partitions quedan ociosos.\n\n**Dilo en voz alta:** "Diseño para at-least-once y hago idempotentes a los consumidores; exactly-once es una garantía interna de Kafka, y cualquier cosa con efectos secundarios externos necesita claves de deduplicación u offsets guardados de forma transaccional junto con la escritura."',
+    hint: 'Relaciona el momento del commit del offset con at-least-once frente a at-most-once, y pregúntate dónde termina la garantía exactly-once de Kafka cuando un efecto sale de Kafka.',
   },
   'distributed-systems-dlq-routing': {
     prompt:
       "Cada mensaje lista el resultado del handler en cada intento (`'ok'`, `'timeout'` o `'invalid'`; si la lista se acaba, se repite el último resultado). El consumidor debe:\n\n- marcar el mensaje como procesado ante `'ok'`;\n- reintentar una falla **transitoria** (`'timeout'`) hasta haber hecho `maxAttempts` intentos en total, y luego mandarlo a la dead-letter queue con la razón `'retries-exhausted'`;\n- mandar a la dead-letter queue una falla **permanente** (`'invalid'`) de inmediato, sin reintentar, con la razón `'invalid'`.\n\nCada entrada de dead-letter registra:\n```js\n{ id, reason, attempts }\n```\nLa implementación actual tiene dos bugs. Corrígelos.",
     explanation:
       'Bug 1: `attempt > maxAttempts` permite un intento de más (4 intentos con `maxAttempts = 3`). Bug 2: los errores permanentes se reintentan como si fueran transitorios. Reintentar un payload malformado o una validación fallida nunca puede tener éxito: solo quema tiempo, retrasa todos los mensajes que vienen detrás en una partition ordenada y castiga a las dependencias. Primero clasifica los errores: los transitorios (timeouts, 503, throttling) reciben reintentos acotados con backoff; los permanentes (validación, deserialización, rechazos de negocio 4xx) van directo a la dead-letter queue.\n\nUna entrada útil en la DLQ lleva el payload original más metadatos (error, cantidad de intentos, topic y offset de origen, correlation ID) para que alguien pueda inspeccionarla, corregirla y hacerle **redrive**. Alerta sobre la profundidad de la DLQ; una DLQ que nadie vigila es pérdida de datos con pasos extra.',
+    hint: 'Revisa el límite de reintentos con `maxAttempts = 3` contando los intentos, y clasifica cada resultado como transitorio o permanente antes de decidir si reintentar.',
   },
   'distributed-systems-poison-message': {
     prompt:
@@ -81,12 +87,14 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un mensaje que nunca se puede procesar bloquea todo lo que tiene detrás cuando el consumidor insiste en manejarlo antes de hacer commit. La dead-letter queue (o topic) es donde se estacionan esos mensajes con suficiente contexto para investigarlos y hacerles redrive después. Agregar consumidores no ayuda, porque la partition pertenece a un solo consumidor, y reintentar una falla determinista nunca tiene éxito. SQS lo ofrece de forma nativa con una redrive policy (`maxReceiveCount`); en Kafka lo implementas en el consumidor o en el framework.',
+    hint: 'Una falla determinista nunca funciona al reintentar, y la partition pertenece a un solo consumidor. ¿Dónde puede apartar ese mensaje para que el resto siga fluyendo?',
   },
   'distributed-systems-idempotency-dedupe': {
     prompt:
       'Un endpoint de webhook recibe eventos at-least-once. Implementa `solution(events)` que devuelva los `id` de los eventos a procesar, conservando solo la **primera** aparición de cada `idempotencyKey`, en orden de llegada. Los eventos sin `idempotencyKey` no se pueden deduplicar y siempre se conservan.',
     explanation:
       'La entrega at-least-once significa que los duplicados son normales, así que el consumidor los convierte en no-ops recordando qué keys ya manejó. Un `Set` da verificaciones de pertenencia en O(1) y una sola pasada preserva el orden de llegada. En producción el conjunto de "vistos" no está en memoria: es una tabla con una restricción de unicidad sobre la key (insertar-o-ignorar dentro de la misma transacción que el efecto secundario) o un `SET NX` de Redis con un TTL al menos tan largo como la ventana de reintentos del productor.',
+    hint: 'Mantén un `Set` con las claves ya vistas y haz una sola pasada en orden de llegada; los eventos sin clave se saltan la verificación.',
   },
   'distributed-systems-idempotency-keys-api': {
     prompt:
@@ -102,12 +110,14 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'POST no es idempotente por definición, y un timeout no le dice al cliente si el cobro ocurrió. Las idempotency keys hacen seguro un reintento haciendo que el **servidor** recuerde los resultados.\n\n**Dilo en voz alta:** "Los reintentos solo son seguros en operaciones idempotentes, así que para POST exijo una idempotency key: el servidor registra la key con el hash de la solicitud y la respuesta, reproduce la respuesta guardada en un reintento, y una restricción de unicidad hace que los duplicados concurrentes sean seguros ante carreras."',
+    hint: 'Cubre quién genera la clave, qué guarda el servidor con ella, cómo se responde un reintento, cómo los duplicados concurrentes quedan a salvo de carreras y cuánto viven las claves.',
   },
   'distributed-systems-backoff-full-jitter': {
     prompt:
       'Implementa un calendario de demoras de reintento usando **backoff exponencial con tope y full jitter**. Para el reintento `i` (empezando en 0), el techo es `baseMs` duplicado `i` veces, pero nunca más que `capMs`; la demora es un valor aleatorio entre 0 y ese techo, redondeado hacia abajo a un milisegundo entero.\n\n`draws` reemplaza a una función aleatoria con semilla: `draws[i]` es el valor en `[0, 1)` que se usa para el reintento `i`, lo que hace que el calendario sea determinista en las pruebas. Devuelve las `retries` demoras en orden.',
     explanation:
       'El backoff exponencial le da a una dependencia en problemas espacio para recuperarse; el tope mantiene acotada la espera en el peor caso. El **jitter** es la parte que la gente olvida: sin él, todos los clientes que fallaron en el mismo momento reintentan en el mismo momento (un thundering herd) y recrean el pico que causó la falla. Full jitter (`random(0, min(cap, base * 2^i))`) reparte los reintentos por toda la ventana y, según el análisis de AWS, completa el trabajo total con la menor cantidad de llamadas. El tope debe aplicarse **antes** del jitter: si se aplica después (`min(cap, random * base * 2^i)`), la mayoría de los reintentos tardíos queda fijada exactamente en `cap`, los clientes se vuelven a sincronizar en el tope y se pierde el jitter.\n\nRecibir la aleatoriedad como entrada (un generador con semilla o valores ya sorteados) es lo que hace que la lógica de reintentos se pueda probar unitariamente. Además, acota el total: una cantidad máxima de intentos o un plazo límite, respeta `Retry-After` en 429/503 y reintenta solo operaciones idempotentes.\n\n**Dilo en voz alta:** "Los reintentos usan backoff exponencial con tope y full jitter para evitar tormentas de reintentos sincronizadas, un presupuesto acotado de intentos, y solo en operaciones idempotentes o en solicitudes que llevan una idempotency key."',
+    hint: 'Calcula primero el techo con `Math.min` entre el cap y la base duplicada, luego escálalo por el draw y usa `Math.floor`. El orden entre el cap y el jitter importa.',
   },
   'distributed-systems-what-to-retry': {
     prompt:
@@ -121,11 +131,13 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Reintenta cuando la falla es **transitoria** *y* repetir la solicitud es **seguro**. Un 503 en un GET cumple ambas. Un 429 es transitorio por definición y el servidor te dijo cuándo volver. Una falla de red en un POST es segura de reintentar solo porque la idempotency key le permite al servidor deduplicar. Un 400 es determinista: la misma solicitud falla de la misma forma. Un POST que dio timeout sin key puede haber tenido éxito ya, así que reintentar puede cobrar dos veces; expón el error o reconcilia en su lugar. Además, pon un circuit breaker alrededor de la dependencia para que los reintentos se detengan cuando claramente está caída.',
+    hint: 'Reintenta solo cuando la falla es transitoria y repetir la solicitud es seguro; pregúntate si una solicitud podría haber tenido éxito ya.',
   },
   'distributed-systems-correlation-propagation': {
     prompt:
       "`solution(incoming, ids)` construye los headers para una llamada hacia abajo. Reglas:\n\n- Reutiliza el correlation ID de quien llama desde el header `x-correlation-id`, buscado **sin distinguir mayúsculas de minúsculas**; si falta o está vacío, usa `ids.correlationId`. Envíalo siempre como `x-correlation-id` en minúsculas.\n- Si el `traceparent` W3C entrante es válido (`<version>-<trace-id>-<parent-id>-<flags>`: campos hex en minúsculas de 2, 32, 16 y 2 caracteres), envía un `traceparent` **hijo**: misma versión, trace-id y flags, pero con `ids.spanId` como parent-id. Si falta o es inválido, omite `traceparent`.\n\nCorrige la implementación actual.",
     explanation:
       'Los nombres de los headers HTTP no distinguen mayúsculas de minúsculas. `req.headers` de Node los pasa a minúsculas por ti, pero los headers que vienen de colas, eventos de Lambda, fixtures de prueba u otros frameworks a menudo no, así que una búsqueda que distingue mayúsculas inicia en silencio un correlation ID nuevo y parte en dos los logs de una misma solicitud.\n\nUn correlation ID une las líneas de log; una traza agrega estructura. En W3C Trace Context el **trace-id** se mantiene constante durante toda la solicitud, mientras que cada salto envía **su propio span ID** como parent-id, y así es como un backend de tracing (OpenTelemetry, Jaeger, X-Ray) reconstruye el árbol de llamadas. Reenviar el `traceparent` entrante sin cambios colgaría el span de abajo del padre equivocado. En la práctica el SDK de OpenTelemetry hace esta propagación por ti; el principio que hay que saber es: acéptalo, valídalo, genéralo si falta, regístralo en cada línea de log y reenvíalo en cada llamada y mensaje salientes.',
+    hint: 'Los nombres de header no distinguen mayúsculas, así que busca las claves con `toLowerCase`. Valida `traceparent` con una regex y cambia solo el parent-id por el nuevo span.',
   },
 };

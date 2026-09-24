@@ -24,6 +24,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Neither shape is dogma. The pyramid comes from an era of slow UI tests; the trophy (Kent C. Dodds) reflects that modern integration tests are cheap enough to be the bulk of the suite. The senior move is diagnosing where confidence is missing and moving test effort there.\n\n**Say this out loud:** "I optimise for confidence per minute of CI: static types at the base, integration tests as the bulk because that is where our bugs live, unit tests for dense pure logic, and a thin layer of E2E for the journeys that make money."',
+    hint:
+      'Compare what each shape optimises for and match it to where this team\'s bugs actually appear; a strong answer also covers tooling, the E2E suite and how you would measure success.',
   },
   {
     id: 'testing-strategies-what-to-mock',
@@ -45,6 +47,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Mock what is **slow, non-deterministic, or outside your control**: network calls to third parties and the clock. Do not mock pure code you own: `calculateTax()` is fast and deterministic, and mocking it means the test no longer checks that tax is actually applied. Spying on private methods couples the test to the internal structure, so a harmless refactor breaks it; with a real `#private` method it is not even possible, because `#buildLineItems` is not a property that `vi.spyOn` / `jest.spyOn` can replace. A useful rule: mock at the boundaries of the system (network, time, randomness, filesystem), not between your own units.',
+    hint:
+      'Ask which collaborators are slow, non-deterministic or outside your control, and which are your own code that the test should really exercise.',
   },
   {
     id: 'testing-unit-test-doubles',
@@ -66,6 +70,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Stubs provide canned answers so the code under test can run; fakes are working simplified implementations (an in-memory repository); `vi.spyOn` / `jest.spyOn` wrap a real method, record calls and by default still call through, which is not the case here because `send` is a standalone `vi.fn()`. What you call `send` depends on the vocabulary: Jest and Vitest call it a mock function, while Meszaros\'s *xUnit Test Patterns* (and Fowler\'s "Mocks Aren\'t Stubs") call a double that records calls for assertions afterwards a **test spy**, and keep **mock** for a double whose expectations are set up front and verified by the double itself. Either way, the test verifies the **interaction**. Interaction assertions are right when the side effect *is* the behaviour (an email must be sent); prefer state assertions otherwise.',
+    hint:
+      'Look at what `vi.fn()` keeps track of besides returning a value, and at what the `expect` line actually asserts on.',
   },
   {
     id: 'testing-unit-fix-deep-equal',
@@ -110,6 +116,8 @@ export function solution(a: unknown, b: unknown): boolean {
     source: 'topic-list',
     explanation:
       'Four problems need handling. (1) It only walks the keys of `a`, so extra keys on `b` (including extra array elements) are ignored: the comparison is a *subset* check. (2) `===` says `NaN !== NaN`; `Object.is` treats them as equal. (3) `[]` and `{}` both have zero keys, so they compare equal unless you check `Array.isArray` on both sides. (4) The obvious fix for (1), comparing key **counts**, is not enough: `{ a: 1, b: undefined }` and `{ a: 1, c: undefined }` both read `undefined` for the missing key, so you must check that each key actually exists on the other side.\n\nThis last case is one of the gaps between Jest/Vitest `toEqual` (which ignores `undefined` properties) and `toStrictEqual` (which does not). A helper this simple still misses `Date`, `Map`, `Set` and class instances, which is why you should use the framework matcher rather than roll your own.',
+    hint:
+      'Check whose keys the recursion walks, how `===` treats `NaN`, and what tells an array apart from an object with the same number of keys.',
   },
   {
     id: 'testing-unit-fix-fake-timers',
@@ -220,6 +228,8 @@ export function solution(plan: Step[], tickMs: number): string[] {
     source: 'topic-list',
     explanation:
       'The buggy `tick` takes a **snapshot** of due timers once, runs them in insertion order, and only moves `now` at the end. That breaks three guarantees: order by due time, `now` equal to the due time inside the callback (so a nested `setTimeout(fn, 50)` is scheduled relative to the wrong base), and timers created during the tick being picked up. The fix is a loop: repeatedly pick the earliest due timer (strict `<` keeps ties in scheduling order), advance `now` to its due time, remove it, run it, and re-scan, because the callback may have added timers.\n\nThis is how `@sinonjs/fake-timers` (behind `vi.useFakeTimers()` and Jest modern timers) implements `tick`, and why `vi.advanceTimersByTime(200)` runs a retry scheduled at +50 ms from inside a +100 ms timer.\n\n**Say this out loud:** "Fake timers make time an input to the test: I control the clock, advance it deterministically, and assert on what fired, instead of sleeping and hoping. The key invariant is that time advances timer by timer, not in one jump."',
+    hint:
+      'Think about what breaks when the due list is computed once up front: firing order, the value of `now` inside a callback, and timers added mid-tick.',
   },
   {
     id: 'testing-integration-flaky-suite',
@@ -242,6 +252,8 @@ export function solution(plan: Step[], tickMs: number): string[] {
     source: 'topic-list',
     explanation:
       'Flakiness has causes: **shared state** between tests (order-dependent data, parallel workers writing the same rows), **timing assumptions** (fixed sleeps that are long enough on a laptop but not on a loaded CI runner), and **environment dependence** (clock, timezone, locale, random seeds). Isolating state, waiting for conditions instead of durations, and injecting the clock remove those causes. Two caveats: truncating in `beforeEach` only isolates tests that run serially against one database, so parallel workers each need their own database or schema (keyed by `VITEST_POOL_ID` or `JEST_WORKER_ID`); and a timezone mismatch on its own fails every CI run, while reading the real clock fails intermittently (a run that crosses midnight, a month end or a DST change). Retries and huge timeouts make the pipeline green while the non-determinism (which may be a real race in production code) stays. If you must quarantine a flaky test, track it as a bug with an owner.',
+    hint:
+      'Sort each option by whether it removes a source of non-determinism (shared state, timing, environment) or only makes the pipeline tolerate it.',
   },
   {
     id: 'testing-backend-testcontainers',
@@ -263,6 +275,8 @@ export function solution(plan: Step[], tickMs: number): string[] {
     source: 'topic-list',
     explanation:
       'Mocks only verify what you *think* the database does. Asserting SQL strings re-states the implementation and still never runs the migration. A substitute engine (SQLite, H2, an ORM mock) diverges from production semantics (NULL ordering, JSON operators, locking, collations): SQLite, for example, puts `NULL` first in ascending order, and Postgres puts it last. Testcontainers starts a throwaway Docker container of the **same engine and version** per suite, so migrations and queries run for real, in seconds, and in CI. E2E would also catch it, but slower, later and with a much worse failure signal.',
+    hint:
+      'Ask which option actually executes your migrations and queries on the same engine and version that production uses.',
   },
   {
     id: 'testing-backend-contract-tests',
@@ -286,6 +300,8 @@ export function solution(plan: Step[], tickMs: number): string[] {
     source: 'topic-list',
     explanation:
       'Contract tests move integration feedback to the pipeline of the team that caused the break. Only fields the consumer actually uses are in the contract, so providers can evolve everything else freely.\n\n**Say this out loud:** "Consumer-driven contracts let each team verify compatibility in its own CI in minutes, so a shared end-to-end environment is no longer the only place we discover that two services disagree."',
+    hint:
+      'Think about who defines the expectations, where they get verified, and what gates a deploy; also say what contracts do not cover.',
   },
   {
     id: 'testing-frontend-rtl-query-priority',
@@ -306,6 +322,8 @@ export function solution(plan: Step[], tickMs: number): string[] {
     source: 'topic-list',
     explanation:
       'RTL\'s guiding principle is "the more your tests resemble the way your software is used, the more confidence they can give you". Users (and assistive technology) find a button by its role and accessible name, so `getByRole` is first in the recommended priority, followed by `getByLabelText`, `getByPlaceholderText` and `getByText`. `getByTestId` is an escape hatch for when nothing semantic exists, and CSS selectors couple the test to styling. A bonus: if `getByRole` cannot find your button, it is often an accessibility bug.',
+    hint:
+      'Remember RTL\'s guiding principle: query the way a user or assistive technology would find the element.',
   },
   {
     id: 'testing-frontend-implementation-details',
@@ -328,5 +346,7 @@ export function solution(plan: Step[], tickMs: number): string[] {
     source: 'topic-list',
     explanation:
       'Implementation details are things the user cannot observe: internal state, which hook holds it, which child receives which prop. Tests that assert on them give **false negatives** (they fail on a correct refactor) and **false positives** (state can be `true` while the dialog is not rendered). The two `getByRole` assertions check what the user sees and interacts with, through roles, so they survive refactors and fail only when behaviour breaks. `wrapper.state()` and shallow rendering are Enzyme APIs, and Enzyme has no official adapter for React 17 or later, so on a React 19 codebase these tests cannot even run. This is the core argument for React Testing Library over Enzyme-style shallow rendering.',
+    hint:
+      'For each assertion, ask whether a user could observe it on screen, or whether it depends on which hook or child component holds the state.',
   },
 ];

@@ -33,6 +33,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'A stack trace reads top-down from the **throw site** to the **entry point**. The message says an object was `undefined` when `.email` was read, not that `email` was missing (that would give `undefined`, not a `TypeError`). The top frame tells you where it crashed; the root cause is often a few frames down, where `sendReceipt` or `OrderService.complete` passed a missing customer. Paths under `dist` are compiled output: enable source maps (`node --enable-source-maps`, or upload them to your error tracker) so line numbers point at your TypeScript. The `async` frame shows the trace survived an `await` thanks to V8 async stack traces.',
+    hint:
+      'Read the frames top to bottom: the top is where it crashed, not necessarily where the bad value came from, and `dist` paths point at compiled code.',
   },
   {
     id: 'operations-production-debugging-correlation-ids',
@@ -73,6 +75,8 @@ export function solution(logs: LogLine[], correlationId: string): { path: string
     source: 'topic-list',
     explanation:
       'The correlation id is the only thing that ties lines from different services to one user request, so it must be generated (or accepted from `X-Request-Id` / `traceparent`) at the edge, propagated on every outgoing call and message, and attached to every log line (in Node, typically via `AsyncLocalStorage` so you do not thread it through every function). Note that the first error is in **payments**, while the error most people would see first is the `orders` one or the gateway `502`: sorting by time and reading the earliest error is how you find the root cause instead of the loudest symptom. Clock skew between hosts makes timestamps approximate; real tracing (OpenTelemetry spans with parent ids) fixes ordering by causality.',
+    hint:
+      'Filter by id, sort a copy by `ts`, then walk it once, skipping a service when it equals the previous entry.',
   },
   {
     id: 'operations-production-debugging-rollback-vs-flag',
@@ -96,6 +100,8 @@ export function solution(logs: LogLine[], correlationId: string): { path: string
     source: 'topic-list',
     explanation:
       'Interviewers look for ordering: stop the bleeding, then find the cause, then prevent recurrence. The migration detail tests whether you know rollbacks are not always free.\n\n**Say this out loud:** "First I mitigate: flag off, then roll back if needed, having checked the migration is backward compatible. Only once customers are safe do I dig into traces by correlation id, and afterwards we run a blameless postmortem."',
+    hint:
+      'Mitigate before you diagnose: think about the fastest safe lever among flag, rollback and migration, and how you communicate while you pull it.',
   },
   {
     id: 'operations-logging-structured-and-levels',
@@ -117,6 +123,8 @@ export function solution(logs: LogLine[], correlationId: string): { path: string
     source: 'topic-list',
     explanation:
       'Structured logs (pino, winston with a JSON formatter) are queryable: `route="/checkout" AND durationMs > 1000` is a filter, while interpolated strings need fragile regexes. Full bodies and headers leak passwords, `Authorization` tokens and personal data into a system with weaker access controls and long retention; redact by default. Levels are a contract with whoever reads the logs and whatever alerts on them: a client sending a bad request is expected behaviour (`info` or `warn`), and logging it as `error` buries real failures.',
+    hint:
+      'Think about who queries the logs later, what personal data or secrets may end up in them, and what each level should make someone do.',
   },
   {
     id: 'operations-logging-red-vs-use',
@@ -137,6 +145,8 @@ export function solution(logs: LogLine[], correlationId: string): { path: string
     source: 'topic-list',
     explanation:
       '**RED** (Rate, Errors, Duration, from Tom Wilkie) describes **request-driven services** from the caller\'s point of view: it is what you chart for the API endpoints. **USE** (Utilization, Saturation, Errors, from Brendan Gregg) describes **resources**: CPUs, disks, thread pools, connection pools, queues. Saturation is the metric teams forget and the one that explains latency: a pool at 100% utilization with 50 waiters shows up as slow requests in RED while CPU looks fine. The two compose: RED tells you *that* users are hurting, USE tells you *which resource* is the bottleneck.',
+    hint:
+      'Ask whether a connection pool is a request-driven service or a resource, and which method was designed for resources.',
   },
   {
     id: 'operations-logging-alert-fatigue',
@@ -159,6 +169,8 @@ export function solution(logs: LogLine[], correlationId: string): { path: string
     source: 'topic-list',
     explanation:
       'A page should mean "a human must act now to protect users". Symptom-based alerts on SLOs catch every cause that hurts users, including ones nobody predicted, while cause-based thresholds fire when nothing is wrong (CPU at 85% during a healthy batch job). Durations and multi-window burn rates filter flapping. Runbooks and a regular alert review keep the set honest. Muting without a replacement just hides the signal and is how real incidents get missed.\n\n**Say this out loud:** "I page on symptoms, not causes: SLO burn-rate alerts on errors and latency, each one actionable with a runbook, and everything else goes to a ticket or a dashboard."',
+    hint:
+      'A page should mean a user is hurting and someone must act now; judge each option by whether it keeps that signal or just silences it.',
   },
   {
     id: 'operations-performance-percentiles',
@@ -194,6 +206,8 @@ export function solution(samples: number[]): Percentiles {
     source: 'topic-list',
     explanation:
       'Two traps: `Array.prototype.sort()` without a comparator sorts **as strings** (`[100, 20, 3, 9]` stays in that order), and sorting in place mutates the caller\'s array, so copy first. Computing `(p * n) / 100` instead of `(p / 100) * n` keeps the arithmetic on integers and avoids floating-point surprises right at a rank boundary.\n\nWhy percentiles: the mean of the outlier test is about 60 ms, which describes no real request. p50 is the typical user, p99 is the tail that one in a hundred requests hits (and a page making 20 API calls hits it far more often). Note that p95 of 20 samples still hides the outlier: tail percentiles need enough samples. In production you cannot average percentiles across hosts; you aggregate **histograms** (Prometheus buckets, HDR histograms) and compute percentiles from the merged distribution.',
+    hint:
+      'Sort a copy with a numeric comparator (the default `sort` is lexicographic), then convert the 1-based rank to a 0-based index.',
   },
   {
     id: 'operations-performance-slow-page-approach',
@@ -217,5 +231,7 @@ export function solution(samples: number[]): Percentiles {
     source: 'notion',
     explanation:
       'The senior signal is the order of operations: measure, find the bottleneck, fix the cause, cache what is still expensive, and verify with field data. LCP measures loading, INP responsiveness, CLS visual stability; each has different levers, and mixing them up (lazy-loading the hero image, memoizing components to fix a slow image) is a classic mid-level mistake.\n\n**Say this out loud:** "I profile before I optimise. I break LCP into its phases, fix the real bottleneck, add caching in layers with a clear invalidation story, and prove the win with real-user metrics, not a single Lighthouse run."',
+    hint:
+      'Tie each metric to its usual causes (LCP to the critical path and server time, INP to main-thread work) and say how you would measure before and after.',
   },
 ];

@@ -23,6 +23,8 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       '`HttpOnly` hides the cookie from JavaScript, which limits the blast radius of XSS (the attacker can still act *as* the user from the page, but cannot steal the session for later). `Secure` is about transport only; the value is stored in plain text. `SameSite=Lax` sends the cookie on same-site requests and on top-level `GET` navigations, but not on cross-site `POST`s, iframes or `fetch`. CSRF never needs to *read* the cookie: the browser attaches it automatically, which is why `HttpOnly` does nothing against CSRF and `SameSite` does.',
+    hint:
+      'Pin down exactly what each attribute controls: script access, transport, or when the browser attaches the cookie.',
   },
   {
     id: 'security-web-basics-cors-misconceptions',
@@ -43,6 +45,8 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       'The same-origin policy is the protection; CORS is the server\'s opt-in to let a browser page from another origin **read** responses. Non-browser clients never check it, so authentication, authorization and rate limiting remain mandatory. Browsers refuse the `*` + credentials combination; you must echo a specific allowed origin. And "simple" requests (a form-encoded `POST` without custom headers) are **not** preflighted: the request is sent with cookies, only the response is hidden, which is exactly how classic CSRF works.',
+    hint:
+      'Ask who enforces CORS, and what happens when the caller is not a browser at all.',
   },
   {
     id: 'security-xss-escape-html',
@@ -81,6 +85,8 @@ export function solution(input: string): string {
     source: 'notion',
     explanation:
       'A single pass with a character class is the safest shape: each character is replaced exactly once. With chained `.replace` calls, `&` **must** go first; otherwise `<` becomes `&lt;` and then its `&` is escaped again into `&amp;lt;`. Escaping is **context-specific**: this function is correct for element text and quoted attributes, but not for unquoted attributes, URLs (`javascript:` survives escaping), inline `<script>` blocks or CSS. That is why you rely on the framework (React escapes text children) and only hand-roll escaping at the edges.',
+    hint:
+      'Think about the order of replacements: which character must be handled first so later entities are not escaped twice? A `replace` with a lookup map works well.',
   },
   {
     id: 'security-xss-escaping-vs-sanitizing',
@@ -102,6 +108,8 @@ export function solution(input: string): string {
     source: 'notion',
     explanation:
       '**Escaping** turns markup into inert text; it is the default for user data, but it would show the reviewer\'s `<b>` tags literally. When you must render user HTML, you **sanitize**: parse it and keep only an allowlist of tags, attributes and URL schemes. Blocklists fail: `<img src=x onerror=...>`, `<svg onload=...>` and `<a href="javascript:...">` contain no `<script>` tag, and regexes do not parse HTML. `encodeURIComponent` is for URL components, not HTML. Sanitize on output (or on both input and output) with a maintained library, and add a Content Security Policy as a second layer.',
+    hint:
+      'The HTML must still render as formatted markup, so ask which defence keeps safe tags while removing dangerous ones, and why blocklists fail.',
   },
   {
     id: 'security-xss-react-vectors',
@@ -123,6 +131,8 @@ export function solution(input: string): string {
     source: 'notion',
     explanation:
       'React escapes text children and attribute values, so `<p>{bio}</p>` and `<input defaultValue={bio} />` render the payload as inert text. `dangerouslySetInnerHTML` opts out of that on purpose: the name is the warning, and the input must be sanitized first. Setting `innerHTML` through a ref bypasses React completely, and a renderer that does not sanitize passes raw HTML such as `<img src=x onerror=...>` straight into the DOM. Assigning `window.location.href` is a DOM sink React never sees: `javascript:alert(1)` is a valid URL, and navigating to it runs the script in your origin. React 19 does block `javascript:` URLs in the props it renders (`href`, `src`, `action`, `formAction`), swapping them for one that throws (React 16.9 to 18 only warned in development), but that does not cover `location`, `window.open` or URLs you hand to non-React code. Allowlist `http:`/`https:` (and maybe `mailto:`) for user-provided URLs.',
+    hint:
+      'React escapes what it renders as text or attribute values; look for the places where HTML or a URL scheme bypasses that.',
   },
   {
     id: 'security-xss-csp-rollout',
@@ -146,6 +156,8 @@ export function solution(input: string): string {
     source: 'notion',
     explanation:
       'A CSP with `unsafe-inline` in `script-src` blocks almost nothing, because injected XSS is inline script. Nonces make "was this script put here by the server for this response?" checkable by the browser. Report-only mode is what makes the change safe on a legacy app.\n\n**Say this out loud:** "CSP is my second line of defence: a nonce-based `script-src` with `strict-dynamic`, rolled out in report-only mode first, so even if an escaping bug slips through, the injected script does not run."',
+    hint:
+      'Cover the target policy (nonces or hashes, `strict-dynamic`, no `unsafe-inline`), what to refactor first, and how report-only mode lets you roll out safely.',
   },
   {
     id: 'security-csrf-samesite-enough',
@@ -167,6 +179,8 @@ export function solution(input: string): string {
     source: 'notion',
     explanation:
       '`SameSite=Lax` (the default in modern Chromium when unset) blocks the classic hidden cross-site form `POST`, which removes most CSRF. The gaps: **same-site is not same-origin** (any subdomain under the same registrable domain, including one running an old CMS or user content, counts as same-site); `GET` requests on top-level navigation still carry the cookie, so any state-changing `GET` is exposed; and older clients may not enforce it. `SameSite=None` is the **least** strict value and requires `Secure`. CSRF tokens (synchronizer or double-submit) or an `Origin`/`Sec-Fetch-Site` check cost little and close those gaps. CSRF tokens do nothing against XSS: script running on your origin can read the token.\n\n**Say this out loud:** "SameSite is a strong default, not a complete defence: I keep GETs side-effect free and still verify a CSRF token or the Origin header on every state-changing request."',
+    hint:
+      'Recall what `Lax` still allows (top-level navigations) and how the browser defines "same site" compared with "same origin".',
   },
   {
     id: 'security-csrf-jwt-localstorage',
@@ -190,5 +204,7 @@ export function solution(input: string): string {
     source: 'notion',
     explanation:
       'This is a trade-off question. The weak answer is "localStorage is insecure"; the strong answer names both attacks, compares their blast radius, and picks cookie-based sessions with CSRF defences because XSS token theft is the worse failure.\n\n**Say this out loud:** "Tokens in localStorage swap CSRF for token theft on any XSS. I prefer an HttpOnly, Secure, SameSite cookie, ideally through a BFF, and then close CSRF with a token or Origin check."',
+    hint:
+      'Weigh the CSRF you avoid against what an XSS payload can do with a token it can read, then think about cookie flags, token lifetime and revocation.',
   },
 ];

@@ -21,6 +21,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Dependencies should point **downward** only: presentation → business → data access. A repository that knows about HTTP couples persistence to one delivery mechanism, so the same query cannot be reused from a queue consumer or a cron job, and it cannot be tested without faking a request. Pass `tenantId` in as a plain argument. Throwing a domain error and translating it to an HTTP status at the edge is the correct way to keep HTTP out of the service layer.',
+    hint: 'Follow the direction of each dependency: which layer ends up knowing about a detail of a layer above it?',
   },
   {
     id: 'architecture-patterns-hexagonal-ports',
@@ -44,6 +45,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'The core defines the ports it needs, in its own language (`findById`, `save`), and knows nothing about Postgres, HTTP or Kafka. Adapters live outside and depend inward: **driving** (primary) adapters such as a REST controller or a CLI call into the core, **driven** (secondary) adapters such as the Postgres repository or an email client implement ports the core defines. That is the dependency inversion principle applied at architecture scale, and it is why the core can be tested with in-memory adapters.',
+    hint: 'Ask who owns the contract in ports and adapters, and which way the dependency arrows must point relative to the core.',
   },
   {
     id: 'architecture-patterns-hexagonal-vs-layered',
@@ -66,6 +68,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Interviewers look for the dependency-direction insight and a pragmatic decision rule, not a diagram recital. Clean architecture and onion architecture are variations of the same inward-dependency idea.\n\n**Say this out loud:** "Hexagonal is dependency inversion at the architecture level: the domain owns the ports and every technology is an adapter. I use it when domain logic is rich or there are several entry points; for thin CRUD, simple layers are enough."',
+    hint: 'Cover the dependency direction in each style, what inverting it buys (testability, extra entry points), what it costs, and a rule for choosing.',
   },
   {
     id: 'architecture-patterns-bff-purpose',
@@ -89,6 +92,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'A BFF is a thin server-side layer owned by (or close to) a frontend team that calls downstream services, aggregates and trims the responses, and returns exactly what one experience needs, often in one round trip. That matters most on mobile where latency and payload size hurt. It complements a gateway rather than replacing cross-cutting edge concerns, and shared business rules belong in the domain services behind it: putting them in several BFFs duplicates logic that then drifts. A Next.js server or a GraphQL layer frequently plays the BFF role.',
+    hint: 'Think about how differently a mobile screen and a desktop page consume the same general-purpose API, and who shapes the payload.',
   },
   {
     id: 'architecture-patterns-bff-design',
@@ -112,6 +116,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'The senior signal is ownership and boundaries: a BFF is as much an organizational pattern (frontend teams own their backend contract) as a technical one.\n\n**Say this out loud:** "One BFF per experience, owned by the frontend team, thin by design: it orchestrates and shapes data, and business rules stay in the services behind it."',
+    hint: 'Cover how many BFFs, what belongs inside one versus in the services behind it, which team owns it, and how you handle slow or failing downstream calls.',
   },
   {
     id: 'architecture-patterns-event-driven-consequences',
@@ -134,6 +139,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Events buy **temporal decoupling** (the producer does not need consumers to be up) and let new consumers subscribe without changing the producer. The price is eventual consistency, at-least-once delivery (a consumer can crash after doing its work but before acknowledging, so the broker redelivers and handlers must be idempotent), and harder debugging because the flow is no longer a call stack. Brokers such as Kafka only order messages **within a partition**, never globally.',
+    hint: 'Weigh what a broker gives you (temporal decoupling) against what it takes away: delivery guarantees, consistency, debuggability, and where Kafka ordering actually holds.',
   },
   {
     id: 'architecture-patterns-transactional-outbox',
@@ -158,6 +164,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Writing to two systems without a shared transaction (the **dual-write problem**) can always fail between the writes. Publishing first just flips the failure (an event for an order that never committed); in-process retries do not survive a crash. The outbox makes the state change and the intent to publish atomic, because both are rows in one local transaction. A relay (polling or change data capture such as Debezium) then publishes with at-least-once semantics, so consumers must be idempotent. Two-phase commit across services is fragile, slow, and rarely supported by brokers.\n\n**Say this out loud:** "You cannot atomically write to a database and a broker, so I write the event to an outbox table in the same transaction and let a relay publish it at least once, with idempotent consumers downstream."',
+    hint: 'This is the dual-write problem: find the option that makes the state change and the intent to publish commit atomically in one local transaction.',
   },
   {
     id: 'architecture-patterns-events-vs-commands',
@@ -181,5 +188,6 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'A command expresses **intent** and couples the sender to a specific receiver who owns the decision (it can say no). An event announces something that **already happened**; the publisher does not know or care who listens, which is what makes adding a new subscriber (loyalty points, analytics) free. Both can travel over queues or HTTP; the transport does not define the semantics. Naming events in the past tense keeps the distinction visible in code reviews.',
+    hint: 'Look at the verb tense of each name, and ask who decides the outcome and how many receivers each message expects.',
   },
 ];

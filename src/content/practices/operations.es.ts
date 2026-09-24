@@ -13,12 +13,16 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un stack trace se lee de arriba hacia abajo, desde el **punto donde se lanzó el error** hasta el **punto de entrada**. El mensaje dice que un objeto era `undefined` cuando se leyó `.email`, no que faltara `email` (eso daría `undefined`, no un `TypeError`). El frame superior te dice dónde falló; la causa raíz suele estar unos frames más abajo, donde `sendReceipt` u `OrderService.complete` pasaron un cliente inexistente. Las rutas bajo `dist` son salida compilada: habilita los source maps (`node --enable-source-maps`, o súbelos a tu error tracker) para que los números de línea apunten a tu TypeScript. El frame `async` muestra que el trace sobrevivió a un `await` gracias a los async stack traces de V8.',
+    hint:
+      'Lee los frames de arriba hacia abajo: el de arriba es donde falló, no necesariamente de donde vino el valor malo, y las rutas `dist` apuntan a código compilado.',
   },
   'operations-production-debugging-correlation-ids': {
     prompt:
       'Las líneas de log de varios servicios se envían a un mismo almacén y llegan **desordenadas**. Cada línea lleva el `correlationId` que el gateway asignó a la solicitud entrante.\n\nImplementa `solution(logs, correlationId)` para que devuelva:\n\n- `path`: los servicios que manejaron esa solicitud, en orden de timestamp, colapsando los duplicados **consecutivos** (`orders, orders` se convierte en `orders`, pero `orders, payments, orders` se mantiene);\n- `firstError`: `"<service>: <msg>"` para la línea de nivel `error` más temprana de esa solicitud, o `null`.',
     explanation:
       'El correlation id es lo único que une las líneas de distintos servicios a una misma solicitud de usuario, así que se debe generar (o aceptar desde `X-Request-Id` / `traceparent`) en el borde, propagar en cada llamada y mensaje saliente, y adjuntar a cada línea de log (en Node, normalmente mediante `AsyncLocalStorage`, para no tener que pasarlo por cada función). Fíjate en que el primer error está en **payments**, mientras que el error que la mayoría vería primero es el de `orders` o el `502` del gateway: ordenar por tiempo y leer el error más temprano es como encuentras la causa raíz en lugar del síntoma más ruidoso. El desfase de reloj entre hosts hace que los timestamps sean aproximados; el tracing real (spans de OpenTelemetry con ids de padre) resuelve el orden por causalidad.',
+    hint:
+      'Filtra por id, ordena una copia por `ts` y recórrela una vez, saltando un servicio cuando es igual a la entrada anterior.',
   },
   'operations-production-debugging-rollback-vs-flag': {
     prompt:
@@ -34,6 +38,8 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'Los entrevistadores buscan el orden: detener la hemorragia, luego encontrar la causa y luego evitar que se repita. El detalle de la migración evalúa si sabes que los rollbacks no siempre son gratis.\n\n**Dilo en voz alta:** "Primero mitigo: apago el flag y, si hace falta, hago rollback, después de comprobar que la migración es compatible hacia atrás. Solo cuando los clientes están a salvo me meto en los traces por correlation id, y después hacemos un postmortem sin culpables."',
+    hint:
+      'Mitiga antes de diagnosticar: piensa en la palanca segura más rápida entre el flag, el rollback y la migración, y en cómo comunicas mientras la usas.',
   },
   'operations-logging-structured-and-levels': {
     prompt: '¿Cuáles de estas son buenas prácticas de logging para una API de Node.js en producción? Selecciona todas las que apliquen.',
@@ -46,6 +52,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Los logs estructurados (pino, winston con un formatter JSON) se pueden consultar: `route="/checkout" AND durationMs > 1000` es un filtro, mientras que las cadenas interpoladas necesitan regex frágiles. Los cuerpos y headers completos filtran contraseñas, tokens de `Authorization` y datos personales hacia un sistema con controles de acceso más débiles y retención larga; enmascara esos datos por defecto. Los niveles son un contrato con quien lee los logs y con lo que dispara alertas a partir de ellos: que un cliente envíe una solicitud incorrecta es comportamiento esperado (`info` o `warn`), y registrarlo como `error` entierra las fallas reales.',
+    hint:
+      'Piensa en quién consulta los logs después, qué datos personales o secretos pueden terminar en ellos y qué debería hacer alguien ante cada nivel.',
   },
   'operations-logging-red-vs-use': {
     prompt: 'Estás armando un dashboard para el **pool de conexiones de Postgres** que usa tu API (no para los endpoints de la API en sí). ¿Qué método encaja y qué graficas?',
@@ -57,6 +65,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '**RED** (Rate, Errors, Duration, de Tom Wilkie) describe los **servicios orientados a solicitudes** desde el punto de vista de quien llama: es lo que graficas para los endpoints de la API. **USE** (Utilization, Saturation, Errors, de Brendan Gregg) describe **recursos**: CPUs, discos, pools de hilos, pools de conexiones, colas. La saturación es la métrica que los equipos olvidan y la que explica la latencia: un pool al 100% de utilización con 50 solicitudes en espera se ve como solicitudes lentas en RED mientras la CPU se ve bien. Los dos se complementan: RED te dice *que* los usuarios están sufriendo, USE te dice *qué recurso* es el cuello de botella.',
+    hint:
+      'Pregúntate si un pool de conexiones es un servicio impulsado por solicitudes o un recurso, y qué método se diseñó para recursos.',
   },
   'operations-logging-alert-fatigue': {
     prompt:
@@ -70,12 +80,16 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un page debería significar "una persona tiene que actuar ya para proteger a los usuarios". Las alertas basadas en síntomas sobre los SLO atrapan todas las causas que afectan a los usuarios, incluidas las que nadie previó, mientras que los umbrales basados en causas se disparan cuando no pasa nada malo (CPU al 85% durante un job batch sano). Las duraciones y los burn rates de múltiples ventanas filtran las alertas intermitentes. Los runbooks y una revisión periódica de las alertas mantienen el conjunto honesto. Silenciar sin un reemplazo solo esconde la señal, y así es como se pasan por alto incidentes reales.\n\n**Dilo en voz alta:** "Hago page por síntomas, no por causas: alertas de burn rate del SLO sobre errores y latencia, cada una accionable y con un runbook, y todo lo demás va a un ticket o a un dashboard."',
+    hint:
+      'Un page debería significar que un usuario está sufriendo y que alguien tiene que actuar ya; juzga cada opción según si conserva esa señal o solo la silencia.',
   },
   'operations-performance-percentiles': {
     prompt:
       'Implementa `solution(samples)`, que recibe latencias de solicitudes en milisegundos (sin ordenar) y devuelve un objeto con las claves `p50`, `p95` y `p99`, usando el método de **rango más cercano** (nearest-rank): ordena de forma ascendente y el percentil p es el valor en el rango `ceil(p / 100 * n)`, contando desde 1. Para un array vacío, devuelve `null` en los tres. No mutes la entrada.',
     explanation:
       'Dos trampas: `Array.prototype.sort()` sin comparador ordena **como cadenas** (`[100, 20, 3, 9]` queda en ese orden), y ordenar in place muta el array de quien llama, así que primero haz una copia. Calcular `(p * n) / 100` en lugar de `(p / 100) * n` mantiene la aritmética en enteros y evita sorpresas de punto flotante justo en el límite de un rango.\n\nPor qué percentiles: la media del test con el valor atípico es de unos 60 ms, lo que no describe ninguna solicitud real. p50 es el usuario típico; p99 es la cola que alcanza una de cada cien solicitudes (y una página que hace 20 llamadas a la API la alcanza con mucha más frecuencia). Fíjate en que el p95 de 20 muestras todavía esconde el valor atípico: los percentiles de cola necesitan suficientes muestras. En producción no puedes promediar percentiles entre hosts; agregas **histogramas** (buckets de Prometheus, histogramas HDR) y calculas los percentiles a partir de la distribución combinada.',
+    hint:
+      'Ordena una copia con un comparador numérico (el `sort` por defecto es lexicográfico) y luego convierte el rango basado en 1 a un índice basado en 0.',
   },
   'operations-performance-slow-page-approach': {
     prompt:
@@ -91,5 +105,7 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'La señal senior es el orden de las operaciones: medir, encontrar el cuello de botella, corregir la causa, cachear lo que siga siendo costoso y verificar con datos de campo. LCP mide la carga, INP la capacidad de respuesta y CLS la estabilidad visual; cada una tiene palancas distintas, y confundirlas (hacer lazy-loading de la imagen principal, memoizar componentes para arreglar una imagen lenta) es un error clásico de nivel mid.\n\n**Dilo en voz alta:** "Perfilo antes de optimizar. Desgloso el LCP en sus fases, corrijo el verdadero cuello de botella, agrego caché en capas con una estrategia de invalidación clara y demuestro la mejora con métricas de usuarios reales, no con una sola ejecución de Lighthouse."',
+    hint:
+      'Relaciona cada métrica con sus causas habituales (LCP con la ruta crítica y el tiempo del servidor, INP con el trabajo en el hilo principal) y di cómo medirías antes y después.',
   },
 };

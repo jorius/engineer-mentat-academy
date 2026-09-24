@@ -22,6 +22,7 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       'A Builder is recognizable by a single creation method (`build()`/`create()`) and several configuration methods that usually return `this` so they chain. It exists to kill the *telescoping constructor* (`new Request(url, method, headers, undefined, 2000, true)`) and to let `build()` validate the whole object once. Returning `this` makes it fluent, but fluency alone is not the pattern: a Decorator returns a *new wrapper* with the same interface, and a Chain of Responsibility passes a request between handlers at run time.',
+    hint: 'Look at what each chained call returns and what the final call does; ask which pattern replaces a constructor with a long list of optional arguments.',
   },
   {
     id: 'design-patterns-vehicle-factory-falsy-defaults',
@@ -66,6 +67,7 @@ console.log(trailer.doors, trailer.wheels);`,
     source: 'notion',
     explanation:
       '`||` falls back on **any falsy value**, so a legitimate `0` doors or an explicit empty `state` is silently replaced by the default (4 and `"new"`). `??` only falls back on `null`/`undefined`, which is why `wheels: 0` survives on the trailer. `bike.type` is `"motorcycle"` because `Motorcycle` adds `type: "motorcycle"` to what it passes to `super` (the input only has `vehicleType`; putting it after `...options` would also let it override a caller-supplied `type`). In a factory that builds objects from external config this is a real data-corruption bug: prefer `??` or destructuring defaults (`{ doors = 4 }`), which also only apply for `undefined`.',
+    hint: 'Compare which values `||` treats as missing with which ones `??` does, and check what the subclass passes to `super`.',
   },
   {
     id: 'design-patterns-factory-registry-prototype-keys',
@@ -130,6 +132,7 @@ export function solution(options) {
     source: 'notion',
     explanation:
       "A plain object literal inherits from `Object.prototype`, so `creators['constructor']` is the `Object` function (which returns its argument unchanged), `creators['toString']` is a method, and `creators['__proto__']` is `Object.prototype` itself: not callable, so the factory throws. Any key that comes from user input or config must be looked up in a structure that only contains what you registered: a `Map`, an `Object.create(null)` dictionary, or an `Object.hasOwn(creators, type)` guard.\n\nThe registry itself is the right move: it turns the factory into something you extend by adding an entry rather than editing a `switch` (open-closed), and it lets plugins register their own types.\n\n**Say this out loud:** \"A factory-by-config map is how I keep creation open for extension, but the lookup must be an own-key lookup: a `Map` or `Object.hasOwn`, never a bare object index on untrusted input.\"",
+    hint: 'A plain object literal inherits keys from `Object.prototype`. Reach for a lookup that only sees own entries: a `Map` or an `Object.hasOwn` guard.',
   },
   {
     id: 'design-patterns-singleton-module-closure',
@@ -184,6 +187,7 @@ export function solution(calls) {
     source: 'notion',
     explanation:
       'In JavaScript the module system already gives you a singleton: a module body runs once and every importer gets the same bindings. A private `let instance` plus a lazy getter is the whole pattern; a class with a `static #instance` and a static `getInstance()` (TypeScript can also mark the constructor `private`; JavaScript cannot) is the same idea with more ceremony.\n\nThe cost of a singleton is hidden global state: tests share it and it is hard to swap. Prefer exporting a factory and injecting the instance where you can, and keep true singletons for things that must be unique per process (a connection pool, a logger).',
+    hint: 'Keep a module-level variable that survives between calls and only create the config the first time it is empty.',
   },
   {
     id: 'design-patterns-memoize-decorator-falsy-cache',
@@ -254,6 +258,7 @@ export function solution(inputs) {
     source: 'core-list',
     explanation:
       'The truthiness check treats a cached `0` (or `""`, `false`, `null`) as a miss, so falsy results are never served from cache. Check for **presence** (`Map#has`, or `Object.hasOwn(cache, key)`) instead of the value.\n\nA `Map` also avoids two other object-cache traps: keys are stringified (`1` and `"1"` collide) and inherited keys such as `"constructor"` look like hits. For multi-argument functions you need a key strategy (`JSON.stringify(args)` for primitives, nested `WeakMap`s for object arguments), and for long-lived processes a bound (LRU) so the cache is not a memory leak. Memoization is only safe for **pure** functions.',
+    hint: 'The cache check tests the stored value\'s truthiness. Check whether the key is present instead, for example with `Map#has`.',
   },
   {
     id: 'design-patterns-adapter-vs-facade',
@@ -275,6 +280,7 @@ export function solution(inputs) {
     source: 'notion',
     explanation:
       'The deciding fact is that the **target interface already exists** (`PaymentGateway`) and the class translates an incompatible one into it: that is an Adapter, and it is exactly what makes the vendor swappable. A Facade also simplifies, but it defines a *new* simplified front over a subsystem you usually own (`BillingService.charge()` over three internal APIs) and is not about matching an expected interface. Proxy and Decorator both keep the **same** interface as the wrapped object: a Proxy controls access (caching, lazy init, rate limiting), a Decorator adds behavior (retries, logging, `withRetry(fn)`, HOCs).',
+    hint: 'Ask whether the target interface already existed before this class, and whether the class keeps the wrapped object\'s interface or translates it into another.',
   },
   {
     id: 'design-patterns-observer-emitter',
@@ -385,6 +391,7 @@ export function solution(events) {
     source: 'notion',
     explanation:
       'The first test is the trap: the `once` wrapper removes itself from the array **during** `emit`. If `emit` iterates the live array, `splice` shifts `audit` into the index the loop already visited and it is skipped on the first order. Iterating a snapshot (`[...list]`) is what Node\'s `EventEmitter` does too.\n\nReturning an unsubscribe function (as Redux `subscribe` and React effects do) is the cleanest API because the caller does not need to keep a reference to the exact listener. In long-lived processes, forgotten subscriptions are the classic Observer memory leak, which is why Node warns past 10 listeners per event. One production detail the tests do not cover: a listener that throws aborts the loop and the listeners after it never run (Node\'s `emit` behaves the same way), so wrap each call in `try/catch` and report the error when one failing subscriber must not starve the rest.\n\n**Say this out loud:** "Observer decouples the publisher from its subscribers; the details that matter in production are snapshotting listeners during emit, always giving callers a way to unsubscribe, and isolating one listener\'s error from the rest."',
+    hint: 'Store listeners per event in a `Map` of arrays, have `on` return a closure that removes it, and think about what happens to the loop when `once` removes itself mid-`emit`.',
   },
   {
     id: 'design-patterns-strategy-map-shipping',
@@ -423,6 +430,7 @@ export function solution(method: string, weightKg: number): number | null {
     source: 'notion',
     explanation:
       'Strategy makes each algorithm a value you can pick at run time. In JavaScript a strategy is usually just a function, so the "pattern" is a lookup table of functions. Adding `overnight` means adding one entry, not editing a growing `switch` in every place that prices shipping: that is the open-closed principle in practice. Sort comparators and pluggable auth or payment providers are the same idea.',
+    hint: 'Use a `Map` from method name to a pricing function and look the method up; an unknown name, including an inherited key, has no entry.',
   },
   {
     id: 'design-patterns-command-undo',
@@ -521,6 +529,7 @@ export function solution(ops) {
     source: 'notion',
     explanation:
       'Command turns an action into an object, so it can be stored, queued, logged, retried or reversed. The subtle part is that `undo` needs the state captured at `execute` time: `delete` must remember **what** it removed (here only 3 characters, not 5), otherwise undo cannot restore it. The same shape appears in job queues (a serialized command handed to a worker) and in Redux, where actions are plain-data messages that can be logged and replayed (Redux\'s style guide models them as events rather than commands).',
+    hint: 'Each command must capture at `execute` time whatever its `undo` needs, such as the characters actually removed. Treat the history as a stack.',
   },
   {
     id: 'design-patterns-over-patterning',
@@ -544,5 +553,6 @@ export function solution(ops) {
     source: 'notion',
     explanation:
       'Senior signal: naming the pattern is easy; knowing when it is **not** worth its indirection is the skill. Over-patterning is a smell, and "extensible" is only a benefit for extensions you will actually make.\n\n**Say this out loud:** "I justify a pattern by the problem it solves. With one email channel this is indirection with no payoff; I would start with a plain function and introduce a strategy map when the second channel is real."',
+    hint: 'Judge each abstraction by the concrete change it absorbs today, name the cost of hidden global state, and say what real signal would justify adding a pattern later.',
   },
 ];
