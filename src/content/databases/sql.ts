@@ -47,6 +47,7 @@ ORDER BY spent DESC, c.name`,
     source: 'topic-list',
     explanation:
       'An inner join would drop Tom. `COALESCE` turns the `NULL` sum into 0. Group by `c.id`, not only by `name`, so two customers who share a name are not merged; `c.name` is also listed in the `GROUP BY` so the query is valid on every engine (Postgres and MySQL 5.7+ would accept `GROUP BY c.id` alone, because `name` is functionally dependent on the primary key).',
+    hint: 'Think about which join keeps customers that have no matching orders, and what `SUM` returns when there is nothing to add up.',
   },
   {
     id: 'sql-countries-over-threshold',
@@ -67,6 +68,7 @@ HAVING SUM(o.total) > 250`,
     source: 'topic-list',
     explanation:
       '`WHERE` filters rows before aggregation; `HAVING` filters groups after it. Here `HAVING` drops CO (240). Filtering single orders with `WHERE o.total > 250` would instead keep only Mia\'s 300 order and report 300, not 320. Putting `SUM(o.total) > 250` in `WHERE` is an error (SQLite: "misuse of aggregate"; Postgres: "aggregate functions are not allowed in WHERE") because the aggregate does not exist yet at that stage.',
+    hint: 'Ask whether the threshold applies to single orders or to each country\'s total, and which clause runs after aggregation.',
   },
   {
     id: 'sql-null-not-equal-trap',
@@ -86,6 +88,7 @@ WHERE manager_id IS NULL OR manager_id <> 1`,
     source: 'topic-list',
     explanation:
       'SQL uses three-valued logic: `NULL <> 1` is `NULL` (unknown), not `true`, and `WHERE` keeps only rows where the predicate is `true`. So `WHERE manager_id <> 1` silently drops Ada. Handle the `NULL` explicitly with `IS NULL OR ...`, or use the null-safe operator of your engine: `IS NOT 1` in SQLite, `IS DISTINCT FROM 1` in Postgres, `NOT (manager_id <=> 1)` in MySQL.',
+    hint: 'Remember how a comparison with `NULL` evaluates under three-valued logic, and what `WHERE` does with an unknown result.',
   },
   {
     id: 'sql-not-in-with-null-subquery',
@@ -107,6 +110,7 @@ WHERE NOT EXISTS (
     source: 'topic-list',
     explanation:
       'The tempting `WHERE id NOT IN (SELECT manager_id FROM employees)` returns **zero rows**. `x NOT IN (1, 2, 4, NULL)` expands to `x <> 1 AND x <> 2 AND x <> 4 AND x <> NULL`; the last term is unknown, so the whole predicate can never be `true`. `NOT EXISTS` (or `LEFT JOIN ... WHERE r.id IS NULL`) is null-safe and is also the form optimizers turn into an anti-join most reliably. If you must use `NOT IN`, filter the subquery with `WHERE manager_id IS NOT NULL`.\n\n**Say this out loud:** "I default to `NOT EXISTS` for anti-joins, because a single `NULL` in a `NOT IN` subquery makes the whole predicate unknown and the query returns nothing."',
+    hint: 'Think about what one `NULL` in the subquery list does to `NOT IN`, and reach for an anti-join shape instead.',
   },
   {
     id: 'sql-employee-earns-more-than-manager',
@@ -130,6 +134,7 @@ WHERE e.salary > m.salary`,
     source: 'topic-list',
     explanation:
       'A self-join aliases the same table twice: `e` is the employee row and `m` is the manager row found through `e.manager_id`. An inner join is right here because an employee without a manager (Ada) cannot out-earn one. Eve earns exactly what Dee earns, so `>` excludes her; `>=` would be a different question. Note that Finn has no department, which does not matter because departments are not joined.',
+    hint: 'The manager is another row of the same table: alias `employees` twice and join through `manager_id`.',
   },
   {
     id: 'sql-headcount-count-variants',
@@ -150,6 +155,7 @@ FROM employees`,
     source: 'topic-list',
     explanation:
       '`COUNT(*)` counts rows. `COUNT(col)` counts rows where `col` is not `NULL`, so Ada is skipped. `COUNT(DISTINCT col)` also ignores `NULL` and collapses duplicates: the manager ids are 1, 2 and 4. Every aggregate except `COUNT(*)` ignores `NULL`s, which is also why `AVG(col)` is not the same as `SUM(col) / COUNT(*)`.',
+    hint: 'Recall how `COUNT(*)`, `COUNT(col)` and `COUNT(DISTINCT col)` each treat `NULL`s and duplicates.',
   },
   {
     id: 'sql-payroll-share-integer-division',
@@ -174,6 +180,7 @@ GROUP BY d.id, d.name`,
     source: 'topic-list',
     explanation:
       'The payroll is 980. Engineering has 510 and Sales 330. In SQLite, Postgres and SQL Server, `INTEGER / INTEGER` is integer division, so `SUM(e.salary) / 980 * 100` gives `0 * 100 = 0` for both. Multiply first (`51000 / 980 = 52`), or cast one side to a real (`SUM(e.salary) * 100.0 / ...`) and truncate at the end. MySQL is the odd one out: its `/` always returns a decimal, and `DIV` is integer division. The scalar subquery gives the denominator without a second pass in application code.',
+    hint: 'Watch what `INTEGER / INTEGER` does before you scale to a percentage, and get the company total from a scalar subquery.',
   },
   {
     id: 'sql-running-total-by-date',
@@ -201,6 +208,7 @@ ORDER BY o.created_at`,
     source: 'topic-list',
     explanation:
       'The correlated subquery sums every order dated on or before the current one. It works on any engine but is O(n²): each row rescans the table (an index on `created_at` makes each rescan a range scan, which helps but does not change the shape). With window functions (SQLite 3.25+, Postgres, MySQL 8) write `SUM(total) OVER (ORDER BY created_at)`, which computes it in one ordered pass. If dates could repeat, the default `RANGE` frame would give tied rows the same total; add a tiebreaker and `ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` for a strict per-row total.',
+    hint: 'For each order, sum every order dated on or before it: a correlated subquery or a window `SUM` with `ORDER BY`.',
   },
   {
     id: 'sql-salary-bands-case',
@@ -229,6 +237,7 @@ GROUP BY band`,
     source: 'topic-list',
     explanation:
       '`CASE` evaluates its `WHEN` branches top to bottom and stops at the first match, so the second branch only needs `< 150`. Grouping by the `CASE` expression (or its alias, which SQLite, Postgres and MySQL all allow in `GROUP BY`) turns a derived value into a group key. A band with no employees would simply be absent; to show it with 0 you would left-join from a list of bands.',
+    hint: 'Derive the band with a `CASE` expression, remembering its branches are checked top to bottom, then group by it.',
   },
   {
     id: 'sql-bare-column-group-by',
@@ -253,6 +262,7 @@ GROUP BY band`,
     source: 'topic-list',
     explanation:
       'Standard SQL only allows columns in the select list that are grouped, aggregated, or functionally dependent on the group key (Postgres accepts non-grouped columns of a table whose primary key is grouped). SQLite has a documented special case: with a single `MIN()` or `MAX()`, bare columns come from the row that produced the extreme value; with ties, or with any other aggregate, the row is arbitrary. MySQL without `ONLY_FULL_GROUP_BY` returns an arbitrary value. The portable answer is a correlated subquery, a join to a grouped subquery, or `RANK()` over a partition.\n\n**Say this out loud:** "A bare column in a grouped query is non-portable and non-deterministic on ties; I solve greatest-per-group with a window function or a join back to the grouped max."',
+    hint: 'Recall the standard rule for non-aggregated columns in a grouped query, and remember that engines differ in how strictly they enforce it.',
   },
   {
     id: 'sql-top-earner-per-department-ties',
@@ -281,6 +291,7 @@ ORDER BY department, e.name`,
     source: 'topic-list',
     explanation:
       'This is the greatest-n-per-group problem. Options: a correlated subquery against the per-department max (above), a join to `SELECT dept_id, MAX(salary) ... GROUP BY dept_id`, or `RANK() OVER (PARTITION BY dept_id ORDER BY salary DESC) = 1` in a subquery. The tie rule decides the function: `RANK`/`DENSE_RANK` keep both Dee and Eve, `ROW_NUMBER` picks one arbitrarily. A bare `name` next to `MAX(salary)` would also return only one of them. Finn has `dept_id NULL`, so the inner join drops him, and `x.dept_id = NULL` would never match anyway.\n\n**Say this out loud:** "First I ask how ties should behave, because that decides between `ROW_NUMBER` and `RANK`; then I pick a window function or a join to the grouped max."',
+    hint: 'This is greatest-n-per-group: compare each salary with its department\'s max, and decide how ties must behave.',
   },
   {
     id: 'sql-composite-index-leftmost-prefix',
@@ -303,6 +314,7 @@ ORDER BY department, e.name`,
     source: 'topic-list',
     explanation:
       'A composite B-tree is sorted by `customer_id`, then by `created_at` within each customer. It can seek on any **leftmost prefix** of its columns: equality on `customer_id` alone, or equality then a range on `created_at`. Within one customer the entries are already in `created_at` order, so `ORDER BY created_at DESC LIMIT 10` walks the index backwards and stops after 10 rows with no sort step. Filtering on `created_at` alone skips the leading column, so there is no contiguous range to seek. Skip scan (Oracle, MySQL 8.0.13+, SQLite, Postgres 18) can turn it into one seek per distinct `customer_id`, which pays off only when the leading column has few distinct values, not for a customer id. In `customer_id > 7 AND created_at = ...` the range on the first column ends the contiguous prefix: a classic B-tree seeks to `customer_id > 7` and checks `created_at` on every index entry after it (Postgres 18 skip scan can re-seek per customer instead, again only worthwhile with few distinct customers). Rule of thumb: equality columns first, then the range or sort column.\n\n**Say this out loud:** "I order composite index columns as equality predicates first, then the range or `ORDER BY` column, because the index can only seek on a leftmost prefix and a range stops the prefix."',
+    hint: 'Picture the index sorted by `customer_id`, then by `created_at` inside each customer, and ask which filters map to one contiguous slice.',
   },
   {
     id: 'sql-like-leading-wildcard',
@@ -327,6 +339,7 @@ ORDER BY department, e.name`,
     source: 'topic-list',
     explanation:
       "`LIKE 'ana%'` is rewritten as the range `email >= 'ana' AND email < 'anb'`, a seek. `'%@example.com'` could start anywhere, so the engine must test every row (at best a full index scan). Fixes for suffix search: index a reversed copy of the column and search `LIKE reverse('%@example.com')` as a prefix, store the domain in its own indexed column, or use a trigram index (`pg_trgm` GIN in Postgres) or full-text search for infix matches. Engine caveats: prefix `LIKE` also needs a compatible collation (Postgres needs `text_pattern_ops` under a non-C locale; SQLite needs the index collation to match its case-insensitive `LIKE`).",
+    hint: 'Think about what a B-tree needs to start a seek, and whether each pattern gives it a known first key.',
   },
   {
     id: 'sql-covering-index-tradeoffs',
@@ -349,6 +362,7 @@ ORDER BY department, e.name`,
     source: 'topic-list',
     explanation:
       'The senior signal is treating an index as a trade: design it for the exact access path (filter, order, projection), then pay for it on every write. The leftmost-prefix rule means the new composite index makes the old single-column one redundant.\n\n**Say this out loud:** "I design the index for the whole access path, filter, then sort, then the projected columns, so the query becomes a single index range read; and I remember every index I add is paid for on every write."',
+    hint: 'Cover what makes an index-only scan possible, how key order can also serve `ORDER BY ... LIMIT`, and what every extra index costs on writes.',
   },
   {
     id: 'sql-n-plus-one-at-sql-layer',
@@ -373,6 +387,7 @@ ORDER BY department, e.name`,
     source: 'topic-list',
     explanation:
       'This is the N+1 pattern: one query for the parent list plus one per parent. Each statement pays a network round trip, parsing and planning, so latency grows linearly with N even when every query is fast. The fix removes round trips: one `JOIN`, or two queries total (parents, then `IN (...)` for children, which is what ORM eager loading and GraphQL DataLoader do). The index on `orders.customer_id` is worth having but still leaves N round trips. Running the queries in parallel with `Promise.all` and raising the pool size move the load onto the database and exhaust connections under concurrency.',
+    hint: 'Count the round trips as the customer list grows, and ask which change reduces that count rather than speeding up each query.',
   },
   {
     id: 'sql-non-sargable-predicates',
@@ -395,6 +410,7 @@ ORDER BY department, e.name`,
     source: 'topic-list',
     explanation:
       'An index stores the raw column value, so a predicate can seek only when the column stands alone on one side of the comparison ("sargable"). Wrapping the column in a function (`DATE(created_at)`, `LOWER(email)`) or doing arithmetic on it (`created_at + INTERVAL ...`) forces the engine to compute the expression for every row. Rewrite the `DATE(created_at)` filter as the half-open range `created_at >= ... AND created_at < ...`, and the arithmetic one as `created_at > NOW() - INTERVAL \'1 day\'`. For case-insensitive email lookups, add an expression index on `LOWER(email)` or use a case-insensitive type or collation (`citext` in Postgres). Another quiet cause is an implicit cast, such as comparing a `VARCHAR` column with a number in MySQL.',
+    hint: 'Ask whether the indexed column stands alone on one side of the comparison or is wrapped in a function or arithmetic.',
   },
   {
     id: 'sql-diagnose-slow-query-explain',
@@ -418,5 +434,6 @@ ORDER BY department, e.name`,
     source: 'topic-list',
     explanation:
       '"Nothing changed" usually means the data changed: growth or skew pushed the optimizer past a cost threshold, or statistics went stale so it misjudged cardinalities. A strong answer is a method (measure, read the plan, form a hypothesis, make the smallest fix, verify), not a list of tuning tricks.\n\n**Say this out loud:** "When the code did not change, I assume the data or the statistics did; I compare estimated and actual rows in `EXPLAIN ANALYZE` to find where the optimizer went wrong."',
+    hint: 'Start from the actual plan, compare estimated with actual rows, and ask what changes in the data when the code did not.',
   },
 ];

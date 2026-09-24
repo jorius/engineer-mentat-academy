@@ -24,6 +24,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Document stores shine when the unit you read and write is a self-contained, variably shaped aggregate: one document holds the product, its variants and its specs, so the page is one read with no joins. The ledger needs multi-row ACID invariants and constraints, the home ground of a relational database (MongoDB has multi-document transactions, but they are not its sweet spot). Ad-hoc analytics wants SQL and a columnar warehouse. Multi-hop relationship traversal is what graph databases such as Neo4j or Neptune are built for.',
+    hint: 'Think about the self-contained aggregate a document store reads in one go, and which workloads need joins, multi-row transactions or graph traversal.',
   },
   {
     id: 'nosql-store-families',
@@ -44,6 +45,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Redis is an in-memory key-value store with per-key TTLs and atomic operations such as `INCR`, which is exactly what sessions, caches and rate limiters need. Time-series ingestion fits a wide-column store such as Cassandra or a time-series database, keyed by device and time bucket. Wide-column stores are designed around known queries and have no joins. Document stores can hold counters, but a shared hot counter at sub-millisecond latency is the key-value store job.',
+    hint: 'Match each family to what it is built for: key lookups with expiry, relationship traversal, time-bucketed writes or flexible documents.',
   },
   {
     id: 'nosql-schemaless-myth',
@@ -67,6 +69,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '"Schemaless" means the database does not enforce the schema; every reader still assumes one. After a field rename, old documents keep the old name forever unless you migrate them, so code must handle both shapes. Common patterns: a `schemaVersion` field with read-time upgrades, lazy migration on write, or a background backfill. MongoDB can also enforce JSON Schema validation per collection when you want the guard back. The flexibility is real, but it is a choice of where to enforce the schema, not an absence of one.',
+    hint: 'Ask where the schema lives when the database does not enforce one, and what happens to documents written before a field changes.',
   },
   {
     id: 'nosql-cap-and-pacelc',
@@ -90,6 +93,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Partitions are not optional in a real network, so "CA" is not a choice for a distributed system. CAP only forces a decision while a partition is happening: refuse some requests (CP) or answer with possibly stale data (AP). PACELC adds the everyday case: else (no partition) you trade latency against consistency. Products are tunable rather than fixed labels: DynamoDB reads are eventually consistent by default and strongly consistent on request; Cassandra picks per query with consistency levels; MongoDB uses read and write concerns. CAP consistency means linearizability, which is unrelated to ACID consistency.\n\n**Say this out loud:** "CAP only bites during a partition, and then I choose between rejecting requests and serving stale data; the rest of the time the real trade-off is latency against consistency, and most modern stores let me tune it per request."',
+    hint: 'Remember when CAP actually forces a choice, what the trade-off is the rest of the time, and what the C in CAP means.',
   },
   {
     id: 'nosql-embed-vs-reference',
@@ -111,6 +115,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Relational modeling normalizes first and optimizes later; document modeling starts from the queries. The key follow-up is "what happens when this array reaches 50,000 entries", and the answer should include bounded embedding plus a separate collection.',
+    hint: 'Cover access patterns (read together, change together), unbounded growth against the document size limit, and a hybrid for comments.',
   },
   {
     id: 'nosql-polyglot-persistence-design',
@@ -134,5 +139,6 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Interviewers are testing judgment, not product knowledge: each choice should be justified by an access pattern or a guarantee, and the cost of every additional datastore should be named.\n\n**Say this out loud:** "I pick the store per access pattern and per guarantee: money needs transactions, feeds need cheap time-ordered writes; but every extra database is another consistency boundary to operate, so I start with Postgres and split on evidence."',
+    hint: 'Tie each part to the guarantee or access pattern it needs, and weigh the operational and consistency cost of every extra datastore.',
   },
 ];

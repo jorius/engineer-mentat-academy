@@ -12,6 +12,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Los document stores brillan cuando la unidad que lees y escribes es un agregado autocontenido y de forma variable: un documento guarda el producto, sus variantes y sus especificaciones, así que la página se resuelve con una sola lectura y sin joins. El libro contable necesita invariantes ACID sobre varias filas y restricciones, el terreno natural de una base de datos relacional (MongoDB tiene transacciones multidocumento, pero no son su punto fuerte). La analítica ad hoc pide SQL y un data warehouse columnar. Recorrer relaciones de varios saltos es justo para lo que están hechas las bases de datos de grafos como Neo4j o Neptune.',
+    hint: 'Piensa en el agregado autocontenido que un document store lee de una vez, y en qué cargas necesitan joins, transacciones de varias filas o recorrer un grafo.',
   },
   'nosql-store-families': {
     prompt: '¿Qué combinación de familia NoSQL y caso de uso es la más adecuada?',
@@ -23,6 +24,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Redis es un key-value store en memoria con TTL por clave y operaciones atómicas como `INCR`, que es justo lo que necesitan las sesiones, las cachés y los rate limiters. La ingesta de series de tiempo encaja en un wide-column store como Cassandra o en una base de datos de series de tiempo, con clave por dispositivo y bloque de tiempo. Los wide-column stores se diseñan en torno a consultas conocidas y no tienen joins. Los document stores pueden guardar contadores, pero un contador compartido y muy disputado con latencia de menos de un milisegundo es trabajo de un key-value store.',
+    hint: 'Relaciona cada familia con aquello para lo que está hecha: búsquedas por clave con expiración, recorrido de relaciones, escrituras por intervalos de tiempo o documentos flexibles.',
   },
   'nosql-schemaless-myth': {
     prompt:
@@ -35,6 +37,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '"Schemaless" significa que la base de datos no impone el esquema; cada lector sigue asumiendo uno. Después de renombrar un campo, los documentos viejos conservan el nombre anterior para siempre a menos que los migres, así que el código tiene que manejar ambas formas. Patrones comunes: un campo `schemaVersion` con actualizaciones al leer, migración perezosa al escribir o un backfill en segundo plano. MongoDB también puede imponer validación con JSON Schema por colección cuando quieres recuperar esa protección. La flexibilidad es real, pero es una decisión sobre dónde imponer el esquema, no la ausencia de uno.',
+    hint: 'Pregúntate dónde vive el esquema cuando la base de datos no lo impone, y qué pasa con los documentos escritos antes de que cambie un campo.',
   },
   'nosql-cap-and-pacelc': {
     prompt: '¿Qué afirmación sobre el teorema CAP es correcta?',
@@ -46,6 +49,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'En una red real las particiones no son opcionales, así que "CA" no es una opción para un sistema distribuido. CAP solo obliga a decidir mientras ocurre una partición: rechazar algunas peticiones (CP) o responder con datos posiblemente desactualizados (AP). PACELC agrega el caso cotidiano: si no hay partición (la "E" de else), cambias latencia por consistencia. Los productos son configurables en lugar de etiquetas fijas: las lecturas de DynamoDB son eventualmente consistentes por defecto y fuertemente consistentes si lo pides; Cassandra decide por consulta con niveles de consistencia; MongoDB usa read concerns y write concerns. La consistencia de CAP significa linealizabilidad, que no tiene relación con la consistencia de ACID.\n\n**Dilo en voz alta:** "CAP solo aprieta durante una partición, y ahí elijo entre rechazar peticiones o servir datos desactualizados; el resto del tiempo el verdadero trade-off es latencia contra consistencia, y la mayoría de los stores modernos me dejan ajustarlo por petición."',
+    hint: 'Recuerda cuándo CAP obliga realmente a elegir, cuál es el trade-off el resto del tiempo y qué significa la C de CAP.',
   },
   'nosql-embed-vs-reference': {
     prompt:
@@ -60,6 +64,7 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'El modelado relacional normaliza primero y optimiza después; el modelado documental parte de las consultas. La pregunta de seguimiento clave es "qué pasa cuando este arreglo llega a 50,000 entradas", y la respuesta debería incluir un embebido acotado más una colección separada.',
+    hint: 'Cubre los patrones de acceso (se leen juntos, cambian juntos), el crecimiento sin límite frente al tamaño máximo del documento y un enfoque híbrido para los comentarios.',
   },
   'nosql-polyglot-persistence-design': {
     prompt:
@@ -75,5 +80,6 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'Los entrevistadores evalúan criterio, no conocimiento de productos: cada elección debe justificarse con un patrón de acceso o una garantía, y hay que nombrar el costo de cada datastore adicional.\n\n**Dilo en voz alta:** "Elijo el store según el patrón de acceso y la garantía: el dinero necesita transacciones, los feeds necesitan escrituras baratas ordenadas por tiempo; pero cada base de datos extra es otra frontera de consistencia que operar, así que empiezo con Postgres y separo con base en evidencia."',
+    hint: 'Vincula cada parte con la garantía o el patrón de acceso que necesita, y pesa el costo operativo y de consistencia de cada datastore adicional.',
   },
 };

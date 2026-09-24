@@ -24,6 +24,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Multi-AZ is for **availability**: writes commit on the primary and the standby synchronously, so failover loses no committed data, but the standby is not readable. Read replicas are for **read scaling**: asynchronous replication means replica lag, so read-after-write flows must go to the primary. A replica can be promoted manually (and can be in another Region for disaster recovery), but that is a separate, deliberate operation. Newer options blur this: the **Multi-AZ DB cluster** deployment (PostgreSQL and MySQL) has two readable standbys with a reader endpoint, and Aurora replicas serve both reads and failover.',
+    hint: 'Compare what each feature is for, availability or read scaling, and whether its replication is synchronous or asynchronous.',
   },
   {
     id: 'rds-failover-behavior',
@@ -46,6 +47,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'The endpoint name stays the same; RDS flips its DNS record to the promoted standby, typically in one to two minutes. Applications therefore need a short DNS TTL, connection retries with backoff, and a pool that discards broken connections; RDS Proxy shortens and hides much of this. Synchronous replication means no committed data is lost, while in-flight transactions are rolled back. Read replicas are not part of RDS Multi-AZ failover, so the automatic replica promotion claim is false for RDS; in **Aurora**, by contrast, a replica is promoted using failover priority tiers.',
+    hint: 'Think about what happens to the endpoint name, the client DNS cache and committed data, and which replicas take part in Multi-AZ failover.',
   },
   {
     id: 'rds-parameter-group-static-change',
@@ -70,6 +72,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Engine configuration on RDS is managed through parameter groups. Default groups cannot be modified, so you create a custom group (ideally in infrastructure as code) and attach it. **Dynamic** parameters apply without a restart; **static** ones wait for a reboot, which in production you schedule or perform with Multi-AZ to minimize downtime. RDS gives no host access, and the master user is not a true superuser, so `ALTER SYSTEM` is not available. Because a group can be shared by many instances, changing it changes all of them.',
+    hint: 'Recall what RDS lets you modify (default groups, host access, superuser rights) and when a static parameter takes effect.',
   },
   {
     id: 'rds-when-to-choose-aurora',
@@ -92,5 +95,6 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'The senior answer is a trade-off anchored in the storage architecture: Aurora buys faster failover, cheap replicas and elastic storage with a different cost model and some compatibility lag.\n\n**Say this out loud:** "Aurora moves durability into a shared storage layer, which is why its replicas are cheap and failover is fast; I pick it when availability or read scale justify the price, and I check the I/O bill and extension support before committing."',
+    hint: 'Anchor the answer in Aurora\'s shared storage layer, then weigh its extra features against cost and compatibility using workload data.',
   },
 ];

@@ -22,6 +22,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'A `Query` must name exactly one partition with **equality** on the partition key, because the partition key is hashed to find the storage partition; there is no ordering to do a prefix or range search on, so `begins_with(PK, ...)` is invalid. The sort key is stored in order within a partition, so it supports `=`, `<`, `<=`, `>`, `>=`, `BETWEEN` and `begins_with`. `contains` is not a key condition; it is only allowed in a `FilterExpression`, which runs after the items are read. Querying by sort key alone (`SK = :sk`) needs a GSI with that attribute as its partition key, or a `Scan`.',
+    hint: 'Recall which operators the partition key accepts compared with the sort key, and which functions belong only in a `FilterExpression`.',
   },
   {
     id: 'dynamodb-gsi-vs-lsi',
@@ -43,6 +44,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'An LSI is "local" because it lives in the same partition as the base items: same partition key, different sort key, created only with the table, and it adds the 10 GB item-collection limit. A GSI has its own partition and sort key, can be added or removed at any time, has its own capacity, and is replicated asynchronously, so its reads are **eventually consistent only** and the `ConsistentRead: true` claim is false. GSI keys are not unique, so the unique-constraint claim is false too: many items can share the same GSI partition and sort key, and DynamoDB has no unique constraint beyond the primary key (you emulate uniqueness with a conditional put on a separate item in a transaction). An under-provisioned GSI can also throttle writes to the base table.',
+    hint: 'Think about where each index lives relative to the base partition, when it can be created, and how it is replicated.',
   },
   {
     id: 'dynamodb-filter-after-limit',
@@ -67,6 +69,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'DynamoDB reads items that match the key condition, stopping at `Limit` items or 1 MB, then applies the `FilterExpression` to that page. You pay read capacity for everything read, not for what the filter keeps. So a filter is a convenience, not an access pattern: if "shipped orders for a customer" is a real query, put the status in the key (for example `SK = ORDER#SHIPPED#<date>`, or a GSI keyed on status). Always loop on `LastEvaluatedKey` until it is absent.',
+    hint: 'Remember the order of operations in a `Query`: when `Limit` is applied relative to the `FilterExpression`.',
   },
   {
     id: 'dynamodb-order-keys-builder',
@@ -133,6 +136,7 @@ export function solution(order: Order): OrderKeys {
     source: 'topic-list',
     explanation:
       "Sort keys compare byte by byte, so `'10' < '9'`; zero-padding makes numeric ids sort numerically, and ISO-8601 UTC timestamps already sort chronologically. With these keys, pattern 1 is `Query PK = 'CUSTOMER#c-42' AND begins_with(SK, 'ORDER#')` with `ScanIndexForward: false` for newest first, or `SK BETWEEN 'ORDER#2026-09-01' AND 'ORDER#2026-09-30~'` for a range. Pattern 2 is a `Query` on `GSI1` with `GSI1PK = 'STATUS#SHIPPED'` and a range on `GSI1SK`. The `ORDER#` prefix leaves room for other entity types (profile, addresses) in the same partition. Watch the GSI: a status has few distinct values, so `STATUS#PENDING` can become a hot partition at scale; shard it (`STATUS#PENDING#3`) or make the index sparse by writing `GSI1PK` only for statuses you actually query.",
+    hint: 'Build the strings with template literals; reach for `String.prototype.padStart` for the id and `toUpperCase` for the status.',
   },
   {
     id: 'dynamodb-hot-partition-throttling',
@@ -156,6 +160,7 @@ export function solution(order: Order): OrderKeys {
     source: 'topic-list',
     explanation:
       'The trap is thinking capacity is a table-level number. Throughput is spread across partitions by the hash of the partition key, so a low-cardinality key concentrates load no matter how much the table is provisioned for.\n\n**Say this out loud:** "Capacity is per partition, not per table: a date as partition key puts a whole day on one key, so I raise cardinality or shard the key and pay for it with a scatter-gather read."',
+    hint: 'Explain the per-partition throughput limit, why a date key puts a whole day on one key, and what write sharding costs on reads.',
   },
   {
     id: 'dynamodb-single-table-design-tradeoffs',
@@ -178,5 +183,6 @@ export function solution(order: Order): OrderKeys {
     source: 'topic-list',
     explanation:
       'DynamoDB modeling works backwards from queries. Single-table design is the logical end of that approach, but it is an optimization for known, stable, latency-critical access patterns, not a default rule. Even AWS guidance now presents multi-table designs as valid when entities are accessed independently.\n\n**Say this out loud:** "Single-table design pre-joins data by sharing a partition key, so it pays off when I know my access patterns and need related items in one query; when the patterns are still moving or I need ad-hoc queries, I use separate tables or a relational database."',
+    hint: 'Cover co-locating entity types under one partition key, overloaded keys and GSIs, and when needing access patterns up front hurts.',
   },
 ];

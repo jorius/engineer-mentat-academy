@@ -13,6 +13,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Multi-AZ es para **disponibilidad**: las escrituras se confirman en el primario y en el standby de forma síncrona, así que el failover no pierde datos confirmados, pero el standby no se puede leer. Las read replicas son para **escalar lecturas**: la replicación asíncrona implica replica lag, así que los flujos de read-after-write deben ir al primario. Una réplica se puede promover manualmente (y puede estar en otra Region para disaster recovery), pero esa es una operación aparte y deliberada. Las opciones más nuevas difuminan esta distinción: el despliegue **Multi-AZ DB cluster** (PostgreSQL y MySQL) tiene dos standbys legibles con un reader endpoint, y las réplicas de Aurora sirven tanto para lecturas como para failover.',
+    hint: 'Compara para qué sirve cada función, disponibilidad o escalado de lecturas, y si su replicación es síncrona o asíncrona.',
   },
   'rds-failover-behavior': {
     prompt:
@@ -26,6 +27,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'El nombre del endpoint no cambia; RDS cambia su registro DNS al standby promovido, normalmente en uno o dos minutos. Por eso las aplicaciones necesitan un TTL de DNS corto, reintentos de conexión con backoff y un pool que descarte las conexiones rotas; RDS Proxy acorta y oculta buena parte de esto. La replicación síncrona significa que no se pierden datos confirmados, mientras que las transacciones en curso se revierten. Las read replicas no forman parte del failover de RDS Multi-AZ, así que la afirmación de que se promueven automáticamente es falsa para RDS; en **Aurora**, en cambio, se promueve una réplica usando niveles de prioridad de failover.',
+    hint: 'Piensa en qué pasa con el nombre del endpoint, la caché DNS del cliente y los datos confirmados, y qué réplicas participan en el failover Multi-AZ.',
   },
   'rds-parameter-group-static-change': {
     prompt:
@@ -38,6 +40,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'En RDS, la configuración del motor se gestiona con parameter groups. Los grupos por defecto no se pueden modificar, así que creas un grupo personalizado (idealmente con infraestructura como código) y lo asocias. Los parámetros **dinámicos** se aplican sin reiniciar; los **estáticos** esperan a un reboot, que en producción programas o haces con Multi-AZ para minimizar el tiempo de inactividad. RDS no da acceso al host, y el usuario maestro no es un superusuario real, así que `ALTER SYSTEM` no está disponible. Como un mismo grupo puede estar compartido por muchas instancias, cambiarlo las cambia a todas.',
+    hint: 'Recuerda qué te deja modificar RDS (grupos por defecto, acceso al host, permisos de superusuario) y cuándo entra en vigor un parámetro estático.',
   },
   'rds-when-to-choose-aurora': {
     prompt: '¿Cuándo elegirías Amazon Aurora en lugar de RDS estándar para PostgreSQL o MySQL, y cuándo te quedarías con RDS estándar?',
@@ -52,5 +55,6 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'La respuesta senior es un trade-off anclado en la arquitectura de almacenamiento: Aurora ofrece failover más rápido, réplicas baratas y almacenamiento elástico a cambio de otro modelo de costos y cierto retraso en compatibilidad.\n\n**Dilo en voz alta:** "Aurora lleva la durabilidad a una capa de almacenamiento compartida, y por eso sus réplicas son baratas y el failover es rápido; la elijo cuando la disponibilidad o la escala de lectura justifican el precio, y reviso la factura de I/O y el soporte de extensiones antes de comprometerme."',
+    hint: 'Ancla la respuesta en la capa de almacenamiento compartido de Aurora, y luego pesa sus funciones extra frente al costo y la compatibilidad con datos de la carga.',
   },
 };
