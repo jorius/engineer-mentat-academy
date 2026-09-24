@@ -152,6 +152,10 @@
     "editorPreview": "Vista previa del editor",
     "colorTheme": "Tema de color",
     "themeAuto": "Seguir el tema de la app",
+    "themeHint": "Las familias con ambas variantes siguen el modo claro u oscuro de la app.",
+    "themesBoth": "Claro y oscuro",
+    "themesDark": "Solo oscuro",
+    "themesLight": "Solo claro",
     "appearanceHeading": "Apariencia",
     "accentColor": "Color de acento",
     "accents": {

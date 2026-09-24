@@ -6,15 +6,29 @@ export type TabSize = 2 | 4 | 8;
 export type MaxAttempts = 1 | 2 | 3 | 'unlimited';
 export type EditorTheme =
   | 'auto'
+  | 'andromeda'
+  | 'atom-one'
+  | 'aura'
+  | 'basic'
+  | 'bbedit'
+  | 'darcula'
   | 'dracula'
+  | 'duotone'
+  | 'eclipse'
+  | 'github'
+  | 'gruvbox'
+  | 'material'
   | 'monokai'
-  | 'github-light'
-  | 'github-dark'
-  | 'solarized-light'
-  | 'solarized-dark'
+  | 'noctis-lilac'
   | 'nord'
+  | 'quietlight'
+  | 'solarized'
+  | 'sublime'
   | 'tokyo-night'
-  | 'vscode-dark';
+  | 'tokyo-night-storm'
+  | 'vscode'
+  | 'white'
+  | 'xcode';
 
 export type Preferences = {
   accent: Accent;
@@ -47,18 +61,42 @@ const ACCENTS: readonly string[] = ['spice', 'sky', 'emerald', 'violet', 'rose']
 const EDITOR_FONTS: readonly string[] = ['jetbrains', 'fira', 'system'];
 const TAB_SIZES: readonly number[] = [2, 4, 8];
 const MAX_ATTEMPTS_NUMBERS: readonly number[] = [1, 2, 3];
-const EDITOR_THEME_IDS: readonly string[] = [
+export const EDITOR_THEME_IDS: readonly EditorTheme[] = [
   'auto',
+  'andromeda',
+  'atom-one',
+  'aura',
+  'basic',
+  'bbedit',
+  'darcula',
   'dracula',
+  'duotone',
+  'eclipse',
+  'github',
+  'gruvbox',
+  'material',
   'monokai',
-  'github-light',
-  'github-dark',
-  'solarized-light',
-  'solarized-dark',
+  'noctis-lilac',
   'nord',
+  'quietlight',
+  'solarized',
+  'sublime',
   'tokyo-night',
-  'vscode-dark',
+  'tokyo-night-storm',
+  'vscode',
+  'white',
+  'xcode',
 ];
+
+// Stored values from before the preference held a family instead of a single variant.
+const LEGACY_EDITOR_THEMES: ReadonlyMap<string, EditorTheme> = new Map<string, EditorTheme>([
+  ['github-light', 'github'],
+  ['github-dark', 'github'],
+  ['solarized-light', 'solarized'],
+  ['solarized-dark', 'solarized'],
+  ['vscode-dark', 'vscode'],
+]);
+
 const MIN_EDITOR_FONT_SIZE = 12;
 const MAX_EDITOR_FONT_SIZE = 20;
 
@@ -92,7 +130,10 @@ function validateMaxAttempts(value: unknown): MaxAttempts {
 }
 
 function validateEditorTheme(value: unknown): EditorTheme {
-  return typeof value === 'string' && EDITOR_THEME_IDS.includes(value) ? (value as EditorTheme) : DEFAULT_PREFERENCES.editorTheme;
+  if (typeof value !== 'string') {
+    return DEFAULT_PREFERENCES.editorTheme;
+  }
+  return EDITOR_THEME_IDS.find((id) => id === value) ?? LEGACY_EDITOR_THEMES.get(value) ?? DEFAULT_PREFERENCES.editorTheme;
 }
 
 function validate(partial: Record<string, unknown>): Preferences {

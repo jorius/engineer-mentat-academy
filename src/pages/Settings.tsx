@@ -1,5 +1,5 @@
 // packages
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ChangeEvent, JSX } from 'react';
 
@@ -13,6 +13,7 @@ import { useDrills } from '../hooks/useDrills';
 
 // engine
 import { EDITOR_THEMES } from '../engine/editorThemes';
+import type { ThemeFamily } from '../engine/editorThemes';
 import type { Accent, EditorFont, EditorTheme, MaxAttempts, TabSize } from '../engine/preferences';
 
 // components
@@ -46,6 +47,13 @@ const EDITOR_FONT_SIZES: readonly number[] = [12, 13, 14, 15, 16, 17, 18, 19, 20
 
 const MAX_ATTEMPTS_OPTIONS: readonly MaxAttempts[] = [1, 2, 3, 'unlimited'];
 
+// `auto` is listed on its own above the groups; each group keeps the alphabetical order of EDITOR_THEMES.
+const THEME_GROUPS: readonly { labelKey: string; families: readonly ThemeFamily[] }[] = [
+  { labelKey: 'settings.themesBoth', families: EDITOR_THEMES.filter((family) => family.light !== undefined && family.dark !== undefined) },
+  { labelKey: 'settings.themesDark', families: EDITOR_THEMES.filter((family) => family.light === undefined && family.dark !== undefined) },
+  { labelKey: 'settings.themesLight', families: EDITOR_THEMES.filter((family) => family.light !== undefined && family.dark === undefined) },
+];
+
 // Status lines keep the translation key, not the translated text, so they follow a language
 // change that resolves after the message was set (the full reset switches language).
 type StatusMessage = { key: string; count?: number } | { text: string };
@@ -61,6 +69,7 @@ export function Settings(): JSX.Element {
   const [message, setMessage] = useState<StatusMessage | null>(null);
   const [previewCode, setPreviewCode] = useState<string>(PREVIEW_CODE);
   const [confirmText, setConfirmText] = useState<string>('');
+  const themeHintId = useId();
 
   const exportProgress = (): void => {
     const blob = new Blob([store.exportJson()], { type: 'application/json' });
@@ -196,18 +205,27 @@ export function Settings(): JSX.Element {
             </label>
           </fieldset>
         </div>
-        <label className="flex flex-col gap-1 text-sm">
-          {t('settings.colorTheme')}
-          <select
-            className="w-56 rounded-md border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
-            value={preferences.editorTheme}
-            onChange={(e): void => preferencesStore.set({ editorTheme: e.target.value as EditorTheme })}
-          >
-            {EDITOR_THEMES.map((editorTheme) => (
-              <option key={editorTheme.id} value={editorTheme.id}>{editorTheme.id === 'auto' ? t('settings.themeAuto') : editorTheme.name}</option>
-            ))}
-          </select>
-        </label>
+        <div className="flex flex-col gap-1">
+          <label className="flex flex-col gap-1 text-sm">
+            {t('settings.colorTheme')}
+            <select
+              className="w-56 rounded-md border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+              value={preferences.editorTheme}
+              aria-describedby={themeHintId}
+              onChange={(e): void => preferencesStore.set({ editorTheme: e.target.value as EditorTheme })}
+            >
+              <option value="auto">{t('settings.themeAuto')}</option>
+              {THEME_GROUPS.map((group) => (
+                <optgroup key={group.labelKey} label={t(group.labelKey)}>
+                  {group.families.map((family) => (
+                    <option key={family.id} value={family.id}>{family.name}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+          <p id={themeHintId} className="text-xs text-zinc-500">{t('settings.themeHint')}</p>
+        </div>
         <div>
           <p className="mb-1 text-sm text-zinc-500">{t('settings.preview')}</p>
           <CodeEditor value={previewCode} onChange={setPreviewCode} language="typescript" readOnly={false} ariaLabel={t('settings.editorPreview')} />

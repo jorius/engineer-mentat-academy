@@ -1,6 +1,6 @@
 // packages
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -110,6 +110,21 @@ describe('Settings', () => {
     expect(screen.getByRole('option', { name: /follow app theme/i })).toBeInTheDocument();
     await user.selectOptions(colorTheme, 'dracula');
     expect(preferencesStore.get().editorTheme).toBe('dracula');
+  });
+
+  it('groups the editor colour themes into light-and-dark, dark-only and light-only families', () => {
+    renderSettings();
+    const colorTheme = screen.getByLabelText(/colour theme/i);
+    const first = within(colorTheme).getAllByRole('option')[0];
+    expect(first).toHaveValue('auto');
+    expect(first.parentElement).toBe(colorTheme);
+    const groups = within(colorTheme).getAllByRole('group');
+    expect(groups.map((group) => group.getAttribute('label'))).toEqual(['Light and dark', 'Dark only', 'Light only']);
+    const [both, darkOnly, lightOnly] = groups;
+    expect(within(both).getByRole('option', { name: 'GitHub' })).toHaveValue('github');
+    expect(within(darkOnly).getByRole('option', { name: 'Dracula' })).toHaveValue('dracula');
+    expect(within(lightOnly).getByRole('option', { name: 'Eclipse' })).toHaveValue('eclipse');
+    expect(colorTheme).toHaveAccessibleDescription("Families with both variants follow the app's light or dark mode.");
   });
 
   it('sets data-accent on the document root when a swatch is picked', async () => {

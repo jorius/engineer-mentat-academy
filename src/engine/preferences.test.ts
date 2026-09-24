@@ -95,9 +95,33 @@ describe('createPreferencesStore', () => {
     expect(createPreferencesStore(storage).get().editorTheme).toBe('tokyo-night');
   });
 
+  it.each(['github', 'solarized', 'vscode', 'atom-one', 'tokyo-night-storm', 'quietlight'])('keeps the %s theme family', (family) => {
+    const storage = memoryStorage();
+    storage.setItem(PREFERENCES_KEY, JSON.stringify({ editorTheme: family }));
+    expect(createPreferencesStore(storage).get().editorTheme).toBe(family);
+  });
+
+  it.each([
+    ['github-light', 'github'],
+    ['github-dark', 'github'],
+    ['solarized-light', 'solarized'],
+    ['solarized-dark', 'solarized'],
+    ['vscode-dark', 'vscode'],
+  ])('migrates the legacy %s theme to the %s family', (legacy, family) => {
+    const storage = memoryStorage();
+    storage.setItem(PREFERENCES_KEY, JSON.stringify({ editorTheme: legacy }));
+    expect(createPreferencesStore(storage).get().editorTheme).toBe(family);
+  });
+
   it('falls back to the default for an unknown editor theme', () => {
     const storage = memoryStorage();
     storage.setItem(PREFERENCES_KEY, JSON.stringify({ editorTheme: 'one-dark' }));
+    expect(createPreferencesStore(storage).get().editorTheme).toBe(DEFAULT_PREFERENCES.editorTheme);
+
+    storage.setItem(PREFERENCES_KEY, JSON.stringify({ editorTheme: 'vscode-light' }));
+    expect(createPreferencesStore(storage).get().editorTheme).toBe(DEFAULT_PREFERENCES.editorTheme);
+
+    storage.setItem(PREFERENCES_KEY, JSON.stringify({ editorTheme: 'constructor' }));
     expect(createPreferencesStore(storage).get().editorTheme).toBe(DEFAULT_PREFERENCES.editorTheme);
 
     storage.setItem(PREFERENCES_KEY, JSON.stringify({ editorTheme: 7 }));
