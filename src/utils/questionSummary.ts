@@ -26,6 +26,19 @@ function stripFencedCode(prompt: string): string {
   return prompt.replace(FENCED_CODE_BLOCK, '').replace(UNTERMINATED_FENCE, '');
 }
 
+/**
+ * The accessible name of a choice option: the option's Markdown with fence lines and inline
+ * backticks removed, so a screen reader hears the code text and never "grave grave grave js".
+ */
+export function optionAccessibleName(text: string): string {
+  return text
+    .replace(/^```[^\n]*\n?/gm, '')
+    .replace(/\n?```\s*$/gm, '')
+    .replace(/`/g, '')
+    .replace(WHITESPACE, ' ')
+    .trim();
+}
+
 function firstParagraph(text: string): string {
   for (const paragraph of text.split(/\n\s*\n/)) {
     const trimmed = paragraph.trim();

@@ -21,8 +21,10 @@ Live: https://jorius.github.io/engineer-mentat-academy/
   their progress so you can resume, rename, restart or delete them, and Home links to the
   latest unfinished one. Skip moves a question to the end of the drill.
 - **Mock**: random, mixed-level session with a results page. Choose the number of
-  questions, timed or untimed, and the domains, levels and kinds to draw from.
-- **Review**: everything you missed or marked for review.
+  questions, timed or untimed, and the domains, levels and kinds to draw from. Skip moves
+  on without answering and the results list the question as skipped.
+- **Review**: everything you missed or marked for review. Skip leaves a question in Review for
+  later.
 
 Every question gives you retries up to the max attempts set in Settings (or unlimited), with
 a Show answer fallback that reveals the key without grading once you're done trying. The
@@ -34,10 +36,14 @@ correct answer never gives it away.
 
 ## Settings
 
-Accent colour, editor font and size, tab size and tabs vs spaces, max attempts per
-question, and the editor colour theme (follow the app theme, Dracula, Monokai, GitHub,
-Solarized, Nord, Tokyo Night or VS Code Dark). The Danger zone at the bottom clears
-progress or resets everything after you type `RESET`.
+Accent colour, editor font (twelve bundled monospace faces such as JetBrains Mono, Fira
+Code, Cascadia Code and Geist Mono, or the system one), font size, tab size and tabs vs
+spaces, max attempts per question, and the editor colour theme, chosen by family: families
+with both variants (GitHub, Solarized, VS Code, Material, Gruvbox, Xcode, Tokyo Night…) follow
+the app's light or dark mode, while dark-only (Dracula, Monokai, Nord…) and light-only
+(BBEdit, Eclipse, Quiet Light…) families always use their one variant. The preview under the
+editor settings is editable. The Danger zone at the bottom clears progress or resets
+everything after you type `RESET`.
 
 ## Question kinds
 
@@ -77,8 +83,9 @@ against the Messages API with a key the user pastes in Settings; nothing else ch
 
 ## Progress
 
-Stored in `localStorage` under `ema:progress:v1`. Export and import from Settings.
-Nothing leaves the browser.
+Stored in `localStorage` under `ema:progress:v1`; saved drills live under `ema:drills:v1`
+and preferences under `ema:prefs:v1`. Export and import progress from Settings; both
+Danger-zone actions also delete the saved drills. Nothing leaves the browser.
 
 ## Standards
 

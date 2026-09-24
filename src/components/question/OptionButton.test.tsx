@@ -85,7 +85,24 @@ describe('OptionButton', () => {
     expect(code).toHaveClass('language-js', 'hljs');
     expect(code?.querySelectorAll('.hljs-keyword, .hljs-title').length).toBeGreaterThan(0);
     expect(option.closest('button')).toBeNull();
-    expect(option).toHaveAttribute('aria-label', text);
+    expect(option).toHaveAttribute('aria-label', 'useEffect(() => { subscribe(); }, []);');
+  });
+
+  it('names an inline-code option without backticks', () => {
+    render(<OptionButton id="a" letter="A" text="Call `useMemo` once" selected={false} onToggle={vi.fn()} />);
+    expect(screen.getByRole('radio', { name: 'Call useMemo once' })).toBeInTheDocument();
+  });
+
+  it('ignores Space and Enter that come from a focusable descendant', () => {
+    const onToggle = vi.fn();
+    const text = '```js\nconst veryLongLine = 1;\n```';
+    render(<OptionButton id="a" letter="A" text={text} selected={false} onToggle={onToggle} />);
+    const pre = screen.getByRole('radio').querySelector('pre');
+    expect(pre).not.toBeNull();
+    pre?.setAttribute('tabindex', '0');
+    fireEvent.keyDown(pre as HTMLElement, { key: ' ' });
+    fireEvent.keyDown(pre as HTMLElement, { key: 'Enter' });
+    expect(onToggle).not.toHaveBeenCalled();
   });
 
   it('is reachable with Tab and toggles on Space and on Enter, preventing the default', async () => {

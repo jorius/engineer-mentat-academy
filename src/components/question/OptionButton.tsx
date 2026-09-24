@@ -4,6 +4,9 @@ import type { JSX, KeyboardEvent } from 'react';
 // components
 import { Markdown } from '../common/Markdown';
 
+// utils
+import { optionAccessibleName } from '../../utils/questionSummary';
+
 type Props = {
   id: string;
   letter: string;
@@ -46,6 +49,10 @@ export function OptionButton({
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    // A focusable descendant (an overflowing code block scrolls with Space) keeps its own keys.
+    if (event.target !== event.currentTarget) {
+      return;
+    }
     if (event.key !== ' ' && event.key !== 'Enter') {
       return;
     }
@@ -65,7 +72,7 @@ export function OptionButton({
       tabIndex={inactive ? -1 : 0}
       aria-checked={selected}
       aria-disabled={inactive}
-      aria-label={text}
+      aria-label={optionAccessibleName(text)}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       className={`flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left leading-snug transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 ${stateClasses} ${

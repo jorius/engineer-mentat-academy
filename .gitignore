@@ -11,3 +11,4 @@ dist-ssr
 .DS_Store
 *.sw?
 coverage
+.superpowers
