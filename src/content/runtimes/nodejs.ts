@@ -23,6 +23,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '`__dirname`, `__filename`, `require`, `module` and `exports` are **CommonJS wrapper variables**: Node injects them by wrapping each CJS file in a function. ES modules are not wrapped, so `__dirname` is a `ReferenceError`. Use `import.meta.dirname` (Node 20.11+) or `path.dirname(fileURLToPath(import.meta.url))`, and `createRequire(import.meta.url)` if you still need `require`.\n\nTop-level `await` is legal in ESM (it is illegal in CJS), default imports of built-ins work, and `export default` is the ESM way to export. Other ESM differences worth knowing: always strict mode, imports are live read-only bindings, and the module graph is loaded asynchronously.',
+    hint: 'Ask which identifiers Node injects by wrapping each CommonJS file in a function, and whether ES modules get that wrapper.',
   },
   {
     id: 'nodejs-libuv-threadpool-operations',
@@ -44,6 +45,7 @@ export const questions: Question[] = [
     source: 'core-list',
     explanation:
       'Network sockets do **not** use the pool: libuv registers them with the kernel readiness API (epoll, kqueue, IOCP) and the event loop is notified in the poll phase, which is why one thread can hold tens of thousands of connections. File system calls, `dns.lookup` (it wraps blocking `getaddrinfo`), async crypto (`pbkdf2`, `scrypt`, `randomBytes`) and async `zlib` have no portable non-blocking kernel API, so they run on the pool.\n\nThe practical consequence: with the default 4 threads, four slow `pbkdf2` hashes or DNS lookups queue every other `fs` call behind them. Raise `UV_THREADPOOL_SIZE` (set before the pool is first used) or move the hashing off the request path. This is the concrete answer to "how does JavaScript handle async work if it is single-threaded".',
+    hint: 'Separate work the kernel can report as ready (epoll, kqueue, IOCP) from blocking system calls that libuv has to hand to a worker thread.',
   },
   {
     id: 'nodejs-async-function-runs-sync',
@@ -71,6 +73,7 @@ console.log('after call');`,
     source: 'core-list',
     explanation:
       'An `async` function runs **synchronously** until its first `await`. There is no `await` here, so the whole loop runs on the caller\'s stack before `after call` prints. The returned promise is already fulfilled when `sumTo` returns; only the `.then` callback is deferred, as a microtask that runs after the script finishes, which is why `total 500500` comes last.\n\n`async` changes how a result is delivered, not where the work runs. Real non-blocking behaviour comes from the runtime doing the work elsewhere (the kernel, libuv\'s pool) or from you moving CPU work to a worker thread.',
+    hint: 'Remember how far an `async` function runs before it first yields control, and what that means when its body never uses `await`.',
   },
 
   // event-loop-phases
@@ -93,6 +96,7 @@ console.log('after call');`,
     source: 'notion',
     explanation:
       'One loop iteration runs these phases in order:\n\n1. **timers**: expired `setTimeout` / `setInterval` callbacks\n2. **pending callbacks**: some system I/O callbacks deferred from the previous iteration\n3. **idle, prepare**: internal\n4. **poll**: wait for and run I/O callbacks (most of your code runs here)\n5. **check**: `setImmediate` callbacks\n6. **close callbacks**: e.g. `socket.on(\'close\')`\n\n`setImmediate` exists precisely to say "run this right after the current poll phase". Between every callback, Node drains the `process.nextTick` queue and then the promise microtask queue.',
+    hint: 'Recall the order of the event loop phases and which one exists so callbacks can run right after I/O polling.',
   },
   {
     id: 'nodejs-immediate-vs-timeout-in-io',
@@ -122,6 +126,7 @@ fs.readFile(__filename, () => {
     source: 'notion',
     explanation:
       'The `readFile` callback runs in the **poll** phase. When it returns, the loop moves on to the **check** phase, which runs the immediate. The timer can only fire when the loop wraps around to the **timers** phase of the next iteration. So inside an I/O callback, `setImmediate` always wins.\n\n"Not deterministic" is the right answer for a different program: when both are scheduled from the **main module**, the order is not deterministic. `setTimeout(fn, 0)` is really 1 ms, and whether that 1 ms has elapsed when the first iteration checks timers depends on process startup timing.',
+    hint: 'Note which phase the `readFile` callback runs in, then ask which phase the loop reaches next and when it checks timers again.',
   },
   {
     id: 'nodejs-nexttick-promise-ordering',
@@ -150,6 +155,7 @@ console.log('sync');
     source: 'notion',
     explanation:
       'After the main script finishes, Node drains the **`process.nextTick` queue first, then the promise microtask queue**, and it does this again after every callback in every phase. So `nextTick` beats `promise`, and both beat any timer or immediate.\n\nThen the loop starts: the **timers** phase runs `timeout` only if its 1 ms has already elapsed, otherwise the **check** phase runs `immediate` first and `timeout` waits for the next iteration. From the main module that race is not deterministic (inside an I/O callback, `immediate` always wins).\n\nESM trap: in an `.mjs` file the module body itself runs inside a promise job, so the microtask queue is drained before Node gets back to the nextTick queue and `promise` prints **before** `nextTick`. A recursive `nextTick` can also starve the loop entirely, which is why the Node docs recommend `queueMicrotask` or `setImmediate` for most deferral.\n\n**Say this out loud:** "nextTick queue, then microtasks, after every single callback; timers versus check from the main module is a race, but inside an I/O callback setImmediate always runs first because check follows poll."',
+    hint: 'Recall which queue Node drains first after the main script, and whether the timers-versus-check order is fixed outside an I/O callback.',
   },
   {
     id: 'nodejs-microtask-queue-interleaving',
@@ -177,6 +183,7 @@ console.log('sync');`,
     source: 'core-list',
     explanation:
       'The microtask queue is FIFO and it is drained **completely**, including microtasks queued while draining, before the event loop moves to the next macrotask.\n\nAfter `sync`, the queue is `[micro 1, promise 1]`. Running `micro 1` appends `micro 2`; running `promise 1` resolves the chained promise and appends `promise 2`. Queue: `[micro 2, promise 2]`. Only when it is empty does the timers phase run `timeout`.\n\nThat same rule is how an endless chain of microtasks starves timers and I/O: the loop never gets past the drain.',
+    hint: 'The microtask queue is drained completely, including jobs queued while it drains, before any macrotask runs; track the queue after each `.then` step.',
   },
   {
     id: 'nodejs-microtasks-between-timers',
@@ -208,6 +215,7 @@ console.log('sync end');`,
     source: 'notion',
     explanation:
       '`job()` runs synchronously up to `await null`, which queues its continuation **before** `p1` is queued, so `job resumed` precedes `p1`. Both beat every timer.\n\nIn the timers phase, `t1` and `t2` are both due. Since **Node 11**, microtasks are drained after **each** timer callback (matching browsers), so `t1 microtask` prints before `t2`. On Node 10 and earlier the whole batch of expired timers ran first, giving `t1, t2, t1 microtask`. `t3` was scheduled during the timers phase, so it runs after `t2` (in the next pass over timers).\n\n**Say this out loud:** "An await is just a microtask continuation, and since Node 11 the microtask queue is drained between every individual timer or immediate callback, not once per phase."',
+    hint: 'Remember what an `await` defers and when, and that since Node 11 microtasks are drained after each individual timer callback, not once per timers phase.',
   },
 
   // streams-and-large-files
@@ -231,6 +239,7 @@ console.log('sync end');`,
     source: 'notion',
     explanation:
       'Node has four stream types: **Readable** (source, e.g. `fs.createReadStream`), **Writable** (sink, e.g. `fs.createWriteStream`), **Duplex** (both sides, independent, e.g. a TCP socket where what you read has nothing to do with what you wrote) and **Transform**, a Duplex whose output is computed from its input (gzip, encryption, CSV parsing).\n\nStreaming processes the file chunk by chunk (64 KiB by default for file streams), so memory stays flat no matter the file size, whereas `fs.readFile` would try to hold all 20 GB in a Buffer and fail.',
+    hint: 'Ask whether the bytes that come out are computed from the bytes that go in, and which stream type models that relationship.',
   },
   {
     id: 'nodejs-pipeline-over-pipe',
@@ -252,6 +261,7 @@ console.log('sync end');`,
     source: 'notion',
     explanation:
       '`.pipe()` **does** implement backpressure: it pauses the source when `dest.write()` returns `false` and resumes on `drain`. What it does not do is error handling. Errors are not forwarded along a `.pipe()` chain, so an unhandled `error` event on a middle stream crashes the process, and when the destination fails the source is left open (a leaked fd or a hung upstream socket).\n\n`pipeline()` wires up errors and teardown for every stage, calls back once, and the promise version composes with `await` and `AbortSignal`. It also accepts async iterables and async generator stages, which is often the clearest way to write a transform.',
+    hint: 'Check what `.pipe()` already does when `write()` returns false, then compare how each approach handles errors and early closes.',
   },
   {
     id: 'nodejs-backpressure-write-bursts',
@@ -303,6 +313,7 @@ Example: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` returns \`[[4, 4, 4
     source: 'notion',
     explanation:
       '`write()` returning `false` is **advisory**: the chunk was accepted (even a chunk bigger than `highWaterMark`), but the producer is being told to stop. If it ignores the signal and keeps writing, the Writable buffers without limit and memory grows until the process is OOM-killed. That is the classic bug when someone writes `for (const row of rows) out.write(row)` over a large dataset.\n\nNote the `>=`: reaching the mark exactly already returns `false`. In real code, `await once(stream, \'drain\')` when `write` returns `false`, or let `pipeline()` / async iteration do it for you.',
+    hint: 'Track a running buffered total and compare it with `highWaterMark` after each write; a failed check ends the burst, and `\'drain\'` empties the buffer.',
   },
   {
     id: 'nodejs-large-upload-pipeline-design',
@@ -326,6 +337,7 @@ Example: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` returns \`[[4, 4, 4
     source: 'notion',
     explanation:
       'The senior signal is connecting a slow consumer to a paused producer across process boundaries, then designing for partial failure.\n\n**Say this out loud:** "Memory is bounded by the stream buffers, not the file size, because backpressure propagates from the database all the way back to the client\'s TCP window; pipeline guarantees that if any stage fails, everything is torn down."',
+    hint: 'Cover how backpressure flows from the database back to the client socket, batched inserts (e.g. `COPY`), and what happens to rows already written when one row fails.',
   },
 
   // worker-threads-and-cpu-work
@@ -349,6 +361,7 @@ Example: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` returns \`[[4, 4, 4
     source: 'notion',
     explanation:
       'Anything that keeps the single JavaScript thread busy blocks **all** requests: synchronous crypto, synchronous file I/O, and huge `JSON.parse` / `JSON.stringify` calls (also catastrophic regexes and big sorts). A slow `await fetch` only makes **that** request slow; while it waits, the thread is free to serve others.\n\nFixes: use the async variants (`crypto.pbkdf2`, `fs.promises`), stream-parse large payloads, and move unavoidable CPU work to a worker thread. Detect it with `perf_hooks.monitorEventLoopDelay()` or a CPU profile (`--cpu-prof`).',
+    hint: 'For each call, ask whether it keeps the single JavaScript thread busy, or only leaves one request waiting while the thread serves others.',
   },
   {
     id: 'nodejs-cluster-vs-worker-threads',
@@ -372,6 +385,7 @@ Example: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` returns \`[[4, 4, 4
     source: 'notion',
     explanation:
       'A new `Worker` costs tens of milliseconds and its own V8 isolate, so per-request workers are an anti-pattern; pools amortise that.\n\n**Say this out loud:** "Processes scale I/O across cores and give me isolation; threads take CPU work off the event loop. I pick by the bottleneck, and I bound the pool so overload turns into fast 503s instead of a growing queue."',
+    hint: 'Diagnose each bottleneck on its own: one is about using more cores for I/O-bound work, the other about keeping CPU work off the event loop. Mention pooling and startup cost.',
   },
 
   // execution-models
@@ -394,6 +408,7 @@ Example: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` returns \`[[4, 4, 4
     source: 'notion',
     explanation:
       'Module scope runs once per **execution environment** (on the cold start), and the environment is reused for later invocations, so a client created there survives warm starts. But each environment handles **one invocation at a time**, and concurrency scales by adding environments, so 500 concurrent invocations means 500 environments. A pool of 20 each would be 10,000 connections and exhaust Postgres. Hence one connection per environment and a pooler in front.\n\nCreating it in the handler pays the TCP and TLS handshake on every call. A `setInterval` does not help: the environment is **frozen** between invocations, so the timer does not fire while the environment sits idle, and the database or a NAT can still drop the idle connection; reconnect on error instead.',
+    hint: 'Think about how long an execution environment lives, how many invocations it handles at once, and what hundreds of concurrent environments do to Postgres.',
   },
   {
     id: 'nodejs-execution-model-choice',
@@ -417,6 +432,7 @@ Example: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` returns \`[[4, 4, 4
     source: 'topic-list',
     explanation:
       'Interviewers want the decision driven by workload shape (duration, traffic pattern, statefulness, latency budget), not by preference.\n\n**Say this out loud:** "Serverless for short, bursty, stateless work; long-lived processes when I need warm connections, persistent consumers or tight latency; scheduled scripts for bounded batch jobs with an exit code I can alert on."',
+    hint: 'Drive each choice from the workload\'s shape: duration, traffic pattern, statefulness and latency budget, and name the limits (timeouts, cold starts) that rule options out.',
   },
   {
     id: 'nodejs-graceful-shutdown-kubernetes',
@@ -440,6 +456,7 @@ Example: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` returns \`[[4, 4, 4
     source: 'notion',
     explanation:
       'The 502s usually come from the load balancer still routing to a pod that has already stopped listening, or from keep-alive connections cut mid-request. Both are ordering problems.\n\n**Say this out loud:** "Stop receiving traffic first, then stop accepting, then drain with a deadline, then release resources, and make every piece of work idempotent because some of it will be retried."',
+    hint: 'Think about ordering: `SIGTERM`, readiness, the load balancer catching up, keep-alive connections, in-flight requests and jobs, a drain deadline and `terminationGracePeriodSeconds`.',
   },
 
   // request-batching
@@ -481,6 +498,7 @@ Example: \`solution([[1, 2], [2, 3], [4]], 2)\` returns \`[[1, 2], [3, 4]]\`.`,
     source: 'topic-list',
     explanation:
       'A `Set` keeps insertion order, so `[...new Set(ids.flat())]` dedupes while preserving first-seen order; then slice into fixed-size chunks.\n\nIn the real batcher the collection window is **one tick**: the first `load(id)` schedules a flush with `queueMicrotask` / `process.nextTick` (DataLoader) or a short `setTimeout` for a wider window, every `load` in between adds its id and gets a promise, and the flush fans the bulk response back out by id. That turns an N+1 pattern (one query per GraphQL field or per item) into `ceil(unique / batchSize)` calls. The trade-off is a small added latency, and one failed batch fails every caller in it.',
+    hint: 'Reach for a `Set` to dedupe while keeping insertion order, then slice the result into fixed-size chunks.',
   },
   {
     id: 'nodejs-retry-backoff-schedule',
@@ -519,6 +537,7 @@ Example: \`solution(3, 100, 1000, [0.5, 0.5, 0.5])\` returns \`[50, 100, 200]\`.
     source: 'notion',
     explanation:
       'Exponential growth gives a struggling dependency room to recover; the **cap** stops the delay from growing without limit; **jitter** spreads out clients that failed at the same moment so they do not all retry together (a thundering herd). Full jitter (random between 0 and the ceiling) spreads load best at the cost of some very short waits.\n\nRetry only **idempotent** operations (or send an idempotency key), respect `Retry-After` when the server sends it, set a timeout on every attempt (`AbortSignal.timeout`), and put a circuit breaker in front so a dead dependency fails fast instead of retrying forever.',
+    hint: 'Compute each ceiling with a power of two, clamp it with `Math.min`, then scale it by the injected random value and round down with `Math.floor`.',
   },
   {
     id: 'nodejs-inflight-dedupe-cache-fix',
@@ -624,5 +643,6 @@ export async function solution(ids: number[], failOnceIds: number[]): Promise<{ 
     source: 'notion',
     explanation:
       'The buggy version caches the **value**, which exists only after the `await`. Every caller that arrives while the first fetch is in flight sees an empty cache and starts its own fetch: a cache stampede. Caching the **promise** synchronously, before any `await`, makes later callers join the in-flight request.\n\nThe second half is the part people miss: once you cache promises, a rejected promise is cached too, and every future call gets the same error. Evict on rejection (`.catch` that deletes and rethrows) so the next call retries. In production, add a TTL or LRU bound so the map cannot grow forever, and for a multi-instance fleet move coalescing to a shared cache with a lock or a request-collapsing proxy.\n\n**Say this out loud:** "Cache the promise, not the value, so concurrent callers coalesce onto one in-flight request, and evict it on rejection so a transient failure is not cached forever."',
+    hint: 'Ask what the cache holds while the first fetch is still pending, what could be stored synchronously before any `await`, and what must happen to it on failure.',
   },
 ];

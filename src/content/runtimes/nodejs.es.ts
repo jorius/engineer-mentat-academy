@@ -11,6 +11,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '`__dirname`, `__filename`, `require`, `module` y `exports` son **variables del wrapper de CommonJS**: Node las inyecta envolviendo cada archivo CJS en una función. Los ES modules no se envuelven, así que `__dirname` produce un `ReferenceError`. Usa `import.meta.dirname` (Node 20.11+) o `path.dirname(fileURLToPath(import.meta.url))`, y `createRequire(import.meta.url)` si todavía necesitas `require`.\n\nEl `await` de nivel superior es válido en ESM (no lo es en CJS), los imports por defecto de los módulos integrados funcionan y `export default` es la forma de exportar en ESM. Otras diferencias de ESM que vale la pena conocer: siempre se ejecuta en modo estricto, los imports son bindings vivos de solo lectura y el grafo de módulos se carga de forma asíncrona.',
+    hint: 'Pregúntate qué identificadores inyecta Node al envolver cada archivo CommonJS en una función, y si los módulos ES reciben esa envoltura.',
   },
   'nodejs-libuv-threadpool-operations': {
     prompt:
@@ -21,12 +22,14 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Los sockets de red **no** usan el pool: libuv los registra en la API de disponibilidad del kernel (epoll, kqueue, IOCP) y el event loop recibe la notificación en la fase poll, por eso un solo hilo puede mantener decenas de miles de conexiones. Las llamadas al sistema de archivos, `dns.lookup` (envuelve el `getaddrinfo` bloqueante), la criptografía asíncrona (`pbkdf2`, `scrypt`, `randomBytes`) y el `zlib` asíncrono no tienen una API del kernel no bloqueante y portable, así que se ejecutan en el pool.\n\nLa consecuencia práctica: con los 4 hilos por defecto, cuatro hashes `pbkdf2` o búsquedas DNS lentas dejan en cola todas las demás llamadas a `fs` detrás de ellas. Aumenta `UV_THREADPOOL_SIZE` (configúralo antes del primer uso del pool) o saca el hashing de la ruta de la petición. Esta es la respuesta concreta a "cómo maneja JavaScript el trabajo asíncrono si tiene un solo hilo".',
+    hint: 'Separa el trabajo que el kernel puede reportar como listo (epoll, kqueue, IOCP) de las llamadas bloqueantes al sistema que libuv tiene que pasar a un hilo trabajador.',
   },
   'nodejs-async-function-runs-sync': {
     prompt:
       'Un compañero marcó como `async` una función que usa mucha CPU "para que no bloquee". ¿Qué imprime esto, un valor por línea?',
     explanation:
       'Una función `async` se ejecuta de forma **síncrona** hasta su primer `await`. Aquí no hay ningún `await`, así que todo el bucle corre en el stack de quien la llama antes de que se imprima `after call`. La promesa devuelta ya está cumplida cuando `sumTo` retorna; solo el callback de `.then` se difiere, como una microtarea que corre cuando termina el script, y por eso `total 500500` sale al final.\n\n`async` cambia cómo se entrega el resultado, no dónde se ejecuta el trabajo. El comportamiento no bloqueante real viene de que el runtime haga el trabajo en otro lugar (el kernel, el pool de libuv) o de que tú muevas el trabajo de CPU a un worker thread.',
+    hint: 'Recuerda hasta dónde se ejecuta una función `async` antes de ceder el control por primera vez, y qué implica eso cuando su cuerpo nunca usa `await`.',
   },
 
   // event-loop-phases
@@ -34,6 +37,7 @@ export const translations: Record<string, QuestionTranslation> = {
     prompt: '¿En qué fase del event loop de Node.js se ejecutan los callbacks de `setImmediate()`?',
     explanation:
       'Una iteración del loop ejecuta estas fases en orden:\n\n1. **timers**: callbacks vencidos de `setTimeout` / `setInterval`\n2. **pending callbacks**: algunos callbacks de I/O del sistema diferidos desde la iteración anterior\n3. **idle, prepare**: internas\n4. **poll**: espera y ejecuta callbacks de I/O (aquí corre la mayor parte de tu código)\n5. **check**: callbacks de `setImmediate`\n6. **close callbacks**: p. ej. `socket.on(\'close\')`\n\n`setImmediate` existe precisamente para decir "ejecuta esto justo después de la fase poll actual". Entre cada callback, Node vacía la cola de `process.nextTick` y luego la cola de microtareas de promesas.',
+    hint: 'Repasa el orden de las fases del event loop y cuál existe para que ciertos callbacks corran justo después del sondeo de I/O.',
   },
   'nodejs-immediate-vs-timeout-in-io': {
     prompt: `¿En qué orden imprime la salida este programa CommonJS?
@@ -54,6 +58,7 @@ fs.readFile(__filename, () => {
     },
     explanation:
       'El callback de `readFile` se ejecuta en la fase **poll**. Cuando termina, el loop pasa a la fase **check**, que ejecuta el immediate. El timer solo puede dispararse cuando el loop da la vuelta hasta la fase **timers** de la siguiente iteración. Así que, dentro de un callback de I/O, `setImmediate` siempre gana.\n\n"No es determinista" es la respuesta correcta para otro programa: cuando ambos se programan desde el **módulo principal**, el orden no es determinista. `setTimeout(fn, 0)` en realidad es 1 ms, y que ese 1 ms ya haya transcurrido cuando la primera iteración revisa los timers depende de los tiempos de arranque del proceso.',
+    hint: 'Fíjate en qué fase corre el callback de `readFile` y luego pregúntate a qué fase llega el loop después y cuándo vuelve a revisar los timers.',
   },
   'nodejs-nexttick-promise-ordering': {
     prompt: `Este archivo se ejecuta como \`node order.cjs\` (CommonJS). ¿Qué afirmación sobre la salida es correcta?
@@ -72,16 +77,19 @@ console.log('sync');
     },
     explanation:
       'Cuando termina el script principal, Node vacía **primero la cola de `process.nextTick` y luego la cola de microtareas de promesas**, y lo vuelve a hacer después de cada callback en cada fase. Así que `nextTick` le gana a `promise`, y ambos le ganan a cualquier timer o immediate.\n\nLuego arranca el loop: la fase **timers** ejecuta `timeout` solo si su 1 ms ya transcurrió; si no, la fase **check** ejecuta `immediate` primero y `timeout` espera a la siguiente iteración. Desde el módulo principal esa carrera no es determinista (dentro de un callback de I/O, `immediate` siempre gana).\n\nTrampa de ESM: en un archivo `.mjs` el propio cuerpo del módulo se ejecuta dentro de un job de promesa, así que la cola de microtareas se vacía antes de que Node vuelva a la cola de nextTick, y `promise` se imprime **antes** que `nextTick`. Un `nextTick` recursivo también puede dejar sin turno al loop por completo, y por eso la documentación de Node recomienda `queueMicrotask` o `setImmediate` para la mayoría de los diferimientos.\n\n**Dilo en voz alta:** "Cola de nextTick y luego microtareas, después de cada callback; timers contra check desde el módulo principal es una carrera, pero dentro de un callback de I/O setImmediate siempre se ejecuta primero porque check viene después de poll."',
+    hint: 'Recuerda qué cola vacía Node primero al terminar el script principal, y si el orden entre timers y check es fijo fuera de un callback de I/O.',
   },
   'nodejs-microtask-queue-interleaving': {
     prompt: '¿Qué imprime esto, un valor por línea?',
     explanation:
       'La cola de microtareas es FIFO y se vacía **por completo**, incluidas las microtareas encoladas mientras se vacía, antes de que el event loop pase a la siguiente macrotarea.\n\nDespués de `sync`, la cola es `[micro 1, promise 1]`. Ejecutar `micro 1` agrega `micro 2`; ejecutar `promise 1` resuelve la promesa encadenada y agrega `promise 2`. Cola: `[micro 2, promise 2]`. Solo cuando queda vacía, la fase timers ejecuta `timeout`.\n\nEsa misma regla explica cómo una cadena infinita de microtareas deja sin turno a los timers y al I/O: el loop nunca pasa del vaciado.',
+    hint: 'La cola de microtareas se vacía por completo, incluidas las tareas que se agregan mientras se vacía, antes de cualquier macrotarea; sigue la cola después de cada paso `.then`.',
   },
   'nodejs-microtasks-between-timers': {
     prompt: '¿Qué imprime esto en Node 11+ (y en los navegadores), un valor por línea?',
     explanation:
       '`job()` se ejecuta de forma síncrona hasta `await null`, que encola su continuación **antes** de que se encole `p1`, así que `job resumed` va antes que `p1`. Ambos le ganan a todos los timers.\n\nEn la fase timers, tanto `t1` como `t2` están vencidos. Desde **Node 11**, las microtareas se vacían después de **cada** callback de timer (igual que en los navegadores), así que `t1 microtask` se imprime antes que `t2`. En Node 10 y versiones anteriores primero se ejecutaba todo el lote de timers vencidos, lo que daba `t1, t2, t1 microtask`. `t3` se programó durante la fase timers, así que se ejecuta después de `t2` (en la siguiente pasada por los timers).\n\n**Dilo en voz alta:** "Un await no es más que una continuación en una microtarea, y desde Node 11 la cola de microtareas se vacía entre cada callback individual de timer o de immediate, no una vez por fase."',
+    hint: 'Recuerda qué difiere un `await` y en qué momento, y que desde Node 11 las microtareas se vacían después de cada callback de timer, no una vez por fase de timers.',
   },
 
   // streams-and-large-files
@@ -93,6 +101,7 @@ console.log('sync');
     },
     explanation:
       'Node tiene cuatro tipos de stream: **Readable** (origen, p. ej. `fs.createReadStream`), **Writable** (destino, p. ej. `fs.createWriteStream`), **Duplex** (ambos lados, independientes, p. ej. un socket TCP donde lo que lees no tiene nada que ver con lo que escribiste) y **Transform**, un Duplex cuya salida se calcula a partir de su entrada (gzip, cifrado, parseo de CSV).\n\nCon streaming, el archivo se procesa chunk por chunk (64 KiB por defecto en los streams de archivos), así que la memoria se mantiene estable sin importar el tamaño del archivo, mientras que `fs.readFile` intentaría guardar los 20 GB en un Buffer y fallaría.',
+    hint: 'Pregúntate si los bytes que salen se calculan a partir de los bytes que entran, y qué tipo de stream modela esa relación.',
   },
   'nodejs-pipeline-over-pipe': {
     prompt:
@@ -105,6 +114,7 @@ console.log('sync');
     },
     explanation:
       '`.pipe()` **sí** implementa backpressure: pausa el origen cuando `dest.write()` devuelve `false` y lo reanuda con `drain`. Lo que no hace es manejar errores. Los errores no se propagan a lo largo de una cadena de `.pipe()`, así que un evento `error` sin manejar en un stream intermedio hace caer el proceso, y cuando el destino falla, el origen queda abierto (un fd filtrado o un socket upstream colgado).\n\n`pipeline()` conecta los errores y el cierre de cada etapa, invoca el callback una sola vez, y la versión con promesas se combina con `await` y `AbortSignal`. También acepta iterables asíncronos y etapas con generadores asíncronos, que muchas veces son la forma más clara de escribir un transform.',
+    hint: 'Revisa qué hace ya `.pipe()` cuando `write()` devuelve false, y luego compara cómo maneja cada enfoque los errores y los cierres anticipados.',
   },
   'nodejs-backpressure-write-bursts': {
     prompt: `Simula un productor que respeta el backpressure de un stream Writable.
@@ -118,6 +128,7 @@ Implementa \`solution(sizes, highWaterMark)\` para que devuelva las **ráfagas**
 Ejemplo: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` devuelve \`[[4, 4, 4], [4, 4]]\`.`,
     explanation:
       'Que `write()` devuelva `false` es **solo un aviso**: el chunk se aceptó (incluso un chunk más grande que `highWaterMark`), pero se le indica al productor que se detenga. Si ignora la señal y sigue escribiendo, el Writable acumula en su buffer sin límite y la memoria crece hasta que el proceso muere por OOM. Ese es el bug clásico cuando alguien escribe `for (const row of rows) out.write(row)` sobre un conjunto de datos grande.\n\nFíjate en el `>=`: alcanzar la marca exacta ya devuelve `false`. En código real, haz `await once(stream, \'drain\')` cuando `write` devuelva `false`, o deja que `pipeline()` / la iteración asíncrona lo haga por ti.',
+    hint: 'Lleva un total acumulado del buffer y compáralo con `highWaterMark` después de cada write; un chequeo fallido cierra la ráfaga y `\'drain\'` vacía el buffer.',
   },
   'nodejs-large-upload-pipeline-design': {
     prompt:
@@ -133,6 +144,7 @@ Ejemplo: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` devuelve \`[[4, 4, 
     ],
     explanation:
       'La señal de seniority es conectar un consumidor lento con un productor pausado a través de los límites entre procesos, y luego diseñar para fallas parciales.\n\n**Dilo en voz alta:** "La memoria está acotada por los buffers de los streams, no por el tamaño del archivo, porque el backpressure se propaga desde la base de datos hasta la ventana TCP del cliente; pipeline garantiza que, si cualquier etapa falla, todo se desmonta."',
+    hint: 'Cubre cómo fluye la backpressure desde la base de datos hasta el socket del cliente, los inserts por lotes (p. ej. `COPY`) y qué pasa con las filas ya escritas cuando una falla.',
   },
 
   // worker-threads-and-cpu-work
@@ -145,6 +157,7 @@ Ejemplo: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` devuelve \`[[4, 4, 
     },
     explanation:
       'Cualquier cosa que mantenga ocupado el único hilo de JavaScript bloquea **todas** las peticiones: la criptografía síncrona, el I/O de archivos síncrono y las llamadas enormes a `JSON.parse` / `JSON.stringify` (también las regex catastróficas y los ordenamientos grandes). Un `await fetch` lento solo hace lenta **esa** petición; mientras espera, el hilo queda libre para atender a las demás.\n\nSoluciones: usa las variantes asíncronas (`crypto.pbkdf2`, `fs.promises`), parsea los payloads grandes con streaming y mueve a un worker thread el trabajo de CPU que no puedas evitar. Detéctalo con `perf_hooks.monitorEventLoopDelay()` o con un perfil de CPU (`--cpu-prof`).',
+    hint: 'Para cada llamada, pregúntate si mantiene ocupado el único hilo de JavaScript o si solo deja una petición esperando mientras el hilo atiende a las demás.',
   },
   'nodejs-cluster-vs-worker-threads': {
     prompt:
@@ -160,6 +173,7 @@ Ejemplo: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` devuelve \`[[4, 4, 
     ],
     explanation:
       'Un `Worker` nuevo cuesta decenas de milisegundos y su propio isolate de V8, así que crear workers por petición es un antipatrón; los pools amortizan ese costo.\n\n**Dilo en voz alta:** "Los procesos escalan el I/O entre núcleos y me dan aislamiento; los hilos sacan el trabajo de CPU del event loop. Elijo según el cuello de botella, y acoto el pool para que la sobrecarga se convierta en 503 rápidos en lugar de en una cola que no para de crecer."',
+    hint: 'Diagnostica cada cuello de botella por separado: uno trata de usar más núcleos para trabajo de I/O, el otro de sacar el trabajo de CPU del event loop. Menciona los pools y el costo de arranque.',
   },
 
   // execution-models
@@ -174,6 +188,7 @@ Ejemplo: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` devuelve \`[[4, 4, 
     },
     explanation:
       'El scope del módulo se ejecuta una vez por **entorno de ejecución** (en el cold start), y el entorno se reutiliza en las invocaciones siguientes, así que un cliente creado ahí sobrevive a los warm starts. Pero cada entorno atiende **una invocación a la vez**, y la concurrencia escala agregando entornos, así que 500 invocaciones concurrentes significan 500 entornos. Un pool de 20 en cada uno serían 10,000 conexiones y agotaría Postgres. Por eso, una conexión por entorno y un pooler delante.\n\nCrearlo en el handler paga el handshake de TCP y TLS en cada llamada. Un `setInterval` no ayuda: el entorno queda **congelado** entre invocaciones, así que el timer no se dispara mientras el entorno está inactivo, y la base de datos o un NAT igual pueden cortar la conexión inactiva; mejor reconecta ante un error.',
+    hint: 'Piensa en cuánto vive un entorno de ejecución, cuántas invocaciones atiende a la vez y qué le hacen cientos de entornos concurrentes a Postgres.',
   },
   'nodejs-execution-model-choice': {
     prompt:
@@ -189,6 +204,7 @@ Ejemplo: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` devuelve \`[[4, 4, 
     ],
     explanation:
       'Los entrevistadores quieren que la decisión la guíe la forma de la carga de trabajo (duración, patrón de tráfico, estado, presupuesto de latencia), no la preferencia personal.\n\n**Dilo en voz alta:** "Serverless para trabajo corto, en ráfagas y sin estado; procesos de larga duración cuando necesito conexiones en caliente, consumidores persistentes o latencia ajustada; scripts programados para jobs batch acotados, con un código de salida sobre el que pueda alertar."',
+    hint: 'Decide cada caso por la forma de la carga: duración, patrón de tráfico, estado y presupuesto de latencia, y nombra los límites (timeouts, cold starts) que descartan opciones.',
   },
   'nodejs-graceful-shutdown-kubernetes': {
     prompt:
@@ -204,6 +220,7 @@ Ejemplo: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` devuelve \`[[4, 4, 
     ],
     explanation:
       'Los 502 suelen venir de que el balanceador de carga sigue enrutando a un pod que ya dejó de escuchar, o de conexiones keep-alive cortadas a mitad de una petición. Ambos son problemas de orden.\n\n**Dilo en voz alta:** "Primero dejo de recibir tráfico, luego dejo de aceptar, luego dreno con un deadline, luego libero recursos, y hago que cada pieza de trabajo sea idempotente porque parte de ella se va a reintentar."',
+    hint: 'Piensa en el orden: `SIGTERM`, readiness, el load balancer poniéndose al día, conexiones keep-alive, peticiones y jobs en curso, un plazo de drenado y `terminationGracePeriodSeconds`.',
   },
 
   // request-batching
@@ -218,6 +235,7 @@ Implementa \`solution(ids, batchSize)\`, donde \`ids[i]\` es la lista de ids que
 Ejemplo: \`solution([[1, 2], [2, 3], [4]], 2)\` devuelve \`[[1, 2], [3, 4]]\`.`,
     explanation:
       'Un `Set` conserva el orden de inserción, así que `[...new Set(ids.flat())]` elimina duplicados y mantiene el orden de primera aparición; después se divide en chunks de tamaño fijo.\n\nEn el batcher real, la ventana de recolección es **un tick**: el primer `load(id)` programa un flush con `queueMicrotask` / `process.nextTick` (DataLoader) o con un `setTimeout` corto para una ventana más amplia, cada `load` intermedio agrega su id y recibe una promesa, y el flush reparte la respuesta masiva por id. Eso convierte un patrón N+1 (una consulta por campo de GraphQL o por elemento) en `ceil(unique / batchSize)` llamadas. El trade-off es una pequeña latencia adicional, y un lote fallido hace fallar a todos los que llamaron dentro de él.',
+    hint: 'Usa un `Set` para quitar duplicados conservando el orden de inserción, y luego corta el resultado en bloques de tamaño fijo.',
   },
   'nodejs-retry-backoff-schedule': {
     prompt: `Un endpoint masivo downstream a veces responde \`429\` o \`503\`. Calcula los tiempos de espera de los reintentos usando **backoff exponencial con tope y full jitter**.
@@ -229,6 +247,7 @@ Ejemplo: \`solution([[1, 2], [2, 3], [4]], 2)\` devuelve \`[[1, 2], [3, 4]]\`.`,
 Ejemplo: \`solution(3, 100, 1000, [0.5, 0.5, 0.5])\` devuelve \`[50, 100, 200]\`.`,
     explanation:
       'El crecimiento exponencial le da margen a una dependencia con problemas para recuperarse; el **tope** evita que la espera crezca sin límite; el **jitter** dispersa a los clientes que fallaron en el mismo momento para que no reintenten todos juntos (una estampida, o thundering herd). El full jitter (un valor aleatorio entre 0 y el techo) es el que mejor reparte la carga, a costa de algunas esperas muy cortas.\n\nReintenta solo operaciones **idempotentes** (o envía una clave de idempotencia), respeta `Retry-After` cuando el servidor lo envía, pon un timeout en cada intento (`AbortSignal.timeout`) y coloca un circuit breaker delante para que una dependencia caída falle rápido en lugar de reintentar para siempre.',
+    hint: 'Calcula cada techo con una potencia de dos, acótalo con `Math.min`, luego escálalo con el valor aleatorio inyectado y redondea hacia abajo con `Math.floor`.',
   },
   'nodejs-inflight-dedupe-cache-fix': {
     prompt: `\`createCachedLoader\` debería **unificar** (coalesce) las peticiones concurrentes: todo el que pida el mismo id mientras hay un fetch en curso debe compartir ese único fetch, y quienes llamen después obtienen el resultado en caché. En producción, una ráfaga de peticiones concurrentes para el mismo usuario igual llega al upstream una vez por petición.
@@ -240,5 +259,6 @@ Corrige **solo \`createCachedLoader\`** para que:
 El harness \`solution\` ejecuta dos oleadas de cargas concurrentes y reporta los resultados y el total de llamadas al upstream. No lo modifiques.`,
     explanation:
       'La versión con el bug guarda en caché el **valor**, que solo existe después del `await`. Todo el que llega mientras el primer fetch está en curso ve la caché vacía e inicia su propio fetch: una estampida de caché (cache stampede). Guardar en caché la **promesa** de forma síncrona, antes de cualquier `await`, hace que quienes llegan después se sumen a la petición en curso.\n\nLa segunda mitad es la que la gente pasa por alto: una vez que guardas promesas en caché, una promesa rechazada también queda en caché, y todas las llamadas futuras reciben el mismo error. Elimínala cuando se rechace (un `.catch` que la borra y vuelve a lanzar el error) para que la siguiente llamada reintente. En producción, agrega un TTL o un límite LRU para que el map no crezca para siempre, y en una flota de varias instancias mueve la unificación a una caché compartida con un lock o a un proxy que colapse las peticiones.\n\n**Dilo en voz alta:** "Guardo en caché la promesa, no el valor, para que las llamadas concurrentes se unifiquen en una sola petición en curso, y la elimino si se rechaza para que una falla transitoria no quede en caché para siempre."',
+    hint: 'Pregúntate qué guarda el caché mientras el primer fetch sigue pendiente, qué podrías guardar de forma síncrona antes de cualquier `await` y qué debe pasarle si falla.',
   },
 };

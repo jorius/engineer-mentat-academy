@@ -22,6 +22,7 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       '**Over-fetching**: the endpoint returns more than the screen needs (40 user fields, whole line items), wasting bandwidth, which matters on mobile. **Under-fetching**: one endpoint does not return enough, so the client makes extra round trips (user, then orders), adding latency.\n\nIn GraphQL the **client declares the shape** of the response and the server resolves nested fields in one request, so both disappear from the client\'s point of view. The work does not vanish; it moves to the server, where nested resolvers can cause N+1 queries unless you batch. GraphQL is still JSON over HTTP (usually POST); the idea that it switches to a binary transport describes gRPC/protobuf, not GraphQL.',
+    hint: 'Define over-fetching and under-fetching in the REST flow, then check what a nested selection set changes about fields and round trips.',
   },
   {
     id: 'graphql-dataloader-per-request-context',
@@ -43,6 +44,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '`context` is the per-request object shared by every resolver in one operation: it is where the authenticated user, DB handles and loaders live. Creating loaders there scopes both the **batch window** and the **memo cache** to a single request.\n\n- **Module level** is the dangerous distractor: a shared cache never invalidates (stale data after writes), grows without bound, and can serve data loaded under one user\'s permissions to another user.\n- **Inside each field resolver** creates a new loader per field call, so there is nothing to batch with and the N+1 comes back.\n- **`info`** is the query AST and schema metadata, not a place for per-request state.\n\nFor a cross-request cache, put Redis (or HTTP caching) *below* the loader, with explicit TTLs and invalidation.',
+    hint: 'DataLoader caches by id: think about who could see a cached record if that cache outlived one request, and which resolver argument is built once per request.',
   },
   {
     id: 'graphql-n-plus-one-batching-predict',
@@ -115,6 +117,7 @@ resolvePosts(db.authorById)
     source: 'topic-list',
     explanation:
       'Naive: 1 query for the posts list + 1 query **per post** for its author = 1 + 4 = **5**. That is the N+1 problem, and in GraphQL it happens by default because each `author` field resolver runs independently and knows nothing about its siblings.\n\nBatched: all four `loadAuthor` calls happen synchronously inside `posts.map`. The first call schedules a dispatch on the microtask queue; the next ones just enqueue. The repeated key `10` hits the memo cache and returns the same promise, so the batch is deduplicated to `[10,20,30]`. Result: 1 + 1 = **2** queries, whatever the number of posts. The real `dataloader` package does the same thing (it schedules the dispatch after the current tick of promise jobs).\n\n**Say this out loud:** "Field resolvers are independent, so nested lists produce N+1 queries; DataLoader fixes it by collecting every key requested in the same tick, deduplicating, and issuing one `WHERE id IN (...)` query, with a loader per request."',
+    hint: 'Count one round trip for the list plus one per item on the naive path; on the batched path, ask how many keys are collected before the tick ends.',
   },
   {
     id: 'graphql-batch-function-contract',
@@ -159,6 +162,7 @@ export function solution(keys: number[], rows: Author[]): (Author | null)[] {
     source: 'topic-list',
     explanation:
       'DataLoader resolves the promise for `keys[i]` with `result[i]`. If you return the raw rows, a missing id shifts every later result by one and **authors get attached to the wrong posts**, a silent data bug rather than a crash (DataLoader only throws when the lengths differ).\n\nIndex the rows in a `Map` (O(n + k)) instead of calling `rows.find` per key (O(n * k)). Return `null` for a missing record, or an `Error` instance if that key should reject individually.',
+    hint: 'Index the rows in a `Map` keyed by id, then map over `keys` so the order and length follow the keys, not the rows.',
   },
   {
     id: 'graphql-operational-costs',
@@ -180,6 +184,7 @@ export function solution(keys: number[], rows: Author[]): (Author | null)[] {
     source: 'notion',
     explanation:
       '**Harder HTTP/CDN caching**: REST GETs are cacheable by URL at every layer (browser, CDN, reverse proxy). One POST endpoint defeats that; persisted queries (a hash instead of the full query) restore GET caching.\n\n**Errors inside `200 OK`**: partial success is normal in GraphQL (`data` plus `errors`), so you monitor the `errors` array and resolver-level metrics, not just HTTP codes.\n\n**Arbitrarily expensive requests**: "requests per minute" means little when one query can fan out to millions of rows. You add query depth limits, cost analysis, pagination caps and, for public APIs, persisted-query allowlists.\n\n**N+1 queries**: each nested field resolver runs on its own, so a list of posts triggers one author lookup per post unless a per-request DataLoader batches them into one `WHERE id IN (...)` query.\n\nThe `/v2/graphql` claim is false: GraphQL APIs usually evolve **without** versions. You add fields freely and deprecate old ones with `@deprecated`, then remove them once field-usage telemetry shows no clients.',
+    hint: 'For each item, check the mechanism behind it: how caches key on URLs, how errors are reported, how query cost is bounded, how resolvers fetch and how schemas evolve.',
   },
   {
     id: 'graphql-when-wrong-choice',
@@ -202,5 +207,6 @@ export function solution(keys: number[], rows: Author[]): (Author | null)[] {
     source: 'notion',
     explanation:
       'The interviewer is testing whether you can argue **against** a fashionable technology with concrete mechanisms (HTTP caching, typed binary RPC, query cost control) rather than taste.\n\n| Style | Strength | Use when |\n|---|---|---|\n| REST | Simple, cacheable, ubiquitous | Public and CRUD APIs |\n| GraphQL | Client picks fields, one round trip | Many clients, nested data, mobile |\n| gRPC | Fast binary, streaming, strict contracts | Internal service-to-service |\n\n**Say this out loud:** "I pick the API style per boundary: GraphQL at the product edge where many clients need different shapes, REST where HTTP caching and simplicity matter, and gRPC or events between services I own."',
+    hint: 'Argue with mechanisms: HTTP/CDN caching, typed binary RPC between services, query cost control and who the consumers are. Name what you would use instead in each case.',
   },
 ];

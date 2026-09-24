@@ -13,6 +13,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un JWT está **firmado, no cifrado** (a menos que uses JWE). Pega uno en cualquier decodificador y los claims están ahí a la vista, así que nunca pongas secretos en él. La firma (HMAC con un secreto compartido, o RSA/ECDSA con un par de claves) prueba que el token lo emitió alguien que tiene la clave y que no fue modificado.\n\nEso hace que los JWT sean **stateless**: el servidor verifica la firma, `exp`, `iss` y `aud` sin consultar la base de datos, así que no hace falta una verificación en la base de datos por petición. La contracara es que cerrar la sesión **no** invalida las copias ya emitidas: un token robado sigue siendo válido hasta que expira. Lo mitigas con access tokens de vida corta (de 5 a 15 min), rotación de refresh tokens y una denylist de ids de token (`jti`) solo cuando necesitas revocación instantánea.\n\nLa autenticación responde *quién eres*; los claims del token (roles, scopes) son entradas para la autorización, que igual debes aplicar en cada petición.',
+    hint: 'Recuerda si base64url es codificación o cifrado, y qué puede y qué no puede garantizar una firma sobre un token sin estado.',
   },
   'api-security-bola-object-level-authz': {
     prompt:
@@ -25,6 +26,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'La **autenticación** (quién eres) funcionó: el token era auténtico. La **autorización** (qué puedes hacer *con este objeto*) nunca se verificó. Esto es **Broken Object Level Authorization**, el #1 del OWASP API Security Top 10, también conocido como IDOR.\n\nLa corrección va en la ruta de acceso a los datos, no en la UI: acota cada consulta por el tenant o la propiedad de quien llama, tomados **del token verificado**, nunca de un parámetro de la petición, y devuelve `404` (no `403`) para no confirmar que el objeto existe. Row-level security en Postgres es un buen respaldo.\n\nCambiar a UUIDs es solo defensa en profundidad: hacen que los ids sean más difíciles de adivinar, pero se filtran por logs, enlaces compartidos y otros endpoints, y no agregan ninguna verificación de permisos. Restringir los orígenes de CORS es irrelevante; CORS no impide que un usuario con sesión iniciada llame a la API directamente.',
+    hint: 'Separa la autenticación de la autorización, y pregúntate si la consulta alguna vez verificó que este objeto en particular pertenece a quien llama.',
   },
   'api-security-cognito-authorizer-scope': {
     prompt:
@@ -37,6 +39,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '**Cognito** es el proveedor de identidad: guarda los usuarios y los hashes de las contraseñas, maneja el registro, el inicio de sesión y MFA, federa con proveedores sociales y SAML/OIDC, y emite JWTs (ID, access y refresh tokens). El **authorizer de Cognito en API Gateway** valida el token (la firma con el JWKS del pool, la expiración, el emisor y, para los access tokens, los scopes de OAuth que configures) antes de que se ejecute tu Lambda, y pasa los claims en `requestContext.authorizer`.\n\nLo que ninguno de los dos puede saber es tu regla de dominio: *este* usuario puede leer *esta* orden. Esa verificación a nivel de objeto, más las verificaciones de rol a partir de `cognito:groups` o de claims personalizados, vive en tu servicio. En resumen: Cognito te da autenticación y scopes de grano grueso; tú eres responsable de la autorización de grano fino.',
+    hint: 'Enumera lo que el proveedor de identidad y el authorizer del Gateway resuelven sobre el token en sí, y luego pregúntate qué no pueden saber sobre tus datos.',
   },
   'api-security-fixed-window-boundary-burst': {
     prompt:
@@ -49,12 +52,14 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Una ventana fija cuenta por bloque de calendario, así que un cliente puede gastar una cuota completa al final de una ventana y otra cuota completa al inicio de la siguiente: **2 veces el límite en dos segundos**.\n\n- **Sliding window log**: guarda el timestamp de cada petición y cuenta las de los últimos 60 s. Es exacto, pero la memoria crece con el límite.\n- **Sliding window counter**: pondera el conteo de la ventana anterior según cuánto de ella todavía se superpone (`prev * (1 - elapsed/60) + current`). Barato y suficientemente preciso; común con Redis.\n- **Token bucket**: un bucket de `capacity` tokens que se rellena a una tasa constante; cada petición consume uno. **Permite ráfagas hasta la capacidad** de forma deliberada mientras impone el promedio a largo plazo, que normalmente es lo que quieres para las APIs (el throttling de AWS API Gateway lo usa).\n\nLa elección de la key (API key, usuario, IP) es una decisión separada del algoritmo.',
+    hint: 'Imagina el contador a cada lado del cambio de minuto, y luego piensa en algoritmos que miran los últimos 60 segundos en lugar del minuto del calendario.',
   },
   'api-security-token-bucket-allow': {
     prompt:
       'Implementa la función de decisión de un rate limiter de **token bucket**, `allow(timestamps, capacity, refillPerSec)`, exportada como `solution`.\n\n- `timestamps` son los tiempos de llegada de las peticiones en **milisegundos**, en orden ascendente.\n- El bucket empieza **lleno**, con `capacity` tokens, en el tiempo de la primera petición.\n- Los tokens se rellenan de forma continua a `refillPerSec` tokens por segundo, nunca por encima de `capacity`.\n- Una petición se permite si hay al menos 1 token disponible, y entonces consume 1 token. Las peticiones rechazadas no consumen nada.\n\nDevuelve un boolean por petición.',
     explanation:
       'El truco es el **relleno perezoso**: ningún temporizador va agregando tokens. En cada petición calculas cuántos tokens se acumularon desde la anterior, `elapsed * rate`, los sumas y **los limitas a la capacidad** (sin ese tope, un cliente inactivo durante una hora podría disparar miles de peticiones de golpe). Luego gastas un token o rechazas.\n\nPor eso el estado por key son solo dos números, `tokens` y `lastRefill`, que caben en un hash de Redis. En un entorno distribuido, el leer-rellenar-decrementar debe ser **atómico** (un script Lua, o `WATCH` más `MULTI`/`EXEC` con reintento ante conflicto; `MULTI` por sí solo no puede leer el conteo y decidir según él), o dos instancias compiten y ambas gastan el último token. Una llamada rechazada devuelve `429` con `Retry-After = ceil((1 - tokens) / rate)` segundos.\n\n**Dilo en voz alta:** "Un token bucket guarda solo los tokens y un timestamp por key, se rellena de forma perezosa en cada petición con tope en la capacidad, lo que permite ráfagas controladas mientras impone la tasa promedio, y en Redis el verificar-y-decrementar tiene que ser un único script atómico."',
+    hint: 'Usa recarga perezosa: en cada petición suma los tokens acumulados desde la anterior, acota a `capacity` y gasta uno si hay. Cuida la conversión de milisegundos a segundos.',
   },
   'api-security-distributed-rate-limiting': {
     prompt:
@@ -70,6 +75,7 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'El bug es de arquitectura, no de algoritmo: un limitador es tan global como su estado. Las respuestas senior también separan la **aplicación de cuotas** (equidad entre clientes, con la API key como key) de la **defensa contra abusos** (por cuenta, reputación de IP, dispositivo), porque un solo algoritmo con la IP como key no hace bien ninguna de las dos cosas.\n\n**Dilo en voz alta:** "Los rate limits tienen que vivir en estado compartido y atómico, con la key de la identidad dueña de la cuota, en capas con throttling en el borde, con límites por cuenta en el login y una decisión explícita de fail open o fail closed cuando el almacén del limitador está caído."',
+    hint: 'Cubre dónde vive el estado del limitador (un almacén compartido con operaciones atómicas), y separa la cuota por clave de la defensa contra abuso basada en algo más que la IP.',
   },
   'api-security-public-endpoint-controls': {
     prompt:
@@ -83,6 +89,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '- El **rate limiting** por IP y global limita la fuerza bruta, el spam y los DoS; agrega un CAPTCHA o proof-of-work si el abuso persiste.\n- La **validación del schema en el servidor** es la regla central: **nunca confíes en el input**. Valida en la frontera (zod, class-validator, JSON Schema) con allowlists y límites de tamaño; esto también bloquea la asignación masiva de campos que no pretendías aceptar.\n- Las **queries parametrizadas más la codificación de salida** se ocupan del input que *sí* aceptaste: las queries parametrizadas evitan la inyección SQL, y la codificación de salida (más una CSP) evita el XSS almacenado cuando un administrador ve el mensaje.\n\nLa allowlist de CORS es el malentendido clásico: **CORS lo aplican los navegadores**, y solo controla si una página de otro origen puede *leer* la respuesta. `curl`, los scripts y los bots lo ignoran por completo. La validación del lado del cliente tampoco protege: los atacantes no usan tu formulario. La validación del lado del cliente es UX, no seguridad.',
+    hint: 'Para cada medida, pregúntate si detiene de verdad a un atacante que se salta tu UI y llama al endpoint con `curl`.',
   },
   'api-security-token-storage-csrf': {
     prompt:
@@ -98,5 +105,6 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'No hay opción de almacenamiento sin concesiones; el entrevistador quiere oírte emparejar cada elección con el ataque que habilita. localStorage cambia inmunidad a CSRF por robo de tokens vía XSS; las cookies cambian resistencia al robo vía XSS por CSRF, que SameSite más tokens manejan bien.\n\nUna distinción útil: **CORS** decide si otro origen puede *leer* tus respuestas (una relajación de la same-origin policy en el navegador), mientras que **CSRF** trata de otro origen que *envía* una petición que el navegador adorna con tus cookies. CORS no detiene CSRF.\n\n**Dilo en voz alta:** "Guardo el access token en memoria y el refresh token en una cookie HttpOnly, Secure y SameSite, así que un XSS no puede robar el refresh token de larga duración (todavía puede actuar como el usuario, por eso la CSP sigue importando); como las cookies traen de vuelta CSRF, me apoyo en SameSite más un token CSRF o verificaciones de Origin, y CORS permite exactamente el origen de mi app con credenciales, nunca un comodín ni un origen reflejado."',
+    hint: 'Empareja cada opción de almacenamiento con el ataque que abre (robo por XSS o CSRF), y luego cubre `HttpOnly`, `SameSite`, las credenciales de CORS y por qué CORS no protege contra CSRF.',
   },
 };

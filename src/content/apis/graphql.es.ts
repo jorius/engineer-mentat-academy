@@ -13,6 +13,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '**Over-fetching**: el endpoint devuelve más de lo que necesita la pantalla (40 campos del usuario, líneas completas), lo que desperdicia ancho de banda, algo que importa en móvil. **Under-fetching**: un endpoint no devuelve lo suficiente, así que el cliente hace viajes de ida y vuelta extra (usuario, luego órdenes), lo que suma latencia.\n\nEn GraphQL el **cliente declara la forma** de la respuesta y el servidor resuelve los campos anidados en una sola petición, así que ambos problemas desaparecen desde el punto de vista del cliente. El trabajo no se esfuma; se mueve al servidor, donde los resolvers anidados pueden causar consultas N+1 a menos que agrupes en batch. GraphQL sigue siendo JSON sobre HTTP (normalmente POST); la idea de que cambia a un transporte binario describe gRPC/protobuf, no GraphQL.',
+    hint: 'Define over-fetching y under-fetching en el flujo REST, y luego revisa qué cambia un selection set anidado en los campos y los viajes de ida y vuelta.',
   },
   'graphql-dataloader-per-request-context': {
     prompt:
@@ -25,18 +26,21 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '`context` es el objeto por petición que comparten todos los resolvers de una operación: ahí viven el usuario autenticado, los handles de la base de datos y los loaders. Crear los loaders ahí acota tanto la **ventana de batch** como el **caché de memoización** a una sola petición.\n\n- **A nivel de módulo** es el distractor peligroso: un caché compartido nunca se invalida (datos obsoletos después de las escrituras), crece sin límite y puede servirle a un usuario datos cargados con los permisos de otro.\n- **Dentro de cada field resolver** se crea un loader nuevo por cada llamada a un campo, así que no hay nada con qué agrupar y el N+1 vuelve.\n- **`info`** es el AST de la query y metadatos del schema, no un lugar para estado por petición.\n\nPara un caché entre peticiones, pon Redis (o caché HTTP) *debajo* del loader, con TTLs e invalidación explícitos.',
+    hint: 'DataLoader cachea por id: piensa en quién podría ver un registro cacheado si ese caché sobreviviera a una petición, y qué argumento del resolver se construye una vez por petición.',
   },
   'graphql-n-plus-one-batching-predict': {
     prompt:
       'Esto simula resolver `posts { author { id } }` dos veces: una con una búsqueda ingenua por post y otra a través de un DataLoader mínimo que recolecta las keys durante el tick actual y despacha un solo batch. `queries` cuenta los viajes de ida y vuelta a la base de datos. ¿Qué imprime, una línea por log?',
     explanation:
       'Ingenuo: 1 consulta para la lista de posts + 1 consulta **por post** para su autor = 1 + 4 = **5**. Ese es el problema N+1, y en GraphQL ocurre por defecto porque cada resolver del campo `author` se ejecuta de forma independiente y no sabe nada de sus hermanos.\n\nCon batch: las cuatro llamadas a `loadAuthor` ocurren de forma síncrona dentro de `posts.map`. La primera llamada programa un despacho en la cola de microtareas; las siguientes solo se encolan. La key repetida `10` encuentra el caché de memoización y devuelve la misma promesa, así que el batch queda deduplicado en `[10,20,30]`. Resultado: 1 + 1 = **2** consultas, sin importar el número de posts. El paquete real `dataloader` hace lo mismo (programa el despacho después del tick actual de trabajos de promesas).\n\n**Dilo en voz alta:** "Los field resolvers son independientes, así que las listas anidadas producen consultas N+1; DataLoader lo resuelve recolectando cada key pedida en el mismo tick, deduplicando y emitiendo una sola consulta `WHERE id IN (...)`, con un loader por petición."',
+    hint: 'Cuenta un viaje para la lista más uno por elemento en el camino ingenuo; en el camino por lotes, pregúntate cuántas claves se juntan antes de que termine el tick.',
   },
   'graphql-batch-function-contract': {
     prompt:
       'Una batch function de DataLoader recibe `keys` y debe devolver un array del **mismo largo y en el mismo orden**, una entrada por key. Tu consulta a la base de datos `SELECT * FROM authors WHERE id IN (...)` devuelve `rows` en orden arbitrario, sin duplicados, y omite los ids que no existen.\n\nImplementa `solution(keys, rows)` para que devuelva las filas alineadas con `keys`, con `null` para los ids faltantes. Las keys duplicadas reciben cada una la fila.',
     explanation:
       'DataLoader resuelve la promesa de `keys[i]` con `result[i]`. Si devuelves las filas tal cual, un id faltante desplaza en uno todos los resultados siguientes y **los autores quedan asociados a los posts equivocados**, un bug silencioso de datos en lugar de un crash (DataLoader solo lanza un error cuando los largos difieren).\n\nIndexa las filas en un `Map` (O(n + k)) en lugar de llamar a `rows.find` por cada key (O(n * k)). Devuelve `null` para un registro faltante, o una instancia de `Error` si esa key debe rechazarse individualmente.',
+    hint: 'Indexa las filas en un `Map` por id y luego recorre `keys` con map para que el orden y la longitud sigan a las claves, no a las filas.',
   },
   'graphql-operational-costs': {
     prompt: 'Tu equipo está migrando una API REST pública a GraphQL. ¿Cuáles de estos son **costos operativos reales** que asumes? Selecciona todos los que apliquen.',
@@ -49,6 +53,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '**Caché HTTP/CDN más difícil**: los GET de REST se pueden cachear por URL en todas las capas (navegador, CDN, reverse proxy). Un único endpoint POST anula eso; las persisted queries (un hash en lugar de la query completa) recuperan el caché por GET.\n\n**Errores dentro de `200 OK`**: el éxito parcial es normal en GraphQL (`data` más `errors`), así que monitoreas el array `errors` y las métricas a nivel de resolver, no solo los códigos HTTP.\n\n**Peticiones arbitrariamente costosas**: "peticiones por minuto" significa poco cuando una sola query puede expandirse a millones de filas. Agregas límites de profundidad de query, análisis de costo, topes de paginación y, para APIs públicas, allowlists de persisted queries.\n\n**Consultas N+1**: cada field resolver anidado se ejecuta por su cuenta, así que una lista de posts dispara una búsqueda de autor por post a menos que un DataLoader por petición las agrupe en una sola consulta `WHERE id IN (...)`.\n\nLo de `/v2/graphql` es falso: las APIs GraphQL normalmente evolucionan **sin** versiones. Agregas campos libremente y marcas los viejos como obsoletos con `@deprecated`, y luego los eliminas cuando la telemetría de uso por campo muestra que ningún cliente los usa.',
+    hint: 'Para cada punto, revisa el mecanismo detrás: cómo los cachés usan la URL como clave, cómo se reportan los errores, cómo se acota el costo, cómo leen los resolvers y cómo evolucionan los schemas.',
   },
   'graphql-when-wrong-choice': {
     prompt: 'Un líder técnico propone GraphQL para todos los servicios nuevos, incluidas las llamadas internas entre servicios y un catálogo de productos público, mayormente de lectura. ¿Cuándo es GraphQL la opción **equivocada** y qué usarías en su lugar?',
@@ -63,5 +68,6 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'El entrevistador está evaluando si puedes argumentar **en contra** de una tecnología de moda con mecanismos concretos (caché HTTP, RPC binario tipado, control del costo de las queries) en lugar de gustos.\n\n| Estilo | Fortaleza | Úsalo cuando |\n|---|---|---|\n| REST | Simple, cacheable, omnipresente | APIs públicas y CRUD |\n| GraphQL | El cliente elige los campos, un solo viaje de ida y vuelta | Muchos clientes, datos anidados, móvil |\n| gRPC | Binario rápido, streaming, contratos estrictos | Comunicación interna entre servicios |\n\n**Dilo en voz alta:** "Elijo el estilo de API por frontera: GraphQL en el borde del producto, donde muchos clientes necesitan formas distintas, REST donde importan el caché HTTP y la simplicidad, y gRPC o eventos entre servicios que son míos."',
+    hint: 'Argumenta con mecanismos: caché HTTP/CDN, RPC binario tipado entre servicios, control del costo de las queries y quiénes consumen la API. Nombra qué usarías en cada caso.',
   },
 };
