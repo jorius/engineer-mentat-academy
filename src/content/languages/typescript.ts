@@ -50,7 +50,7 @@ export const questions: Question[] = [
     level: 'mid',
     kind: 'predict',
     language: 'typescript',
-    prompt: 'This compiles cleanly under `strict`. What does it print at runtime, one value per line?',
+    prompt: 'This compiles cleanly under `strict`. What does it print at runtime, one line per `console.log` call?',
     code: `type UserId = string;
 interface User {
   id: UserId;
@@ -167,12 +167,12 @@ export function solution(tickets: Ticket[]) {
     level: 'junior',
     kind: 'single',
     prompt:
-      '```ts\nfunction longest<T>(a: T, b: T): T {\n  return a.length >= b.length ? a : b;\n}\n```\nThis fails with `Property \'length\' does not exist on type \'T\'`. Which fix keeps the caller\'s type, so `longest(\'ab\', \'c\')` is a `string` and `longest([1], [2, 3])` is a `number[]`?',
+      '```ts\nfunction longest<T>(a: T, b: T): T {\n  return a.length >= b.length ? a : b;\n}\n```\nThis fails with `Property \'length\' does not exist on type \'T\'`. Which fix keeps the caller\'s type, so `longest(\'ab\', \'c\')` stays a string type (TypeScript infers `\'ab\' | \'c\'`) and `longest([1], [2, 3])` is a `number[]`?',
     options: [
-      { id: 'a', text: '`function longest<T extends { length: number }>(a: T, b: T): T`' },
-      { id: 'b', text: '`function longest(a: { length: number }, b: { length: number }): { length: number }`' },
+      { id: 'a', text: '```ts\nfunction longest<T extends { length: number }>(\n  a: T,\n  b: T,\n): T\n```' },
+      { id: 'b', text: '```ts\nfunction longest(\n  a: { length: number },\n  b: { length: number },\n): { length: number }\n```' },
       { id: 'c', text: 'Keep `<T>` and write `(a as any).length >= (b as any).length`' },
-      { id: 'd', text: '`function longest<T = string>(a: T, b: T): T`' },
+      { id: 'd', text: '```ts\nfunction longest<T = string>(\n  a: T,\n  b: T,\n): T\n```' },
     ],
     answer: 'a',
     tags: ['generics', 'constraints'],
@@ -212,7 +212,7 @@ export function solution(tickets: Ticket[]) {
     kind: 'single',
     prompt: '```ts\ninterface Box {\n  width: number;\n}\ninterface Box {\n  height: number;\n}\nconst box: Box = { width: 10 };\n```\nWhat does the compiler report?',
     options: [
-      { id: 'a', text: 'Property `height` is missing: the two declarations merged into `{ width: number; height: number }`.' },
+      { id: 'a', text: 'Property `height` is missing: the two declarations merged, so `Box` requires both `width` and `height`.' },
       { id: 'b', text: 'Duplicate identifier `Box`.' },
       { id: 'c', text: 'Nothing: the first declaration wins and `height` is ignored.' },
       { id: 'd', text: 'Object literal may only specify known properties: `width` does not exist, because the second declaration replaced the first.' },
@@ -231,7 +231,7 @@ export function solution(tickets: Ticket[]) {
     level: 'mid',
     kind: 'predict',
     language: 'typescript',
-    prompt: 'Enums are one of the few TypeScript features that emit runtime code. What does this print, one value per line?',
+    prompt: 'Enums are one of the few TypeScript features that emit runtime code. What does this print, one line per `console.log` call?',
     code: `enum Status {
   Draft,
   Published = 5,
@@ -261,7 +261,7 @@ console.log(raw === Color.Red, Color['RED' as keyof typeof Color]);`,
     level: 'senior',
     kind: 'predict',
     language: 'typescript',
-    prompt: 'This is the common "enum without `enum`" pattern. What does it print, one value per line?',
+    prompt: 'This is the common "enum without `enum`" pattern. What does it print, one line per `console.log` call?',
     code: `const ROLES = ['admin', 'editor', 'viewer'] as const;
 type Role = (typeof ROLES)[number];
 function isRole(value: string): value is Role {
@@ -448,7 +448,7 @@ export function solution(line: StockLine): string {
     tags: ['optional-properties', 'truthiness', 'narrowing'],
     source: 'topic-list',
     explanation:
-      'Truthiness narrowing removes `undefined` and `null` from the type, which is why the buggy version compiles, but it also rejects the valid values `0`, `NaN` and `""`. For an optional number, check for nullish explicitly (`=== undefined || === null`, or the idiomatic `line.quantity == null`), or use `??` when you want a fallback value (`line.quantity ?? \'n/a\'`) instead of `||`.',
+      'Truthiness narrowing removes `undefined` and `null` from the type, so the buggy check looks fine to the compiler, but at runtime it also rejects the falsy numbers `0` and `NaN`. For an optional number, check for nullish explicitly (`=== undefined || === null`, or the idiomatic `line.quantity == null`), or use `??` when you want a fallback value (`line.quantity ?? \'n/a\'`) instead of `||`.',
   },
   {
     id: 'typescript-optional-vs-undefined',
@@ -457,7 +457,7 @@ export function solution(line: StockLine): string {
     topic: 'optional-fields',
     level: 'mid',
     kind: 'single',
-    prompt: 'With `strict` on (and `exactOptionalPropertyTypes` off), what is the difference between `{ nickname?: string }` and `{ nickname: string | undefined }`?',
+    prompt: '```ts\ntype First = { nickname?: string };\ntype Second = { nickname: string | undefined };\n```\nWith `strict` on (and `exactOptionalPropertyTypes` off), what is the difference between these two types?',
     options: [
       { id: 'a', text: 'The first lets callers omit the key; the second requires the key to be present, although its value may be `undefined`. Turning on `exactOptionalPropertyTypes` also stops the first from accepting an explicit `nickname: undefined`.' },
       { id: 'b', text: 'There is no difference; `?` is shorthand for `| undefined`.' },
@@ -468,7 +468,7 @@ export function solution(line: StockLine): string {
     tags: ['optional-properties', 'exact-optional-property-types', 'strict'],
     source: 'topic-list',
     explanation:
-      '`?` means **the key may be absent**; `| undefined` means **the value may be undefined**. Reading either gives `string | undefined`, but only the optional one can be left out of an object literal. Neither accepts `null`; you have to add `| null` explicitly.\n\nThe difference matters whenever presence is meaningful: `\'nickname\' in obj`, `Object.keys`, object spread and PATCH semantics ("absent means unchanged, `undefined` or `null` means clear"). By default TypeScript lets `nickname?: string` receive an explicit `undefined`; `exactOptionalPropertyTypes` tightens that so the type describes what the runtime actually sees.',
+      '`?` means **the key may be absent**; `| undefined` means **the value may be undefined**. Reading either gives `string | undefined`, but only the optional one can be left out of an object literal. Neither accepts `null`; you have to add `| null` explicitly.\n\nThe difference matters whenever presence is meaningful: `\'nickname\' in obj`, `Object.keys`, object spread and PATCH semantics ("absent means unchanged, `null` means clear"; an explicit `undefined` disappears in `JSON.stringify`, so it cannot carry meaning over the wire). By default TypeScript lets `nickname?: string` receive an explicit `undefined`; `exactOptionalPropertyTypes` tightens that so the type describes what the runtime actually sees.',
   },
   {
     id: 'typescript-partial-spread-undefined',
@@ -478,7 +478,7 @@ export function solution(line: StockLine): string {
     level: 'senior',
     kind: 'predict',
     language: 'typescript',
-    prompt: 'A settings screen merges a `Partial` patch over defaults. This compiles under `strict`. What does it print, one value per line?',
+    prompt: 'A settings screen merges a `Partial` patch over defaults. This compiles under `strict`. What does it print, one line per `console.log` call?',
     code: `type Settings = { theme: string; fontSize: number };
 const defaults: Settings = { theme: 'dark', fontSize: 14 };
 const patch: Partial<Settings> = { theme: undefined, fontSize: 16 };
@@ -568,7 +568,7 @@ export function solution(user: User) {
     level: 'senior',
     kind: 'multi',
     prompt:
-      '```ts\ninterface User {\n  id: number;\n  name: string;\n  email: string;\n}\n```\nYou need the PATCH payload type `{ name?: string; email?: string }`. Which of these produce exactly that type? Select all that apply.',
+      '```ts\ninterface User {\n  id: number;\n  name: string;\n  email: string;\n}\n```\nYou need this PATCH payload type:\n```ts\ntype UserPatch = {\n  name?: string;\n  email?: string;\n};\n```\nWhich of these produce exactly that type? Select all that apply.',
     options: [
       { id: 'a', text: '`Partial<Omit<User, \'id\'>>`' },
       { id: 'b', text: '`Omit<Partial<User>, \'id\'>`' },
@@ -579,7 +579,7 @@ export function solution(user: User) {
     tags: ['partial', 'omit', 'pick', 'exclude', 'homomorphic-mapped-types'],
     source: 'notion',
     explanation:
-      '- **a**: remove `id`, then make the rest optional.\n- **b**: make everything optional, then remove `id`. `Omit` is built on `Pick`, and `Pick` is a *homomorphic* mapped type (it iterates over `keyof T`), so it **preserves** the `?` and `readonly` modifiers it finds.\n- **d**: the same modifier preservation, with the keys listed explicitly.\n- **c** is the classic confusion: `Exclude<U, E>` filters members out of a **union**. `Partial<User>` is a single object type, not a union containing `\'id\'`, so nothing is excluded and `id?` stays.\n\n**Say this out loud:** "`Omit` and `Pick` work on keys of an object type, `Exclude` and `Extract` work on members of a union, and homomorphic mapped types like `Pick` and `Partial` preserve optional and readonly modifiers, so the order of composition often does not matter."',
+      '- `Partial<Omit<User, \'id\'>>`: remove `id`, then make the rest optional.\n- `Omit<Partial<User>, \'id\'>`: make everything optional, then remove `id`. `Omit` is built on `Pick`, and `Pick` is a *homomorphic* mapped type (it iterates over `keyof T`), so it **preserves** the `?` and `readonly` modifiers it finds.\n- `Pick<Partial<User>, \'name\' | \'email\'>`: the same modifier preservation, with the keys listed explicitly.\n- `Exclude<Partial<User>, \'id\'>` is the classic confusion: `Exclude<U, E>` filters members out of a **union**. `Partial<User>` is a single object type, not a union containing `\'id\'`, so nothing is excluded and `id?` stays.\n\n**Say this out loud:** "`Omit` and `Pick` work on keys of an object type, `Exclude` and `Extract` work on members of a union, and homomorphic mapped types like `Pick` and `Partial` preserve optional and readonly modifiers, so the order of composition often does not matter."',
   },
   {
     id: 'typescript-deep-readonly-freeze',
@@ -644,7 +644,7 @@ export function solution(config: Config) {
     tags: ['mapped-types', 'conditional-types', 'readonly', 'object-freeze'],
     source: 'topic-list',
     explanation:
-      'The type combines a **conditional type** (functions pass through untouched, objects recurse, primitives stay as they are) with a **mapped type** that adds `readonly` to every key. It distributes over unions and works for arrays too, because a homomorphic mapped type over an array type produces a readonly array.\n\nBut `readonly` is erased: a cast or a plain JavaScript caller can still mutate. `Object.freeze` is the runtime half, and it is **shallow**, so the implementation must recurse (`Reflect.ownKeys` also covers symbol keys; the `isFrozen` check stops cycles and repeated work). The final `as` is unavoidable: the compiler cannot prove that a runtime loop satisfies a recursive type.\n\n**Say this out loud:** "Utility and mapped types describe shapes at compile time only; when the guarantee has to hold at runtime I pair the type with code that enforces it, and I keep the one unavoidable cast inside that helper."',
+      'The type combines a **conditional type** (functions pass through untouched, objects recurse, primitives stay as they are) with a **mapped type** that adds `readonly` to every key. It distributes over unions and works for arrays too, because a homomorphic mapped type over an array type produces a readonly array.\n\nBut `readonly` is erased: a cast or a plain JavaScript caller can still mutate. `Object.freeze` is the runtime half, and it is **shallow**, so the implementation must recurse (`Reflect.ownKeys` also covers symbol keys; the `isFrozen` check stops cycles and repeated work, but it also skips the children of an object that was already frozen shallowly, so a production helper tracks visited objects in a `WeakSet` instead). The final `as` is unavoidable: the compiler cannot prove that a runtime loop satisfies a recursive type.\n\n**Say this out loud:** "Utility and mapped types describe shapes at compile time only; when the guarantee has to hold at runtime I pair the type with code that enforces it, and I keep the one unavoidable cast inside that helper."',
   },
   {
     id: 'typescript-boundary-validation-open',
@@ -654,9 +654,9 @@ export function solution(config: Config) {
     level: 'senior',
     kind: 'open',
     prompt:
-      'A service consumes JSON from a third-party webhook and from an LLM tool call. Today the code does `const event = (await res.json()) as OrderEvent`. What is wrong with that, and how do you type these boundaries properly?',
+      'A service consumes JSON from a third-party webhook and from an LLM tool call. Today the code does this:\n```ts\nconst event = (await res.json()) as OrderEvent;\n```\nWhat is wrong with that, and how do you type these boundaries properly?',
     modelAnswer:
-      'The `as` cast is an unchecked assertion: types are erased, so malformed data flows deep into the system and fails far from its cause, or worse, gets persisted. Everything that crosses a trust boundary (HTTP bodies, webhooks, queue messages, env vars, `localStorage`, LLM or tool output) should enter as `unknown` and be **parsed** at the edge with a runtime schema such as zod, valibot or ajv. I derive the static type from the schema (`type OrderEvent = z.infer<typeof OrderEvent>`) so the validator and the type cannot drift. Parse, don\'t validate: the parser returns a typed value or a structured error, and past the edge the domain code never sees `unknown` again. The failure path is explicit: a 400 for synchronous APIs, a dead-letter queue for webhooks and messages, a bounded retry or repair prompt for LLM output, and a log with the correlation id in every case. I also decide per boundary whether unknown keys are stripped or rejected, and version the schema when the producer changes. Env config gets the same treatment at startup so the process fails fast instead of at the first request.',
+      'The `as` cast is an unchecked assertion: types are erased, so malformed data flows deep into the system and fails far from its cause, or worse, gets persisted. A hand-written type predicate (`value is OrderEvent`) is no safer: the compiler trusts whatever its body returns. Everything that crosses a trust boundary (HTTP bodies, webhooks, queue messages, env vars, `localStorage`, LLM or tool output) should enter as `unknown` and be **parsed** at the edge with a runtime schema such as zod, valibot or ajv. I derive the static type from the schema (`type OrderEvent = z.infer<typeof OrderEvent>`) so the validator and the type cannot drift. Parse, don\'t validate: the parser returns a typed value or a structured error, and past the edge the domain code never sees `unknown` again. The failure path is explicit: a 400 for synchronous APIs, a dead-letter queue for webhooks and messages, a bounded retry or repair prompt for LLM output, and a log with the correlation id in every case. I also decide per boundary whether unknown keys are stripped or rejected, and version the schema when the producer changes. Env config gets the same treatment at startup so the process fails fast instead of at the first request.',
     rubric: [
       '`as` and type predicates are unchecked; types are erased at runtime',
       'Receive boundary data as `unknown` and parse it with a runtime schema at the edge',
