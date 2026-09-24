@@ -28,7 +28,7 @@ export const translations: Record<string, QuestionTranslation> = {
   },
   'containers-multi-stage-build-benefits': {
     prompt:
-      'Una API de TypeScript pasa a un Dockerfile multi-stage: un stage `build` ejecuta `npm ci` y `tsc`, y un stage final basado en `node:22-slim` ejecuta `npm ci --omit=dev` y copia `dist/` con `COPY --from=build`. ¿Qué afirmaciones son verdaderas? Selecciona todas las que apliquen.',
+      'Una API de TypeScript pasa a un Dockerfile multi-stage: un stage `build` ejecuta `npm ci` y `tsc`, y un stage final basado en `node:22-slim` copia `package.json` y `package-lock.json`, ejecuta `npm ci --omit=dev` y copia `dist/` con `COPY --from=build`. `typescript` y las herramientas de testing están en `devDependencies`. ¿Qué afirmaciones son verdaderas? Selecciona todas las que apliquen.',
     options: {
       a: 'La imagen final no contiene el compilador de TypeScript, las dependencias de desarrollo ni el árbol `src/`',
       b: '`COPY --from=build` copia solo las rutas que nombras de ese stage, no todo su sistema de archivos',

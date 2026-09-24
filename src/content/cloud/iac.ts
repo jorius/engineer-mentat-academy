@@ -62,7 +62,7 @@ export const questions: Question[] = [
     tags: ['terraform', 'state', 'locking', 'security'],
     source: 'topic-list',
     explanation:
-      'State maps your resource addresses to real resource IDs and stores their attributes, so Terraform knows what it owns and what to change. It must be **shared** (everyone sees the latest), **locked** (one writer at a time) and **protected** (it contains secrets in plain text, such as generated passwords). A remote backend gives all three. For S3, Terraform 1.10+ supports native locking with a lock object in the bucket; the older DynamoDB lock table is deprecated. Enable bucket versioning to recover from a bad write. Workspaces with the same backend just create separate states for the same config; they do not solve concurrent applies to one environment.',
+      'State maps your resource addresses to real resource IDs and stores their attributes, so Terraform knows what it owns and what to change. It must be **shared** (everyone sees the latest), **locked** (one writer at a time) and **protected** (it contains secrets in plain text, such as generated passwords). A remote backend gives all three. For S3, Terraform 1.11+ supports native locking with a `.tflock` object in the bucket (experimental in 1.10); the older DynamoDB lock table is deprecated since 1.11. Enable bucket versioning to recover from a bad write. Workspaces with the same backend just create separate states for the same config; they do not solve concurrent applies to one environment.',
   },
   {
     id: 'iac-terraform-module-practices',
@@ -93,7 +93,7 @@ export const questions: Question[] = [
     kind: 'code',
     language: 'typescript',
     prompt:
-      'Model what `terraform plan` does. Implement `solution(desired, current, forceNew)` where `desired` (your configuration) and `current` (refreshed state) map resource addresses to flat attribute objects, and `forceNew` lists attribute names whose change requires replacement. Return `{ create, update, replace, destroy }`, each a **sorted** array of addresses:\n\n- `create`: in `desired` only.\n- `destroy`: in `current` only.\n- For addresses in both, compare the union of attribute keys with `!==` (a key missing on one side counts as a change). No change: omit. Any changed key in `forceNew`: `replace`. Otherwise: `update`.',
+      'Model what `terraform plan` does. Implement `solution(desired, current, forceNew)` where `desired` (your configuration) and `current` (refreshed state) map resource addresses to flat attribute objects, and `forceNew` lists attribute names whose change requires replacement. Return a `Plan` in which every array lists its addresses in **sorted** order:\n\n```ts\ntype Plan = {\n  create: string[];\n  update: string[];\n  replace: string[];\n  destroy: string[];\n};\n```\n\n- `create`: in `desired` only.\n- `destroy`: in `current` only.\n- For addresses in both, compare the union of attribute keys with `!==` (a key missing on one side counts as a change). No change: omit. Any changed key in `forceNew`: `replace`. Otherwise: `update`.',
     starter: `type Attrs = Record<string, string | number | boolean>;
 type Plan = { create: string[]; update: string[]; replace: string[]; destroy: string[] };
 
@@ -178,18 +178,18 @@ export function solution(desired: Record<string, Attrs>, current: Record<string,
     level: 'senior',
     kind: 'single',
     prompt:
-      'During an incident someone opened port 5432 on a Terraform-managed security group through the AWS console. What does the next `terraform plan` do, and what is the right way to handle it?',
+      'During an incident someone opened port 5432 on a Terraform-managed security group through the AWS console. The group\'s rules are declared as inline `ingress` blocks inside its `aws_security_group` resource, not as separate `aws_security_group_rule` or `aws_vpc_security_group_ingress_rule` resources. What does the next `terraform plan` do, and what is the right way to handle it?',
     options: [
-      { id: 'a', text: 'Nothing: Terraform only compares configuration with the state file, which still holds the old rules' },
-      { id: 'b', text: 'Plan refreshes the real resource, detects the drift and proposes reverting it; the team either codifies the rule in HCL or lets apply remove it, and can inspect drift alone with `terraform plan -refresh-only`' },
-      { id: 'c', text: 'Run `terraform import` on the new rule so Terraform adopts it automatically' },
-      { id: 'd', text: 'Terraform rewrites the `.tf` files to include the console change on the next plan' },
+      { id: 'a', text: 'Nothing: Terraform only compares configuration with the state file, which still holds the old rules, so the extra rule stays until someone runs `terraform refresh`' },
+      { id: 'b', text: 'Plan refreshes the group, shows the extra rule as drift and proposes removing it; the team either codifies the rule in HCL or lets apply remove it' },
+      { id: 'c', text: 'Run `terraform import` on the new rule; that alone makes Terraform adopt it, with no change to the configuration needed' },
+      { id: 'd', text: 'Terraform rewrites the `.tf` files to include the console change on the next plan, so the pull request shows it for review' },
     ],
     answer: 'b',
     tags: ['terraform', 'drift', 'operations'],
     source: 'topic-list',
     explanation:
-      'By default `plan` refreshes managed resources from the provider API, so out-of-band edits show up as changes that apply would **revert** to match the code. That is the point of IaC: code is the source of truth. The decision is organizational: keep the change by adding it to HCL (reviewed, then plan shows no diff) or let apply remove it. `plan -refresh-only` / `apply -refresh-only` shows or accepts drift into state without touching infrastructure. For attributes legitimately managed elsewhere (an autoscaler\'s desired count), use `lifecycle { ignore_changes = [...] }`. Caveats: drift is only detected on resources Terraform manages, not on things created entirely outside it, and mixing inline rules with separate `aws_security_group_rule` resources causes endless flapping. Scheduled drift-detection plans in CI catch this early.\n\n**Say this out loud:** "Plan refreshes, so console changes show up as drift that apply would revert; we either codify the change or let Terraform put it back, and we run scheduled drift detection so this is not a surprise."',
+      'By default `plan` refreshes managed resources from the provider API, so out-of-band edits show up as changes that apply would **revert** to match the code. That is the point of IaC: code is the source of truth. The decision is organizational: keep the change by adding it to HCL (reviewed, then plan shows no diff) or let apply remove it. `plan -refresh-only` / `apply -refresh-only` shows or accepts drift into state without touching infrastructure. For attributes legitimately managed elsewhere (an autoscaler\'s desired count), use `lifecycle { ignore_changes = [...] }`. Caveats: plan sees this rule only because the rules are inline, so the whole rule set is an attribute Terraform manages. With separate `aws_vpc_security_group_ingress_rule` resources, the console rule would be a new object Terraform never created and plan would show nothing, because drift is only detected on what Terraform manages. Mixing inline rules with separate rule resources causes endless flapping. Scheduled drift-detection plans in CI catch this early.\n\n**Say this out loud:** "Plan refreshes, so console changes show up as drift that apply would revert; we either codify the change or let Terraform put it back, and we run scheduled drift detection so this is not a surprise."',
   },
   {
     id: 'iac-cloudformation-stacks-change-sets',
@@ -201,7 +201,7 @@ export function solution(desired: Record<string, Attrs>, current: Record<string,
     prompt: 'Which statements about CloudFormation stacks and change sets are true? Select all that apply.',
     options: [
       { id: 'a', text: 'A change set previews which resources will be added, modified or removed, and whether each modification requires replacement (`True`, `False` or `Conditional`), before you execute it' },
-      { id: 'b', text: 'A failed stack update rolls back automatically; if the rollback itself fails, the stack sits in `UPDATE_ROLLBACK_FAILED` until you continue the rollback, possibly skipping resources' },
+      { id: 'b', text: 'A failed stack update rolls back automatically by default; if the rollback itself fails, the stack sits in `UPDATE_ROLLBACK_FAILED` until you continue the rollback, possibly skipping resources' },
       { id: 'c', text: 'CloudFormation continuously detects drift and reverts console changes on the next update' },
       { id: 'd', text: 'CloudFormation keeps no record of what it deployed, so, unlike Terraform, it cannot know which resources a stack owns' },
     ],
@@ -209,7 +209,7 @@ export function solution(desired: Record<string, Attrs>, current: Record<string,
     tags: ['cloudformation', 'change-sets', 'rollback', 'drift'],
     source: 'topic-list',
     explanation:
-      'A **stack** is the unit of deployment: CloudFormation tracks its resources server-side (the equivalent of Terraform state, managed for you) and applies updates transactionally, rolling back on failure. **Change sets** are CloudFormation\'s `plan`; the `Replacement` column is what you check before touching databases. Drift detection exists but is **on demand** and only reports; it never reverts. Protect stateful resources with `DeletionPolicy: Retain` or `Snapshot` and `UpdateReplacePolicy`, add stack policies to block updates to critical resources, and turn on termination protection for production stacks.\n\n**Say this out loud:** "I always deploy through a change set and read the Replacement column, and I put Retain or Snapshot deletion policies on anything stateful, because a rollback cannot bring back deleted data."',
+      'A **stack** is the unit of deployment: CloudFormation tracks its resources server-side (the equivalent of Terraform state, managed for you) and applies updates transactionally, rolling back on failure. **Change sets** are CloudFormation\'s `plan`; the `Replacement` column is what you check before touching databases. Drift detection is **on demand** and only reports. Reverting is opt-in: a drift-aware change set (`--deployment-mode REVERT_DRIFT`, available since November 2025) compares the template with the actual resource state and puts drifted properties back, while a standard change set compares only the old and new templates and ignores drift. Protect stateful resources with `DeletionPolicy: Retain` or `Snapshot` and `UpdateReplacePolicy`, add stack policies to block updates to critical resources, and turn on termination protection for production stacks.\n\n**Say this out loud:** "I always deploy through a change set and read the Replacement column, and I put Retain or Snapshot deletion policies on anything stateful, because a rollback cannot bring back deleted data."',
   },
   {
     id: 'iac-terraform-vs-cloudformation-choice',

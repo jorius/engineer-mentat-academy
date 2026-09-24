@@ -41,7 +41,7 @@ export const questions: Question[] = [
     tags: ['lambda', 'cold-start', 'performance'],
     source: 'topic-list',
     explanation:
-      'A cold start happens whenever Lambda must create a new execution environment: first request, scale-out beyond current warm environments, a new deployment, or after idle reclamation. **Provisioned concurrency** keeps N environments initialized (paid). Smaller bundles and lean init code shorten every cold start, and init work done outside the handler is reused on warm invocations. More memory also gives proportionally more CPU, which speeds up init. **SnapStart** snapshots the initialized environment and restores it; check which runtimes support it (Java, Python and .NET at the time of writing). A ping keeps roughly **one** environment warm; a burst of 50 concurrent requests still needs 49 new ones. Timeout has no effect on startup.',
+      'A cold start happens whenever Lambda must create a new execution environment: first request, scale-out beyond current warm environments, a new deployment, or after idle reclamation. **Provisioned concurrency** keeps N environments initialized (paid). Smaller bundles and lean init code shorten every cold start, and init work done outside the handler is reused on warm invocations. More memory also gives proportionally more CPU, which speeds up init. **SnapStart** snapshots the initialized environment and restores it; it covers the Java, Python and .NET managed runtimes and, since July 2026, container-image functions, so check your runtime and packaging. A ping keeps roughly **one** environment warm; a burst of 50 concurrent requests still needs 49 new ones. Timeout has no effect on startup.',
   },
   {
     id: 'serverless-stateless-warm-environment',
@@ -87,16 +87,16 @@ console.log(envB({ userId: 7, name: 'Ana Maria' }));`,
     prompt:
       'An internal API on Lambda now handles a **steady 2,000 requests per second, 24/7**, at 150 ms average duration and 1 GB memory. The monthly bill surprised finance. Which statement best describes the cost model?',
     options: [
-      { id: 'a', text: 'Lambda is always cheapest because you only pay when code runs' },
+      { id: 'a', text: 'Lambda is always the cheapest option because you only pay while code runs, and idle environments between requests cost nothing' },
       { id: 'b', text: 'Lambda bills per request plus GB-seconds of duration; at sustained high utilization that often exceeds right-sized containers running near full capacity, while spiky or low traffic favors Lambda' },
-      { id: 'c', text: 'Lambda cost depends only on the number of requests, so lowering memory will not change the bill' },
-      { id: 'd', text: 'The cost is dominated by cold starts; enabling provisioned concurrency will make it cheaper' },
+      { id: 'c', text: 'Lambda cost depends only on the number of requests, so lowering memory or duration will not change the bill' },
+      { id: 'd', text: 'The cost is dominated by cold starts, because at a steady 2,000 requests per second almost every invocation creates a new execution environment' },
     ],
     answer: 'b',
     tags: ['lambda', 'cost', 'fargate'],
     source: 'topic-list',
     explanation:
-      'Lambda pricing is a per-request fee plus **duration x memory** (GB-seconds), rounded to the millisecond; since August 2025 the init phase is billed as well. That is ideal when traffic is bursty or idle much of the time, because idle costs nothing. With a constant, high load, you are effectively paying a premium for capacity you could run at high utilization on Fargate or EC2 with Savings Plans. Levers before migrating: right-size memory with Lambda Power Tuning (more memory can finish faster and cost the same or less), use Graviton (arm64), and batch work. Remember the hidden costs around the function too: API Gateway requests, NAT gateway data, CloudWatch Logs ingestion.',
+      'Lambda pricing is a per-request fee plus **duration x memory** (GB-seconds), rounded to the millisecond; since August 2025 the init phase is billed as well. That is ideal when traffic is bursty or idle much of the time, because idle costs nothing. With a constant, high load, you are effectively paying a premium for capacity you could run at high utilization on Fargate or EC2 with Savings Plans. Levers before migrating: right-size memory with Lambda Power Tuning (more memory can finish faster and cost the same or less), use Graviton (arm64), and batch work. Cold starts are rare here: 2,000 requests per second at 150 ms keep about 300 environments continuously busy. Provisioned concurrency is in fact a cost lever at this utilization: its per-GB-second price (standby plus duration) beats on-demand above roughly 60% utilization, and Compute Savings Plans also apply to Lambda. Remember the hidden costs around the function too: API Gateway requests, NAT gateway data, CloudWatch Logs ingestion.',
   },
   {
     id: 'serverless-when-it-fits',
@@ -131,10 +131,10 @@ console.log(envB({ userId: 7, name: 'Ana Maria' }));`,
     prompt:
       'Leadership worries that going serverless on AWS locks the company in. Where does most of the **real** lock-in live, and what is a pragmatic mitigation?',
     options: [
-      { id: 'a', text: 'In the handler signature; wrap every function in a cross-cloud framework so the handlers never change' },
-      { id: 'b', text: 'In the Node.js runtime version AWS provides; bundling your own runtime removes the lock-in' },
-      { id: 'c', text: 'In the event sources, IAM model, managed data stores and workflows (DynamoDB, EventBridge, Step Functions) and the operational tooling; keep domain logic in plain modules behind ports and adapters, and accept the managed-service coupling where it pays for itself' },
-      { id: 'd', text: 'Nowhere significant: any Lambda function can be moved to another cloud by redeploying the zip' },
+      { id: 'a', text: 'In the handler signature; wrapping every function in a cross-cloud framework keeps handlers unchanged, which removes most of the switching cost' },
+      { id: 'b', text: 'In the Node.js runtime version AWS provides; bundling your own runtime as a custom runtime or container image removes the lock-in' },
+      { id: 'c', text: 'In the event sources, IAM, managed data stores and workflows around the code; keep domain logic behind ports and adapters and accept managed-service coupling where it pays off' },
+      { id: 'd', text: 'Nowhere significant: any Lambda function can be moved to another cloud by redeploying the same zip to that provider\'s function service' },
     ],
     answer: 'c',
     tags: ['serverless', 'architecture', 'hexagonal', 'trade-offs'],

@@ -52,7 +52,7 @@ export const questions: Question[] = [
     level: 'mid',
     kind: 'multi',
     prompt:
-      'A TypeScript API moves to a multi-stage Dockerfile: a `build` stage runs `npm ci` and `tsc`, and a final stage based on `node:22-slim` runs `npm ci --omit=dev` and copies `dist/` with `COPY --from=build`. Which statements are true? Select all that apply.',
+      'A TypeScript API moves to a multi-stage Dockerfile: a `build` stage runs `npm ci` and `tsc`, and a final stage based on `node:22-slim` copies `package.json` and `package-lock.json`, runs `npm ci --omit=dev`, and copies `dist/` with `COPY --from=build`. `typescript` and the test tooling are listed in `devDependencies`. Which statements are true? Select all that apply.',
     options: [
       { id: 'a', text: 'The final image does not contain the TypeScript compiler, dev dependencies or the `src/` tree' },
       { id: 'b', text: '`COPY --from=build` copies only the paths you name from that stage, not its whole filesystem' },

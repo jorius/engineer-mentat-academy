@@ -35,14 +35,14 @@ export const questions: Question[] = [
     options: [
       { id: 'a', text: 'Blue/green: two full environments, and traffic shifts gradually between them by percentage' },
       { id: 'b', text: 'Canary: a small, growing slice of traffic validates the new version against the old; blue/green stands up a full parallel environment and switches all traffic at once, with rollback by switching back' },
-      { id: 'c', text: 'Rolling update: instances are replaced one at a time, which is the same thing as a canary' },
-      { id: 'd', text: 'Recreate: stop v1 and start v2, which is the safest way to compare metrics' },
+      { id: 'c', text: 'Rolling update: instances are replaced one batch at a time, which gives the same per-percentage metric comparison as a canary' },
+      { id: 'd', text: 'Recreate: stop v1 and start v2 so that only one version serves traffic, which is the safest way to compare metrics cleanly' },
     ],
     answer: 'b',
     tags: ['deployment-strategies', 'canary', 'blue-green'],
     source: 'topic-list',
     explanation:
-      '**Blue/green** runs the new version as a complete parallel environment, tests it, then flips the router or DNS in one step; rollback is instant (flip back), but it doubles capacity during the switch and every user hits v2 at once. **Canary** limits the blast radius by exposing a small percentage first and gating each step on metrics (automated canary analysis). **Rolling** replaces instances in batches without traffic-level control or a clean comparison. In AWS terms: CodeDeploy supports canary and linear shifting for Lambda and ECS, Lambda aliases support weighted traffic, and ALB weighted target groups do it for services. All of them require backward-compatible schema changes, because two versions run at the same time.',
+      '**Blue/green** runs the new version as a complete parallel environment, tests it, then flips the router or DNS in one step; rollback is instant (flip back), but it doubles capacity during the switch and every user hits v2 at once. **Canary** limits the blast radius by exposing a small percentage first and gating each step on metrics (automated canary analysis). **Rolling** replaces instances in batches without traffic-level control or a clean comparison. In AWS terms: CodeDeploy supports canary and linear shifting for Lambda and ECS, Lambda aliases support weighted traffic, and ALB weighted target groups do it for services. Watch the vocabulary: AWS calls its ECS deployment type "blue/green" even when it shifts traffic in canary or linear steps between the two task sets; what makes this scenario a canary is the small, metric-gated first slice compared against the live v1, not the number of environments. All of them require backward-compatible schema changes, because two versions run at the same time.',
   },
   {
     id: 'cicd-pipeline-quality-gates',
@@ -74,7 +74,7 @@ export const questions: Question[] = [
     kind: 'code',
     language: 'typescript',
     prompt:
-      'Implement the decision step of an automated canary analysis. `solution(baseline, canary)` receives `{ requests, errors, p99Ms }` for the old and new version over the same window and returns:\n\n- `\'wait\'` if the canary has fewer than **500** requests (not enough data yet);\n- otherwise `\'rollback\'` if the canary error rate (`errors / requests`) is **more than 1 percentage point** above the baseline error rate, **or** the canary p99 is **more than 20%** above the baseline p99;\n- otherwise `\'promote\'`.',
+      'Implement the decision step of an automated canary analysis. `solution(baseline, canary)` receives these metrics for the old and new version over the same window:\n\n```ts\ntype Metrics = {\n  requests: number;\n  errors: number;\n  p99Ms: number;\n};\n```\n\nIt returns:\n\n- `\'wait\'` if the canary has fewer than **500** requests (not enough data yet);\n- otherwise `\'rollback\'` if the canary error rate (`errors / requests`) is **more than 1 percentage point** above the baseline error rate, **or** the canary p99 is **more than 20%** above the baseline p99;\n- otherwise `\'promote\'`.',
     starter: `type Metrics = { requests: number; errors: number; p99Ms: number };
 
 export function solution(baseline: Metrics, canary: Metrics): 'wait' | 'rollback' | 'promote' {

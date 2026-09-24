@@ -21,7 +21,7 @@ export const questions: Question[] = [
     tags: ['lambda', 'layers', 'cold-start'],
     source: 'topic-list',
     explanation:
-      'A cold start is the time to create an execution environment: fetch and unpack the code (function **plus** layers), start the runtime, then run your init code (top-level imports, SDK clients). Layers change *where* the bytes live, not how many are loaded, so init time is essentially the same. Layers are for **sharing** code or binaries across functions and keeping the function artifact small to deploy; limits are 5 layers per function and 250 MB unzipped for function plus layers (container images go up to 10 GB). What actually shortens cold starts: a smaller bundle (tree-shaken, only the SDK v3 clients you use), lazy imports on rare paths, more memory (CPU scales with it), provisioned concurrency, or SnapStart on the runtimes that support it. Layers are not reloaded per invocation, so the claim that each layer adds a network round trip on every invocation is also wrong.',
+      'A cold start is the time to create an execution environment: fetch and unpack the code (function **plus** layers), start the runtime, then run your init code (top-level imports, SDK clients). Layers change *where* the bytes live, not how many are loaded, so init time is essentially the same. Layers are for **sharing** code or binaries across functions and keeping the function artifact small to deploy; limits are 5 layers per function and 250 MB unzipped for function plus layers (container images go up to 10 GB). What actually shortens cold starts: a smaller bundle (tree-shaken, only the SDK v3 clients you use), lazy imports on rare paths, more memory (CPU scales with it), or provisioned concurrency. SnapStart is not an option here: it covers the Java, Python and .NET managed runtimes, not a Node.js zip function. Layers are not reloaded per invocation, so the claim that each layer adds a network round trip on every invocation is also wrong.',
   },
   {
     id: 'aws-lambda-concurrency-controls',
@@ -52,18 +52,18 @@ export const questions: Question[] = [
     level: 'senior',
     kind: 'single',
     prompt:
-      'An SQS queue triggers a Lambda whose timeout is 5 minutes; a typical batch takes about 2 minutes. The queue still has its default 30-second visibility timeout. Orders are occasionally processed **twice**. What is the root cause and the right fix?',
+      'An SQS queue triggers a Lambda whose timeout is 5 minutes; a typical batch takes about 2 minutes. The event source mapping was created when the queue\'s visibility timeout was 10 minutes; last week someone lowered it to 30 seconds to "speed up retries". Orders are occasionally processed **twice**. What is the root cause and the right fix?',
     options: [
-      { id: 'a', text: 'Lambda retries every batch by default; set the maximum retry attempts on the event source mapping to 0' },
-      { id: 'b', text: 'Messages become visible again after 30 s while the first invocation is still working, so another poller picks them up; set the visibility timeout to at least six times the function timeout and make the handler idempotent' },
-      { id: 'c', text: 'Standard queues deliver every message twice by design; switch to a FIFO queue and the duplicates disappear' },
-      { id: 'd', text: 'The function timeout is too long; lower it to 30 s so it matches the visibility timeout' },
+      { id: 'a', text: 'Lambda retries every successful batch once more by default to guard against partial failures; set the maximum retry attempts on the event source mapping to 0' },
+      { id: 'b', text: 'The 30 s visibility timeout expires mid-batch, so another poller receives the same messages; raise it to at least six times the function timeout and make the handler idempotent' },
+      { id: 'c', text: 'Standard queues deliver every message twice by design, because each copy is stored on several servers; switch to a FIFO queue and the duplicates disappear' },
+      { id: 'd', text: 'The function timeout is too long, so Lambda keeps the batch open and SQS assumes it failed; lower it to 30 s so it matches the visibility timeout' },
     ],
     answer: 'b',
     tags: ['lambda', 'sqs', 'timeouts', 'idempotency'],
     source: 'topic-list',
     explanation:
-      'The visibility timeout is how long a received message stays hidden. If processing outlasts it, the message reappears and a concurrent invocation receives it again. AWS recommends a queue visibility timeout of **at least 6x the function timeout** (plus any batching window) so retries after throttling still fit. Even then SQS standard is at-least-once, so the handler must be idempotent (for example a conditional write on the order id), and partial batch failures should be reported with `ReportBatchItemFailures` instead of failing the whole batch. FIFO reduces duplicates within a 5-minute deduplication window but does not fix a visibility timeout that is shorter than the work. Lowering the function timeout to 30 s would just kill 2-minute batches. Remember the ceilings: Lambda max timeout is 15 minutes, and API Gateway integrations time out far sooner (29 s default on REST, 30 s max on HTTP APIs).\n\n**Say this out loud:** "Visibility timeout must comfortably exceed processing time, AWS says six times the function timeout, and the consumer must be idempotent anyway because SQS is at-least-once."',
+      'The visibility timeout is how long a received message stays hidden. If processing outlasts it, the message reappears and a concurrent invocation receives it again. Lambda checks that the function timeout does not exceed the visibility timeout when you create or update the event source mapping, but it does not watch the queue afterwards, so a later change to the queue silently reintroduces the problem. AWS recommends a queue visibility timeout of **at least 6x the function timeout** (plus any batching window) so retries after throttling still fit. Even then SQS standard is at-least-once, so the handler must be idempotent (for example a conditional write on the order id), and partial batch failures should be reported with `ReportBatchItemFailures` instead of failing the whole batch. FIFO reduces duplicates within a 5-minute deduplication window but does not fix a visibility timeout that is shorter than the work. Lowering the function timeout to 30 s would just kill 2-minute batches. Remember the ceilings: Lambda max timeout is 15 minutes, and API Gateway integrations time out far sooner (29 s default on REST, 30 s max on HTTP APIs).\n\n**Say this out loud:** "Visibility timeout must comfortably exceed processing time, AWS says six times the function timeout, and the consumer must be idempotent anyway because SQS is at-least-once."',
   },
   {
     id: 'aws-api-gateway-rest-vs-http-features',
@@ -202,7 +202,7 @@ export const questions: Question[] = [
     kind: 'code',
     language: 'typescript',
     prompt:
-      'A Lambda receives S3 event notifications. Implement `solution(event)` that returns `[{ bucket, key }]` for every record whose `eventName` starts with `ObjectCreated:`, in record order. Object keys arrive **URL-encoded**, with spaces encoded as `+` (and sometimes `%20`), so decode them into the real key. Ignore other event types and return `[]` when `Records` is missing.',
+      'A Lambda receives S3 event notifications. Implement `solution(event)` so that it returns one entry per record whose `eventName` starts with `ObjectCreated:`, in record order, shaped like this:\n\n```ts\n[\n  { bucket: \'uploads\', key: \'invoices/March 2026.pdf\' },\n]\n```\n\nObject keys arrive **URL-encoded**, with spaces encoded as `+`; your decoder should also accept `%20`. Decode them into the real key. Ignore other event types and return `[]` when `Records` is missing.',
     starter: `type S3Record = {
   eventName: string;
   s3: { bucket: { name: string }; object: { key: string; size?: number } };
@@ -265,7 +265,7 @@ export function solution(event: S3Event): { bucket: string; key: string }[] {
     tags: ['s3', 'lambda', 'events', 'url-encoding'],
     source: 'topic-list',
     explanation:
-      'S3 encodes object keys in notifications like an HTML form: spaces become `+` and everything else is percent-encoded, so a literal `+` arrives as `%2B`. The order matters: replace `+` with a space **first**, then `decodeURIComponent`; decoding first would turn `%2B` into `+` and then wrongly into a space. Forgetting this is a classic production bug: `GetObject` on the raw key returns `NoSuchKey` only for files with spaces or accents. Also filter on `eventName` (or configure the notification for `s3:ObjectCreated:*` only), and remember one invocation can carry several records.',
+      'S3 encodes object keys in notifications like an HTML form: spaces become `+` and reserved or non-ASCII characters are percent-encoded (letters, digits and `/` stay as they are), so a literal `+` arrives as `%2B`. The order matters: replace `+` with a space **first**, then `decodeURIComponent`; decoding first would turn `%2B` into `+` and then wrongly into a space. Forgetting this is a classic production bug: `GetObject` on the raw key returns `NoSuchKey` only for files whose names contain spaces, accents or other encoded characters. Also filter on `eventName` (or configure the notification for `s3:ObjectCreated:*` only), and remember one invocation can carry several records.',
   },
   {
     id: 'aws-s3-event-delivery-semantics',
@@ -286,7 +286,7 @@ export function solution(event: S3Event): { bucket: string; key: string }[] {
     tags: ['s3', 'events', 'idempotency', 'lambda'],
     source: 'topic-list',
     explanation:
-      'S3 notifications are **at-least-once** and usually arrive within seconds, but can take longer and can be duplicated. Ordering is not guaranteed; each record carries a `sequencer` value you can compare (as a hex string of equal length) to discard stale events for the same key. Writing output to the prefix that triggers the function creates a recursive loop that scales and bills fast; write to a different prefix or bucket and filter by prefix/suffix. S3 rejects overlapping prefix/suffix filters for the same event type, so to fan out to several consumers either publish to one SNS topic (and subscribe several queues) or enable **EventBridge** on the bucket and use rules, which also gives you content filtering, archive and replay.\n\n**Say this out loud:** "S3 events are at-least-once and unordered, so I make consumers idempotent, use the sequencer for ordering, never write back to the triggering prefix, and use SNS or EventBridge when more than one consumer needs the same event."',
+      'S3 notifications are **at-least-once** and usually arrive within seconds, but can take longer and can be duplicated. Ordering is not guaranteed: object-create and delete records carry a `sequencer` hex string; left-pad the shorter one with zeros and compare lexicographically to discard stale events for the same key. Writing output to the prefix that triggers the function creates a recursive loop that scales and bills fast (Lambda\'s recursive loop detection now stops S3 loops after about 16 invocations, but do not rely on it); write to a different prefix or bucket and filter by prefix/suffix. S3 rejects overlapping prefix/suffix filters for the same event type, so to fan out to several consumers either publish to one SNS topic (and subscribe several queues) or enable **EventBridge** on the bucket and use rules, which also gives you content filtering, archive and replay.\n\n**Say this out loud:** "S3 events are at-least-once and unordered, so I make consumers idempotent, use the sequencer for ordering, never write back to the triggering prefix, and use SNS or EventBridge when more than one consumer needs the same event."',
   },
   {
     id: 'aws-sns-fan-out-vs-sqs',
@@ -317,11 +317,11 @@ export function solution(event: S3Event): { bucket: string; key: string }[] {
     level: 'senior',
     kind: 'multi',
     prompt:
-      'You call `PutBucketNotificationConfiguration` to publish `s3:ObjectCreated:*` from bucket `my-uploads` to SNS topic `uploads`, and it fails with *"Unable to validate the following destination configurations"*. Which of these are actually required for the wiring to work? Select all that apply.',
+      'You call `PutBucketNotificationConfiguration` to publish `s3:ObjectCreated:*` from bucket `my-uploads` to SNS topic `uploads`, which is encrypted with SSE-KMS, and it fails with *"Unable to validate the following destination configurations"*. Which of these are actually required for the wiring to work? Select all that apply.',
     options: [
       { id: 'a', text: 'A statement in the **SNS topic access policy** allowing principal `s3.amazonaws.com` to `sns:Publish`, scoped with `aws:SourceArn` = the bucket ARN and `aws:SourceAccount`' },
       { id: 'b', text: 'A **bucket policy** granting `sns.amazonaws.com` permission to `s3:GetObject` so SNS can read the new objects' },
-      { id: 'c', text: 'If the topic uses SSE-KMS, a customer managed key whose key policy lets `s3.amazonaws.com` call `kms:GenerateDataKey*` and `kms:Decrypt`' },
+      { id: 'c', text: 'Because the topic uses SSE-KMS, a customer managed key whose key policy lets `s3.amazonaws.com` call `kms:GenerateDataKey*` and `kms:Decrypt`' },
       { id: 'd', text: 'An IAM role that S3 assumes to publish, referenced by ARN in the notification configuration' },
     ],
     answer: ['a', 'c'],
@@ -384,15 +384,15 @@ export function solution(event: S3Event): { bucket: string; key: string }[] {
     prompt:
       'A mobile app signs users in with email and password, then uploads photos **directly to S3**, each user limited to their own `users/<id>/` prefix. Which Cognito setup is correct?',
     options: [
-      { id: 'a', text: 'A user pool alone: its ID token is accepted by S3 as a credential' },
-      { id: 'b', text: 'A user pool to authenticate and issue JWTs, plus an identity pool that exchanges the token for temporary AWS credentials from an IAM role scoped with the `${cognito-identity.amazonaws.com:sub}` policy variable' },
-      { id: 'c', text: 'An identity pool alone: it stores the users and passwords and issues JWTs' },
-      { id: 'd', text: 'A user pool plus an API Gateway Cognito authorizer, which grants the app S3 permissions' },
+      { id: 'a', text: 'A user pool alone: S3 accepts its ID token as a credential when the bucket policy names the user pool as a federated principal' },
+      { id: 'b', text: 'A user pool to authenticate and issue JWTs, plus an identity pool that exchanges the token for temporary AWS credentials from an IAM role that limits each user to a prefix named after their identity ID' },
+      { id: 'c', text: 'An identity pool alone: it stores the users and passwords, issues JWTs, and its unauthenticated role already limits each device to its own prefix' },
+      { id: 'd', text: 'A user pool plus an API Gateway Cognito authorizer, which exchanges the validated token for S3 permissions that the app then uses for direct uploads' },
     ],
     answer: 'b',
     tags: ['cognito', 'iam', 'authentication', 's3'],
     source: 'topic-list',
     explanation:
-      '**User pools** are the user directory and OIDC identity provider: sign-up, sign-in, MFA, federation with social or SAML providers, and they issue ID, access and refresh tokens (JWTs) for *your* APIs. **Identity pools** (federated identities) do not store users; they take a token from a user pool or another provider and call STS to hand out **temporary AWS credentials** for an IAM role, so the client can call AWS services directly. Policy variables such as `${cognito-identity.amazonaws.com:sub}` in the role policy restrict each identity to its own prefix. AWS services never accept a user pool JWT directly, and an API Gateway authorizer only protects your API routes. Often the simpler alternative is to skip identity pools and have your API return presigned URLs.',
+      '**User pools** are the user directory and OIDC identity provider: sign-up, sign-in, MFA, federation with social or SAML providers, and they issue ID, access and refresh tokens (JWTs) for *your* APIs. **Identity pools** (federated identities) do not store users; they take a token from a user pool or another provider and call STS to hand out **temporary AWS credentials** for an IAM role, so the client can call AWS services directly. Policy variables such as `${cognito-identity.amazonaws.com:sub}` in the role policy restrict each identity to its own prefix. S3 and other AWS service APIs accept only SigV4-signed requests, so a user pool JWT is never an S3 credential (only front doors such as API Gateway and AppSync validate it), and an API Gateway authorizer only protects your API routes. Note that `${cognito-identity.amazonaws.com:sub}` is the identity pool\'s identity ID (for example `us-east-1:1a2b...`), not the user pool `sub`, so the app must build the `users/<id>/` prefix from the identity ID. Often the simpler alternative is to skip identity pools and have your API return presigned URLs.',
   },
 ];
