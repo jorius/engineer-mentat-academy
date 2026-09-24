@@ -35,6 +35,6 @@ describe('Markdown', () => {
     const { container } = render(<Markdown text={text} />);
     const pre = container.querySelector('pre');
     expect(pre).not.toBeNull();
-    expect(pre).toHaveClass('bg-zinc-50', 'text-zinc-900', 'dark:bg-zinc-900', 'dark:text-zinc-100');
+    expect(pre).toHaveClass('bg-zinc-50', 'text-zinc-900', 'dark:bg-zinc-950', 'dark:text-zinc-100', 'border');
   });
 });

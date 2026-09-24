@@ -52,7 +52,8 @@
 .md ul { @apply my-2 list-disc pl-6; }
 .md ol { @apply my-2 list-decimal pl-6; }
 .md li { @apply my-1; }
-.md code { @apply rounded bg-zinc-200 px-1 py-0.5 text-[0.9em] dark:bg-zinc-800; }
+/* Inline code only: `.dark .md code` would outrank `.md pre code` and paint boxes on block lines. */
+.md :not(pre) > code { @apply rounded bg-zinc-200 px-1 py-0.5 text-[0.9em] dark:bg-zinc-800; }
 /* --editor-font is set on <html> from the editor font preference (usePreferences). */
 .md code, .md pre { font-family: var(--editor-font, ui-monospace, monospace); }
 .md pre code { @apply bg-transparent p-0; }

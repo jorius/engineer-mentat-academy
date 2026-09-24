@@ -33,7 +33,7 @@ const hljsLanguages = {
 const components: Components = {
   pre: ({ node, ...props }): JSX.Element => {
     void node;
-    return <pre {...props} className="my-3 overflow-x-auto rounded-lg bg-zinc-50 p-4 text-sm text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100" />;
+    return <pre {...props} className="my-3 overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100" />;
   },
 };
 
