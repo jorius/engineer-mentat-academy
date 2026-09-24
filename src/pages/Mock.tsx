@@ -67,7 +67,7 @@ function Session({ questions, minutes, onFinish }: { questions: Question[]; minu
       {timed ? (
         <p className={`font-mono text-lg ${remaining < 60 ? 'text-red-500' : ''}`} aria-live="polite" aria-label={t('mock.timeRemaining')}>{formatClock(remaining)}</p>
       ) : null}
-      <QuestionView key={queue.current.id} question={queue.current} onNext={queue.next} position={{ index: queue.index, total: queue.total }} />
+      <QuestionView key={queue.current.id} question={queue.current} onNext={queue.next} onSkip={queue.next} position={{ index: queue.index, total: queue.total }} />
     </div>
   );
 }

@@ -81,7 +81,7 @@ const code: Question = {
 
 const open: Question = { ...single, id: 'javascript-test-open', kind: 'open', modelAnswer: 'Model.', rubric: ['one', 'two'] };
 
-type SetupOptions = { maxAttempts?: MaxAttempts; onNext?: (() => void) | null; grader?: Grader; store?: ProgressStore };
+type SetupOptions = { maxAttempts?: MaxAttempts; onNext?: (() => void) | null; onSkip?: () => void; grader?: Grader; store?: ProgressStore };
 
 function staticGrader(): Grader {
   return createStaticGrader({
@@ -99,7 +99,7 @@ function tree(question: Question, options: SetupOptions, store: ProgressStore, o
         <ThemeProvider>
           <ProgressProvider store={store}>
             <GraderProvider grader={options.grader ?? staticGrader()}>
-              <QuestionView question={question} onNext={onNext} />
+              <QuestionView question={question} onNext={onNext} onSkip={options.onSkip} />
             </GraderProvider>
           </ProgressProvider>
         </ThemeProvider>
@@ -154,6 +154,51 @@ describe('QuestionView', () => {
   it('hides Next when the caller passes no onNext and offers Reset only for editable answers', () => {
     setup(code, { onNext: null });
     expect(within(actionBar()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Reset', 'Show answer', 'Submit']);
+  });
+
+  it('offers Skip at the left of Reset only when the caller passes onSkip, with a hint', () => {
+    setup(code, { onSkip: vi.fn() });
+    expect(within(actionBar()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Skip', 'Reset', 'Show answer', 'Submit', 'Next →']);
+    expect(button(/skip/i)).toHaveAttribute('title', 'Move on without answering; nothing is recorded.');
+    expect(button(/skip/i)).toBeEnabled();
+  });
+
+  it('Skip calls onSkip and records nothing, even after a wrong attempt', async () => {
+    const user = userEvent.setup();
+    const onSkip = vi.fn();
+    const { store, onNext } = setup(single, { onSkip });
+    await user.click(screen.getByRole('radio', { name: 'A' }));
+    await user.click(button(/submit/i));
+    await screen.findByText('Not yet. Try again, or show the answer.');
+    await user.click(button(/skip/i));
+    expect(onSkip).toHaveBeenCalledTimes(1);
+    expect(onNext).not.toHaveBeenCalled();
+    expect(store.all()).toEqual({});
+    expect(within(actionBar()).getByText('Attempt 2 of 3')).toBeInTheDocument();
+  });
+
+  it('hides Skip once the question resolves', async () => {
+    const user = userEvent.setup();
+    setup(single, { onSkip: vi.fn() });
+    await user.click(button(/show answer/i));
+    expect(within(actionBar()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Show answer', 'Submit', 'Next →']);
+  });
+
+  it('disables Skip while an answer is being graded', async () => {
+    const user = userEvent.setup();
+    const grader: Grader = { grade: async () => new Promise(() => undefined) };
+    setup(single, { onSkip: vi.fn(), grader });
+    await user.click(screen.getByRole('radio', { name: 'B' }));
+    await user.click(button(/submit/i));
+    expect(await screen.findByText('Grading…')).toBeInTheDocument();
+    expect(button(/skip/i)).toBeDisabled();
+  });
+
+  it('names Skip and its hint in Spanish', async () => {
+    await i18n.changeLanguage('es');
+    setup(single, { onSkip: vi.fn() });
+    const skip = within(screen.getByRole('group', { name: /acciones de respuesta/i })).getByRole('button', { name: 'Saltar' });
+    expect(skip).toHaveAttribute('title', 'Pasa a la siguiente sin responder; no se registra nada.');
   });
 
   it('shows the position letter before each option in the stable shuffled order', () => {

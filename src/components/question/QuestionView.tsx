@@ -38,7 +38,8 @@ import { SqlExercise } from './SqlExercise';
 // utils
 import { orderOptions } from '../../utils/optionOrder';
 
-type Props = { question: Question; onNext?: () => void; position?: { index: number; total: number } };
+/** `onSkip` moves on without answering and records nothing; without it there is no Skip button. */
+type Props = { question: Question; onNext?: () => void; onSkip?: () => void; position?: { index: number; total: number } };
 
 /** Every kind's answer value, held here so the action bar can submit, reset and fill them. */
 type Answers = {
@@ -215,7 +216,7 @@ function AnswerInput({ question, answers, update, onSubmit, disabled, readOnly, 
   }
 }
 
-export function QuestionView({ question: given, onNext, position }: Props): JSX.Element {
+export function QuestionView({ question: given, onNext, onSkip, position }: Props): JSX.Element {
   const { t } = useTranslation();
   // Show the question in the active language (a queue built before a language switch still holds the
   // old text), but grade the canonical English question so option ids and answer keys never depend on
@@ -447,6 +448,7 @@ export function QuestionView({ question: given, onNext, position }: Props): JSX.
         pill={<AttemptsPill kind={question.kind} state={attempt} maxAttempts={maxAttempts} />}
         resolved={resolved}
         busy={grading}
+        onSkip={onSkip}
         onReset={hasResettableInput(question) ? reset : undefined}
         onShowAnswer={isOpen ? undefined : showAnswer}
         showAnswerDisabled={showAnswerDisabled}

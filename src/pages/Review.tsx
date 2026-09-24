@@ -44,7 +44,7 @@ export function Review(): JSX.Element {
   if (drilling && drill.current !== undefined && !drill.done) {
     return (
       <div className="space-y-4">
-        <QuestionView key={drill.current.id} question={drill.current} onNext={drill.next} position={{ index: drill.index, total: drill.total }} />
+        <QuestionView key={drill.current.id} question={drill.current} onNext={drill.next} onSkip={drill.next} position={{ index: drill.index, total: drill.total }} />
       </div>
     );
   }

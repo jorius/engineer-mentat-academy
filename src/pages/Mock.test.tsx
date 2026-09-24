@@ -1,6 +1,6 @@
 // packages
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -99,6 +99,39 @@ describe('Mock', () => {
     await user.click(screen.getByRole('button', { name: /^write code/i }));
     expect(screen.getByText(/· 0 available$/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /start/i })).toBeDisabled();
+  });
+
+  it('skips a question without recording it, and the results list it as skipped with no score', async () => {
+    const user = userEvent.setup();
+    const store = createProgressStore(null);
+    setup(store);
+    const questions = screen.getByRole('spinbutton', { name: 'Questions' });
+    await user.clear(questions);
+    await user.type(questions, '2');
+    await user.click(screen.getByRole('radio', { name: 'Untimed' }));
+    await user.click(screen.getByRole('button', { name: /^single choice/i }));
+    await user.click(screen.getByRole('button', { name: /start/i }));
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
+
+    const actions = (): ReturnType<typeof within> => within(screen.getByRole('group', { name: /answer actions/i }));
+    await user.click(actions().getByRole('button', { name: 'Skip' }));
+    expect(screen.getByText('2 / 2')).toBeInTheDocument();
+    expect(store.all()).toEqual({});
+
+    await user.click(actions().getByRole('button', { name: /show answer/i }));
+    await user.click(actions().getByRole('button', { name: /next/i }));
+    await user.click(screen.getByRole('button', { name: /see results/i }));
+
+    expect(screen.getByText('1 of 2 answered · average 0%')).toBeInTheDocument();
+    const skipped = screen.getByText('skipped').closest('div');
+    const shown = screen.getByText('0%').closest('div');
+    if (skipped === null || shown === null) {
+      throw new Error('result rows missing');
+    }
+    const idOf = (row: HTMLElement): string => within(row).getByRole('link').getAttribute('href')?.replace('/q/', '') ?? '';
+    expect(store.get(idOf(skipped))).toBeUndefined();
+    expect(store.get(idOf(shown))).toMatchObject({ attempts: 1, lastScore: 0 });
+    expect(Object.keys(store.all())).toEqual([idOf(shown)]);
   });
 
   it('ignores progress recorded before the session started', async () => {

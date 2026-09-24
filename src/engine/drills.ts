@@ -19,6 +19,8 @@ export interface DrillsStore {
   create(input: { query: string; questionIds: string[] }): SavedDrill;
   rename(id: string, name: string | undefined): void;
   restart(id: string): void;
+  /** Moves `questionId` to the end of the drill's order so it comes back after the others; no-op when it is already last. */
+  skip(id: string, questionId: string): void;
   remove(id: string): void;
   reset(): void;
   subscribe(listener: () => void): () => void;
@@ -117,6 +119,14 @@ export function createDrillsStore(storage: Storage | null): DrillsStore {
       });
     },
     restart: (id: string): void => update(id, (d): SavedDrill => ({ ...d, startedAt: new Date().toISOString() })),
+    skip: (id: string, questionId: string): void => {
+      const ids = drills.find((d) => d.id === id)?.questionIds ?? [];
+      const at = ids.indexOf(questionId);
+      if (at === -1 || at === ids.length - 1) {
+        return;
+      }
+      update(id, (d): SavedDrill => ({ ...d, questionIds: [...ids.slice(0, at), ...ids.slice(at + 1), questionId] }));
+    },
     remove: (id: string): void => {
       if (drills.some((d) => d.id === id)) {
         commit(drills.filter((d) => d.id !== id));

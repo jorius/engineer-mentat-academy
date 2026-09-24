@@ -9,6 +9,7 @@ type Props = {
   pill: ReactNode;
   resolved: boolean;
   busy: boolean;
+  onSkip?: () => void;
   onReset?: () => void;
   onShowAnswer?: () => void;
   showAnswerDisabled: boolean;
@@ -21,11 +22,11 @@ type Props = {
 };
 
 /**
- * The workbench's single row of actions, pinned to the bottom of the card. Order: Reset (only when
- * the caller passes `onReset`), Show answer (only with `onShowAnswer`), Submit (primary until resolved), Next (primary once
- * resolved; hidden without `onNext`).
+ * The workbench's single row of actions, pinned to the bottom of the card. Order: Skip (only with
+ * `onSkip`, until resolved), Reset (only when the caller passes `onReset`), Show answer (only with
+ * `onShowAnswer`), Submit (primary until resolved), Next (primary once resolved; hidden without `onNext`).
  */
-export function ActionBar({ pill, resolved, busy, onReset, onShowAnswer, showAnswerDisabled, submitLabel, onSubmit, submitDisabled, onNext, nextRef }: Props): JSX.Element {
+export function ActionBar({ pill, resolved, busy, onSkip, onReset, onShowAnswer, showAnswerDisabled, submitLabel, onSubmit, submitDisabled, onNext, nextRef }: Props): JSX.Element {
   const { t } = useTranslation();
   return (
     <div
@@ -35,6 +36,11 @@ export function ActionBar({ pill, resolved, busy, onReset, onShowAnswer, showAns
     >
       <div className="empty:hidden">{pill}</div>
       <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+        {onSkip !== undefined && !resolved && (
+          <Button variant="ghost" className="disabled:opacity-40" onClick={onSkip} disabled={busy} title={t('question.skipHint')}>
+            {t('question.skip')}
+          </Button>
+        )}
         {onReset !== undefined && (
           <Button variant="ghost" className="disabled:opacity-40" onClick={onReset} disabled={resolved || busy}>
             {t('question.reset')}

@@ -125,6 +125,40 @@ describe('createDrillsStore', () => {
     expect(createDrillsStore(storage).get(drill.id)?.startedAt).toBe('2026-09-24T08:30:00.000Z');
   });
 
+  it('skip moves the question to the end, persists and keeps the timestamps', () => {
+    const store = createDrillsStore(storage);
+    const drill = store.create(INPUT);
+    vi.setSystemTime(new Date('2026-09-24T08:30:00Z'));
+    store.skip(drill.id, 'q1');
+    expect(store.get(drill.id)).toMatchObject({ questionIds: ['q2', 'q3', 'q1'], createdAt: drill.createdAt, startedAt: drill.startedAt });
+    expect(createDrillsStore(storage).get(drill.id)?.questionIds).toEqual(['q2', 'q3', 'q1']);
+    store.skip(drill.id, 'q3');
+    expect(store.get(drill.id)?.questionIds).toEqual(['q2', 'q1', 'q3']);
+  });
+
+  it('skip only rotates the named drill', () => {
+    const store = createDrillsStore(storage);
+    const skipped = store.create(INPUT);
+    const other = store.create(INPUT);
+    store.skip(skipped.id, 'q2');
+    expect(store.get(skipped.id)?.questionIds).toEqual(['q1', 'q3', 'q2']);
+    expect(store.get(other.id)?.questionIds).toEqual(['q1', 'q2', 'q3']);
+  });
+
+  it('ignores skip for an unknown drill, an unknown question or the last question without notifying', () => {
+    const store = createDrillsStore(storage);
+    const drill = store.create(INPUT);
+    const before = store.all();
+    const listener = vi.fn();
+    store.subscribe(listener);
+    store.skip('nope', 'q1');
+    store.skip(drill.id, 'nope');
+    store.skip(drill.id, 'q3');
+    expect(store.all()).toBe(before);
+    expect(store.get(drill.id)?.questionIds).toEqual(['q1', 'q2', 'q3']);
+    expect(listener).not.toHaveBeenCalled();
+  });
+
   it('removes one drill', () => {
     const store = createDrillsStore(storage);
     const keep = store.create(INPUT);
@@ -162,12 +196,13 @@ describe('createDrillsStore', () => {
     const drill = store.create(INPUT);
     store.rename(drill.id, 'x');
     store.restart(drill.id);
+    store.skip(drill.id, 'q1');
     store.remove(drill.id);
     store.reset();
-    expect(listener).toHaveBeenCalledTimes(5);
+    expect(listener).toHaveBeenCalledTimes(6);
     unsubscribe();
     store.create(INPUT);
-    expect(listener).toHaveBeenCalledTimes(5);
+    expect(listener).toHaveBeenCalledTimes(6);
   });
 
   it('drops invalid entries on load and keeps the valid ones', () => {

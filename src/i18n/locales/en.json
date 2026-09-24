@@ -191,6 +191,8 @@
     "notesHint": "Private notes for this question, stored in this browser and shown again when you revisit it.",
     "showAnswer": "Show answer",
     "reset": "Reset",
+    "skip": "Skip",
+    "skipHint": "Move on without answering; nothing is recorded.",
     "tryAgain": "Not yet. Try again, or show the answer.",
     "lineGot": "Line {{n}}: got \"{{got}}\"",
     "attemptsLeft_one": "{{count}} attempt left",
