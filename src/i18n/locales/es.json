@@ -199,6 +199,7 @@
     "codeEditor": "Editor de código",
     "solution": "Solución",
     "referenceAnswer": "Respuesta de referencia",
+    "hiddenTests": "Pruebas ocultas",
     "test": "Prueba: {{name}}",
     "program": "Programa",
     "expectedOutput": "Salida esperada: una línea por cada llamada a console; dentro de arrays y objetos no importan los espacios ni el tipo de comillas",

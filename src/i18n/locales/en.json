@@ -199,6 +199,7 @@
     "codeEditor": "Code editor",
     "solution": "Solution",
     "referenceAnswer": "Reference answer",
+    "hiddenTests": "Hidden tests",
     "test": "Test: {{name}}",
     "program": "Program",
     "expectedOutput": "Expected output: one line per console call; inside arrays and objects, spacing and quote style do not matter",
