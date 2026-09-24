@@ -127,3 +127,15 @@ describe('localizeQuestion', () => {
     expect(loadQuestions().every((question) => typeof question.id === 'string')).toBe(true);
   });
 });
+
+describe('hint localization', () => {
+  it('takes the translated hint and keeps the English one when the translation has none', () => {
+    const question = { ...loadQuestions()[0], hint: 'Think about the call site.' };
+    const table = loadTranslations();
+    const base = table.es[question.id] ?? { prompt: 'p', explanation: 'e' };
+    table.es[question.id] = { ...base, hint: 'Piensa en el punto de llamada.' };
+    expect(localizeQuestion(question, 'es', table).hint).toBe('Piensa en el punto de llamada.');
+    delete table.es[question.id].hint;
+    expect(localizeQuestion(question, 'es', table).hint).toBe('Think about the call site.');
+  });
+});

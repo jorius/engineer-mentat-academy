@@ -15,6 +15,8 @@ export type CodeLanguage = (typeof CODE_LANGUAGES)[number];
 
 const idPattern = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
+export const HINT_MAX_LENGTH = 240;
+
 const baseSchema = z.object({
   id: z.string().regex(idPattern, 'id must be kebab-case'),
   domain: z.string().min(1),
@@ -25,6 +27,8 @@ const baseSchema = z.object({
   tags: z.array(z.string()),
   source: z.enum(SOURCES),
   explanation: z.string().min(1),
+  // One or two sentences that point at the concept or the trap without giving the answer away.
+  hint: z.string().min(1).max(HINT_MAX_LENGTH).optional(),
 });
 
 export const optionSchema = z.object({ id: z.string().min(1), text: z.string().min(1) });
@@ -111,6 +115,7 @@ export const questionTranslationSchema = z
   .object({
     prompt: z.string().min(1),
     explanation: z.string().min(1),
+    hint: z.string().min(1).max(HINT_MAX_LENGTH).optional(),
     options: z.record(z.string(), z.string().min(1)).optional(),
     modelAnswer: z.string().min(1).optional(),
     rubric: z.array(z.string().min(1)).optional(),

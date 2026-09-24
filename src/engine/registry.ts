@@ -49,7 +49,7 @@ export function localizeQuestion(question: Question, locale: string, translation
   if (translation === undefined) {
     return question;
   }
-  const prose = { prompt: translation.prompt, explanation: translation.explanation };
+  const prose = { prompt: translation.prompt, explanation: translation.explanation, ...(translation.hint === undefined ? {} : { hint: translation.hint }) };
   switch (question.kind) {
     case 'single':
     case 'multi':

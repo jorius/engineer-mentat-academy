@@ -172,3 +172,49 @@ describe('question translations', () => {
     }
   });
 });
+
+// A hint must nudge, never answer: no option text, no predict output line, no solution body.
+function plain(markdown: string): string {
+  return markdown.replace(/`/g, '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function hintLeaks(question: Question, hint: string): string[] {
+  const needle = plain(hint);
+  const leaks: string[] = [];
+  if (question.kind === 'single' || question.kind === 'multi') {
+    for (const option of question.options) {
+      const text = plain(option.text);
+      if (text.length >= 12 && needle.includes(text)) {
+        leaks.push(`option ${option.id}`);
+      }
+    }
+  }
+  if (question.kind === 'predict') {
+    for (const line of question.answer.split('\n')) {
+      const text = plain(line);
+      if (text.length >= 4 && needle.includes(text)) {
+        leaks.push(`output line "${line}"`);
+      }
+    }
+  }
+  return leaks;
+}
+
+describe('hints', () => {
+  it('every hint nudges without answering', () => {
+    const leaks = bank.filter((q) => q.hint !== undefined).flatMap((q) => hintLeaks(q, q.hint ?? '').map((leak) => `${q.id}: ${leak}`));
+    expect(leaks).toEqual([]);
+  });
+
+  it('every translated hint nudges without answering', () => {
+    const leaks = translationFiles.flatMap(([path, module]) =>
+      Object.entries(module.translations ?? {})
+        .filter(([, translation]) => translation.hint !== undefined)
+        .flatMap(([id, translation]) => {
+          const question = byId.get(id);
+          return question === undefined ? [`${path} ${id}: unknown question`] : hintLeaks(question, translation.hint ?? '').map((leak) => `${path} ${id}: ${leak}`);
+        }),
+    );
+    expect(leaks).toEqual([]);
+  });
+});

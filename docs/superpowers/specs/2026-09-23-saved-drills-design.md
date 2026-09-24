@@ -140,3 +140,20 @@ For `code` and `fix` questions the learner can see what their program prints.
 - Tests: Run executes without recording (progress store untouched, attempts pill unchanged), the panel
   opens with the logged lines and test outcomes, Clear empties it, a runtime error shows its message,
   Submit's run also fills the panel, `Ctrl+Shift+Enter` runs, Run is absent on a single-choice question.
+
+## 12. Hints (added 2026-09-24, Jose's request)
+
+Every question carries an optional `hint` (schema: `z.string().min(1).max(240).optional()` on the base
+question and on `QuestionTranslation`; `localizeQuestion` merges the translated hint with an English
+fallback). A hint is one or two sentences that name the concept, API or trap to think about, never the
+answer: the content test fails a hint that contains any option's text (12+ characters), any predict
+output line, or exceeds 240 characters. Hints are authored for every question in both languages.
+
+- Workbench: a ghost **Hint** button (`question.hint` "Hint" / "Pista", tooltip `question.hintHint`
+  "Show a nudge; it does not cost an attempt" / "Muestra una pista; no gasta intentos") at the left of
+  Run in the action bar, rendered only when the (localized) question has a hint and hidden once revealed.
+  Revealing shows the hint in the question pane under the prompt in a muted panel labelled
+  `question.hintLabel` ("Hint" / "Pista") with a lightbulb icon (`FiZap` is not a bulb; use `FiSun`?
+  no — use `FiHelpCircle`). State is per question (resets on question change), has no effect on
+  attempts or score, and is not recorded. Keyboard: `H` (same rules as `N`/`M`: not while typing).
+- Content: `hint` on every question in `src/content/**/*.ts` and `hint` in every `.es.ts` entry.

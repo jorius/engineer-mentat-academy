@@ -89,6 +89,20 @@ TypeScript strict, explicit return types, labeled import groups, no barrel files
 - [ ] Tests per spec §11.
 - [ ] Commit: `Add a run button and a debug console to code exercises`.
 
+### Task 10: Hint button and panel (after Task 9; both edit QuestionView and ActionBar)
+
+**Files:** `src/components/question/QuestionView.tsx` (+ test), `ActionBar.tsx`, `HintPanel.tsx` (new, + test), locales, README.
+
+- [ ] Implement spec §12 (workbench part). The schema, localization and leak guard already exist (controller commit).
+- [ ] Tests: button absent without a hint; click reveals the panel and hides the button; no reducer event, no progress record; `H` reveals; state resets on question change; Spanish hint shown in Spanish mode.
+- [ ] Commit: `Add a hint button to the workbench`.
+
+### Task 11: Author hints for every question (one agent per domain, parallel, content files only)
+
+**Files:** every `src/content/<domain>/<subject>.ts` and `.es.ts`.
+
+- [ ] For each question add `hint` (English) after `explanation`, and `hint` in the `.es.ts` entry. One or two sentences, at most 240 characters, that point at the concept, API or trap; never the answer, never an option's wording, never a predict output line; for code/fix name the approach or the method to reach for, not the code; for open questions the angle to cover. Run `npx vitest run src/content` (the leak guard) and the full gate. Commit: `Add hints to the <domain> questions`.
+
 ## Self-review notes
 - Task 1 defines `describeDrill` and may already need `drill.allSubjects/allLevels/allKinds`; Task 3 must reuse them, not redefine.
 - `Home` "Drill unseen" keeps pointing at `/drill?unseen=1`; it creates a drill each click by design.
