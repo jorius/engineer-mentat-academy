@@ -5,6 +5,8 @@ import rehypeHighlight from 'rehype-highlight';
 import type { Components } from 'react-markdown';
 import type { JSX } from 'react';
 import bash from 'highlight.js/lib/languages/bash';
+import csharp from 'highlight.js/lib/languages/csharp';
+import java from 'highlight.js/lib/languages/java';
 import javascript from 'highlight.js/lib/languages/javascript';
 import json from 'highlight.js/lib/languages/json';
 import sql from 'highlight.js/lib/languages/sql';
@@ -13,11 +15,16 @@ import typescript from 'highlight.js/lib/languages/typescript';
 const hljsLanguages = {
   javascript,
   typescript,
+  csharp,
+  java,
   sql,
   json,
   bash,
   js: javascript,
+  jsx: javascript,
   ts: typescript,
+  tsx: typescript,
+  cs: csharp,
 };
 
 // The highlight.js palette below assumes a light background in light mode and a dark

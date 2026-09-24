@@ -78,6 +78,8 @@
 .dark .md pre code .hljs-built_in { color: #e6c07b; }
 .dark .md pre code .hljs-attr { color: #d19a66; }
 .dark .md pre code .hljs-punctuation { color: #abb2bf; }
+/* A code block inside a choice option stays compact; it outranks the <pre> utilities set in Markdown.tsx. */
+.option-md .md pre { @apply my-1 p-2 text-xs leading-snug; }
 .md table { @apply my-3 w-full border-collapse text-sm; }
 .md th, .md td { @apply border border-zinc-300 px-2 py-1 text-left dark:border-zinc-700; }
 .md blockquote { @apply my-2 border-l-4 border-accent-500 pl-3 italic; }

@@ -1,6 +1,6 @@
 // packages
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // components
@@ -74,6 +74,65 @@ describe('OptionButton', () => {
   it('does not show a check mark when not correct', () => {
     render(<OptionButton id="a" letter="A" text="Option A" selected={false} onToggle={vi.fn()} />);
     expect(screen.queryByText('✓')).not.toBeInTheDocument();
+  });
+
+  it('renders a fenced code block highlighted inside the option, not inside a button', () => {
+    const text = '```js\nuseEffect(() => {\n  subscribe();\n}, []);\n```';
+    render(<OptionButton id="a" letter="A" text={text} selected={false} onToggle={vi.fn()} />);
+    const option = screen.getByRole('radio');
+    const code = option.querySelector('pre > code');
+    expect(code).not.toBeNull();
+    expect(code).toHaveClass('language-js', 'hljs');
+    expect(code?.querySelectorAll('.hljs-keyword, .hljs-title').length).toBeGreaterThan(0);
+    expect(option.closest('button')).toBeNull();
+    expect(option).toHaveAttribute('aria-label', text);
+  });
+
+  it('is reachable with Tab and toggles on Space and on Enter, preventing the default', async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    render(<OptionButton id="a" letter="A" text="Option A" selected={false} onToggle={onToggle} />);
+    const option = screen.getByRole('radio', { name: 'Option A' });
+    await user.tab();
+    expect(option).toHaveFocus();
+    await user.keyboard(' ');
+    expect(onToggle).toHaveBeenCalledTimes(1);
+    await user.keyboard('{Enter}');
+    expect(onToggle).toHaveBeenCalledTimes(2);
+    expect(onToggle).toHaveBeenLastCalledWith('a');
+    expect(fireEvent.keyDown(option, { key: ' ' })).toBe(false);
+    expect(fireEvent.keyDown(option, { key: 'Enter' })).toBe(false);
+  });
+
+  it('ignores other keys', () => {
+    const onToggle = vi.fn();
+    render(<OptionButton id="a" letter="A" text="Option A" selected={false} onToggle={onToggle} />);
+    expect(fireEvent.keyDown(screen.getByRole('radio', { name: 'Option A' }), { key: 'a' })).toBe(true);
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it('keeps a locked option out of the tab order and ignores Space and Enter on it', async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    render(<OptionButton id="a" letter="A" text="Option A" selected={false} locked onToggle={onToggle} />);
+    const option = screen.getByRole('radio', { name: 'Option A' });
+    expect(option).toHaveAttribute('tabindex', '-1');
+    option.focus();
+    await user.keyboard(' ');
+    await user.keyboard('{Enter}');
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it('ignores Space and Enter when disabled', async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    render(<OptionButton id="a" letter="A" text="Option A" selected={false} disabled multi onToggle={onToggle} />);
+    const option = screen.getByRole('checkbox', { name: 'Option A' });
+    expect(option).toHaveAttribute('tabindex', '-1');
+    option.focus();
+    await user.keyboard(' ');
+    await user.keyboard('{Enter}');
+    expect(onToggle).not.toHaveBeenCalled();
   });
 
   it('shows a dimmed, not-allowed cue for a plain disabled (not locked) option', () => {

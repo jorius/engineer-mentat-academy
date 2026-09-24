@@ -1,5 +1,5 @@
 // packages
-import type { JSX } from 'react';
+import type { JSX, KeyboardEvent } from 'react';
 
 // components
 import { Markdown } from '../common/Markdown';
@@ -18,10 +18,12 @@ type Props = {
 
 /**
  * A full-width, button-style choice option shared by SingleChoice (role="radio") and
- * MultiChoice (role="checkbox"). Keyboard activation (Space/Enter) comes for free from the
- * native <button>. A locked option (previously picked wrong) cannot be toggled; a correct
- * option gets the success style and a decorative check mark once the question is resolved.
- * The badge shows `letter` (the display position); `id` is what toggling reports.
+ * MultiChoice (role="checkbox"). It is a focusable <div>, not a <button>, because option text
+ * may hold a fenced code block and <pre> is not allowed inside <button>; Space and Enter toggle
+ * it like a native button would. A locked option (previously picked wrong) cannot be toggled
+ * and leaves the tab order; a correct option gets the success style and a decorative check
+ * mark once the question is resolved. The badge shows `letter` (the display position); `id`
+ * is what toggling reports.
  */
 export function OptionButton({
   id,
@@ -43,6 +45,14 @@ export function OptionButton({
     onToggle(id);
   };
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key !== ' ' && event.key !== 'Enter') {
+      return;
+    }
+    event.preventDefault();
+    handleClick();
+  };
+
   const stateClasses = correct
     ? 'border-emerald-500/50 bg-emerald-50 dark:bg-emerald-900/20'
     : selected
@@ -50,14 +60,15 @@ export function OptionButton({
       : 'border-zinc-200 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900';
 
   return (
-    <button
-      type="button"
+    <div
       role={multi ? 'checkbox' : 'radio'}
+      tabIndex={inactive ? -1 : 0}
       aria-checked={selected}
       aria-disabled={inactive}
       aria-label={text}
       onClick={handleClick}
-      className={`flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left leading-snug transition ${stateClasses} ${
+      onKeyDown={handleKeyDown}
+      className={`flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left leading-snug transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 ${stateClasses} ${
         locked ? 'line-through opacity-50' : ''
       } ${disabled && !locked ? 'opacity-60 cursor-not-allowed' : ''} ${inactive ? 'cursor-not-allowed' : 'cursor-pointer'}`}
     >
@@ -68,7 +79,7 @@ export function OptionButton({
       >
         {letter}
       </span>
-      <span className="min-w-0 flex-1 [&_.md>p]:my-0">
+      <span className="option-md min-w-0 flex-1 [&_.md>p]:my-0">
         <Markdown text={text} />
       </span>
       {correct && (
@@ -76,6 +87,6 @@ export function OptionButton({
           ✓
         </span>
       )}
-    </button>
+    </div>
   );
 }
