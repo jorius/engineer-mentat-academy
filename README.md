@@ -6,6 +6,9 @@ engineering practices, from junior fundamentals to senior trade-offs, in English
 Write real code against hidden tests, predict what a snippet prints, query a SQLite database,
 or talk through a design and score yourself against a rubric. Nothing leaves your machine.
 
+Live at **[jorius.github.io/engineer-mentat-academy](https://jorius.github.io/engineer-mentat-academy/)**,
+or [run your own copy](#run-it-yourself).
+
 ![The workbench: a fix-the-code question with the editor, the hidden tests and the console](docs/screenshots/workbench.png)
 
 ## A word of caution
