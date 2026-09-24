@@ -41,7 +41,7 @@ export const translations: Record<string, QuestionTranslation> = {
   'solid-lsp-penguin-predict': {
     prompt: '¿Qué imprime esto, una línea por cada `console.log`?',
     explanation:
-      'El verificador de tipos (y `instanceof`) está conforme: un `Penguin` **es un** `Bird`. Pero `launchAll` se escribió contra el contrato "todo Bird puede volar", y la subclase rompe ese contrato en tiempo de ejecución. Eso es una violación de Liskov: un subtipo debe poder usarse en cualquier lugar donde se use su tipo base, sin que quien llama necesite casos especiales. Envolver las llamadas en `try/catch` o agregar `if (bird instanceof Penguin)` en quienes llaman son síntomas, no soluciones. La solución es modelar la capacidad (un `FlyingBird` o una interfaz `canFly`) para que los que no vuelan nunca prometan `fly()`.',
+      '`instanceof` está conforme (y un verificador de TypeScript también lo estaría): un `Penguin` **es un** `Bird`. Pero `launchAll` se escribió contra el contrato "todo Bird puede volar", y la subclase rompe ese contrato en tiempo de ejecución. Eso es una violación de Liskov: un subtipo debe poder usarse en cualquier lugar donde se use su tipo base, sin que quien llama necesite casos especiales. Envolver las llamadas en `try/catch` o agregar `if (bird instanceof Penguin)` en quienes llaman son síntomas, no soluciones. La solución es modelar la capacidad (un `FlyingBird` o una interfaz `canFly`) para que los que no vuelan nunca prometan `fly()`.',
   },
   'solid-lsp-model-capabilities': {
     prompt:
@@ -52,7 +52,7 @@ export const translations: Record<string, QuestionTranslation> = {
   'solid-isp-mixins-predict': {
     prompt: 'Las capacidades se componen con mixins en lugar de una interfaz `Bird` gorda. ¿Qué imprime esto, una línea por cada `console.log`?',
     explanation:
-      "La segregación de interfaces dice que ningún cliente debería verse obligado a depender de métodos que no usa. Los mixins le dan a cada clase solo las capacidades que necesita: `Penguin` nunca recibe un `fly` que tendría que dejar como stub, así que `typeof penguin.fly` es `'undefined'` en lugar de un método que lanza un error. Como `Object.assign` copia los métodos en el **prototipo**, `this` se sigue resolviendo a la instancia en el momento de la llamada, `'swim' in penguin` es `true` (el operador `in` recorre la cadena de prototipos) y `Object.keys` solo lista la propiedad propia `name`.",
+      "La segregación de interfaces dice que ningún cliente debería verse obligado a depender de métodos que no usa. Los mixins le dan a cada clase solo las capacidades que necesita: `Penguin` nunca recibe un `fly` que tendría que dejar como stub, así que `typeof penguin.fly` es `'undefined'` en lugar de un método que lanza un error. `Object.assign` copia los métodos en el **prototipo**, y `this` lo fija el punto de llamada (`duck.fly()` hace que `this` sea el pato), así que los métodos compartidos leen el `name` propio de cada instancia; `'swim' in penguin` es `true` (el operador `in` recorre la cadena de prototipos) y `Object.keys` solo lista la propiedad propia `name`.",
   },
   'solid-dip-injectable-gateway': {
     prompt:
@@ -73,6 +73,6 @@ export const translations: Record<string, QuestionTranslation> = {
       'Propone un resultado concreto e incremental para el PR en lugar de todo o nada',
     ],
     explanation:
-      'La señal senior es el equilibrio: conocer el olor que corrige cada principio (god class, switch que crece, override que lanza errores, interfaz gorda, proveedor cableado a mano) y aplicar el principio solo donde el acoplamiento o los cambios frecuentes realmente duelen.\n\n**Dilo en voz alta:** "SOLID es un medio, no un fin. Lo aplico donde el acoplamiento o los cambios frecuentes duelen; sobreabstraer código pequeño y estable solo agrega indirección. Pragmatismo antes que dogma."',
+      'La señal senior es el equilibrio: conocer el olor que corrige cada principio (god class, switch que crece, override que lanza errores, interfaz gorda, proveedor cableado a mano) y aplicar el principio solo donde el acoplamiento o los cambios frecuentes realmente duelen.\n\n**Dilo en voz alta:** "SOLID es un medio, no un fin: lo aplico donde el acoplamiento o los cambios frecuentes duelen y mantengo la inyección en los límites reales de E/S. Los principios se superponen: por ejemplo, un mapa de estrategias es OCP logrado a través de DIP, y solo es seguro si cada estrategia respeta LSP."',
   },
 };

@@ -57,7 +57,7 @@ export const questions: Question[] = [
     level: 'mid',
     kind: 'single',
     prompt:
-      'Events `created`, `paid` and `shipped` for the same order must be processed in order. The topic has 12 partitions and the producer sends messages **without a key**. Consumers sometimes see `shipped` before `paid`. What is the right fix?',
+      'Events `created`, `paid` and `shipped` for the same order must be processed in order. The topic has 12 partitions and the producer sends messages **without a key**. Consumers sometimes see `shipped` before `paid`. What is the right fix that keeps all 12 partitions consuming in parallel?',
     options: [
       { id: 'a', text: 'Use the order ID as the message key, so all events for one order land on the same partition, where Kafka preserves order' },
       { id: 'b', text: 'Reduce the topic to a single partition' },
@@ -68,7 +68,7 @@ export const questions: Question[] = [
     tags: ['kafka', 'partitions', 'ordering', 'message-keys'],
     source: 'topic-list',
     explanation:
-      'Kafka only guarantees order **within a partition**. Without a key, messages are spread across partitions and consumed in parallel, so per-order order is lost. Keying by the entity whose order matters (`orderId`) hashes all its events to one partition while different orders still spread across all 12, keeping parallelism. A single partition also works but caps throughput at one consumer. Timestamps from different producers are not a reliable order. Two extra details: keep the idempotent producer enabled so retries do not reorder or duplicate within a partition, and remember that adding partitions later changes the key-to-partition mapping.',
+      'Kafka only guarantees order **within a partition**. Without a key, messages are spread across partitions and consumed in parallel, so per-order order is lost. Keying by the entity whose order matters (`orderId`) hashes all its events to one partition while different orders still spread across all 12, keeping parallelism. A single partition would restore order but throws away the parallelism the prompt requires (one consumer for the whole topic), and Kafka cannot shrink an existing topic\'s partition count anyway: you would have to create a new topic and migrate. Timestamps from different producers are not a reliable order. Two extra details: keep the idempotent producer enabled so retries do not reorder or duplicate within a partition, and remember that adding partitions later changes the key-to-partition mapping.',
   },
   {
     id: 'distributed-systems-kafka-consumer-groups',
@@ -123,7 +123,7 @@ export const questions: Question[] = [
     kind: 'fix',
     language: 'javascript',
     prompt:
-      "Each message lists the handler's outcome per attempt (`'ok'`, `'timeout'` or `'invalid'`; if the list runs out, the last outcome repeats). The consumer must:\n\n- mark the message processed on `'ok'`;\n- retry a **transient** failure (`'timeout'`) until it has made `maxAttempts` attempts in total, then dead-letter it with reason `'retries-exhausted'`;\n- dead-letter a **permanent** failure (`'invalid'`) immediately, without retrying, with reason `'invalid'`.\n\nEach dead-letter entry records `{ id, reason, attempts }`. The current implementation has two bugs. Fix them.",
+      "Each message lists the handler's outcome per attempt (`'ok'`, `'timeout'` or `'invalid'`; if the list runs out, the last outcome repeats). The consumer must:\n\n- mark the message processed on `'ok'`;\n- retry a **transient** failure (`'timeout'`) until it has made `maxAttempts` attempts in total, then dead-letter it with reason `'retries-exhausted'`;\n- dead-letter a **permanent** failure (`'invalid'`) immediately, without retrying, with reason `'invalid'`.\n\nEach dead-letter entry records:\n```js\n{ id, reason, attempts }\n```\nThe current implementation has two bugs. Fix them.",
     starter: `const PERMANENT = new Set(['invalid']);
 
 function outcomeAt(message, attempt) {
@@ -321,7 +321,7 @@ export function solution(events: IncomingEvent[]): number[] {
     prompt:
       'A mobile client calls `POST /payments`, the request times out, and the client retries. Some customers are charged twice. Design server-side support for an `Idempotency-Key` header.',
     modelAnswer:
-      'The client generates a unique key (a UUID) per logical operation and sends it on every retry of that operation. The server stores the key, scoped to the caller (tenant or user), together with a hash of the request body and a status, in a table with a unique constraint. On the first request it inserts the key as `in-progress` inside the same transaction boundary as the payment work, performs the charge, and saves the final status code and response body against the key. A retry with the same key and same body returns the stored response without charging again; the same key with a different body is a client bug and gets a 422; a retry that arrives while the original is still in progress gets a 409 (or waits), which the unique constraint makes race-safe. Keys expire after a window longer than any client retry policy (for example 24 hours). Downstream, I pass the same key to the payment provider, since Stripe and similar APIs support idempotency keys too, so the guarantee holds end to end.',
+      'The client generates a unique key (a UUID) per logical operation and sends it on every retry of that operation. The server stores the key, scoped to the caller (tenant or user), together with a hash of the request body and a status, in a table with a unique constraint. On the first request it inserts the key as `in-progress` in its own short transaction and commits it before calling the provider, so the unique constraint acts as the lock and concurrent retries can see it; it then performs the charge and saves the final status code and response body against the key in a second transaction. A retry with the same key and same body returns the stored response without charging again; the same key with a different body is a client bug and gets a 422; a retry that arrives while the original is still in progress gets a 409 (or waits), which the unique constraint makes race-safe. Keys expire after a window longer than any client retry policy (for example 24 hours). Downstream, I pass the same key to the payment provider, since Stripe and similar APIs support idempotency keys too, so the guarantee holds end to end.',
     rubric: [
       'Client-generated key per logical operation, reused across retries',
       'Server stores key with request fingerprint and the final response, and replays it on retry',
@@ -366,7 +366,7 @@ export function solution(events: IncomingEvent[]): number[] {
     tags: ['retries', 'exponential-backoff', 'jitter', 'thundering-herd'],
     source: 'notion',
     explanation:
-      'Exponential backoff gives a struggling dependency room to recover; the cap keeps the worst-case wait bounded. **Jitter** is the part people forget: without it, every client that failed at the same moment retries at the same moment (a thundering herd), re-creating the spike that caused the failure. Full jitter (`random(0, min(cap, base * 2^i))`) spreads retries across the whole window and, in AWS\'s analysis, finishes the total work with the fewest calls. The cap must apply **before** the jitter, otherwise delays can exceed it.\n\nTaking the randomness as an input (a seeded generator or pre-drawn values) is what makes retry logic unit-testable. Also bound the total: a max attempt count or a deadline, honor `Retry-After` on 429/503, and only retry idempotent operations.\n\n**Say this out loud:** "Retries use capped exponential backoff with full jitter to avoid synchronized retry storms, a bounded attempt budget, and only on idempotent operations or requests carrying an idempotency key."',
+      'Exponential backoff gives a struggling dependency room to recover; the cap keeps the worst-case wait bounded. **Jitter** is the part people forget: without it, every client that failed at the same moment retries at the same moment (a thundering herd), re-creating the spike that caused the failure. Full jitter (`random(0, min(cap, base * 2^i))`) spreads retries across the whole window and, in AWS\'s analysis, finishes the total work with the fewest calls. The cap must apply **before** the jitter: capping afterwards (`min(cap, random * base * 2^i)`) clamps most late retries to exactly `cap`, so clients line up again at the cap and the jitter is lost.\n\nTaking the randomness as an input (a seeded generator or pre-drawn values) is what makes retry logic unit-testable. Also bound the total: a max attempt count or a deadline, honor `Retry-After` on 429/503, and only retry idempotent operations.\n\n**Say this out loud:** "Retries use capped exponential backoff with full jitter to avoid synchronized retry storms, a bounded attempt budget, and only on idempotent operations or requests carrying an idempotency key."',
   },
   {
     id: 'distributed-systems-what-to-retry',
@@ -375,7 +375,8 @@ export function solution(events: IncomingEvent[]): number[] {
     topic: 'retries',
     level: 'mid',
     kind: 'multi',
-    prompt: 'Your HTTP client wrapper retries automatically with backoff. Which failures should it retry? Select all that apply.',
+    prompt:
+      'Your HTTP client wrapper retries automatically with backoff. The payments API deduplicates requests that carry an `Idempotency-Key` header. Which failures should it retry? Select all that apply.',
     options: [
       { id: 'a', text: '`503 Service Unavailable` on `GET /orders/42`' },
       { id: 'b', text: '`429 Too Many Requests` with a `Retry-After: 2` header, waiting at least 2 seconds' },
@@ -398,7 +399,7 @@ export function solution(events: IncomingEvent[]): number[] {
     kind: 'fix',
     language: 'javascript',
     prompt:
-      "`solution(incoming, ids)` builds the headers for a downstream call. Rules:\n\n- Reuse the caller's correlation ID from the `x-correlation-id` header, matched **case-insensitively**; if it is missing or empty, use `ids.correlationId`. Always send it as lowercase `x-correlation-id`.\n- If the incoming W3C `traceparent` is valid (`00-<32 hex trace-id>-<16 hex parent-id>-<2 hex flags>`, lowercase), send a **child** `traceparent`: same version, trace-id and flags, but with `ids.spanId` as the parent-id. If it is missing or invalid, omit `traceparent`.\n\nFix the current implementation.",
+      "`solution(incoming, ids)` builds the headers for a downstream call. Rules:\n\n- Reuse the caller's correlation ID from the `x-correlation-id` header, matched **case-insensitively**; if it is missing or empty, use `ids.correlationId`. Always send it as lowercase `x-correlation-id`.\n- If the incoming W3C `traceparent` is valid (`<version>-<trace-id>-<parent-id>-<flags>`: lowercase hex fields of 2, 32, 16 and 2 characters), send a **child** `traceparent`: same version, trace-id and flags, but with `ids.spanId` as the parent-id. If it is missing or invalid, omit `traceparent`.\n\nFix the current implementation.",
     starter: `export function solution(incoming, ids) {
   const correlationId = incoming['x-correlation-id'] || ids.correlationId;
   const outgoing = { 'x-correlation-id': correlationId };

@@ -105,7 +105,7 @@ console.log(flock.every((bird) => bird instanceof Bird));`,
     tags: ['lsp', 'inheritance'],
     source: 'notion',
     explanation:
-      'The type checker (and `instanceof`) is happy: a `Penguin` **is a** `Bird`. But `launchAll` was written against the contract "every Bird can fly", and the subclass breaks that contract at run time. That is a Liskov violation: a subtype must be usable anywhere its base type is, without the caller needing special cases. Wrapping calls in `try/catch` or adding `if (bird instanceof Penguin)` in callers are symptoms, not fixes. The fix is to model the capability (a `FlyingBird` or a `canFly` interface) so that non-flyers never promise `fly()`.',
+      '`instanceof` is happy (and a TypeScript checker would be too): a `Penguin` **is a** `Bird`. But `launchAll` was written against the contract "every Bird can fly", and the subclass breaks that contract at run time. That is a Liskov violation: a subtype must be usable anywhere its base type is, without the caller needing special cases. Wrapping calls in `try/catch` or adding `if (bird instanceof Penguin)` in callers are symptoms, not fixes. The fix is to model the capability (a `FlyingBird` or a `canFly` interface) so that non-flyers never promise `fly()`.',
   },
   {
     id: 'solid-lsp-model-capabilities',
@@ -248,7 +248,7 @@ console.log('swim' in penguin, Object.keys(penguin).length);`,
     tags: ['isp', 'mixins', 'prototypes'],
     source: 'notion',
     explanation:
-      "Interface segregation says no client should be forced to depend on methods it does not use. Mixins give each class only the capabilities it needs: `Penguin` never gets a `fly` it would have to stub out, so `typeof penguin.fly` is `'undefined'` rather than a method that throws. Because `Object.assign` copies the methods onto the **prototype**, `this` still resolves to the instance at call time, `'swim' in penguin` is `true` (the `in` operator walks the prototype chain), and `Object.keys` only lists the own property `name`.",
+      "Interface segregation says no client should be forced to depend on methods it does not use. Mixins give each class only the capabilities it needs: `Penguin` never gets a `fly` it would have to stub out, so `typeof penguin.fly` is `'undefined'` rather than a method that throws. `Object.assign` copies the methods onto the **prototype**, and `this` is set by the call site (`duck.fly()` makes `this` the duck), so the shared methods read each instance's own `name`; `'swim' in penguin` is `true` (the `in` operator walks the prototype chain), and `Object.keys` only lists the own property `name`.",
   },
   {
     id: 'solid-dip-injectable-gateway',
@@ -335,6 +335,6 @@ export function solution(amount, gatewayApproves) {
     tags: ['solid', 'pragmatism', 'code-review', 'strategy'],
     source: 'notion',
     explanation:
-      'The senior signal is balance: knowing the smell each principle fixes (god class, growing switch, throwing override, fat interface, vendor hard-wiring) and applying the principle only where coupling or churn actually hurts.\n\n**Say this out loud:** "SOLID is a means, not an end. I apply it where coupling or churn hurts; over-abstracting small, stable code just adds indirection. Pragmatism over dogma."',
+      'The senior signal is balance: knowing the smell each principle fixes (god class, growing switch, throwing override, fat interface, vendor hard-wiring) and applying the principle only where coupling or churn actually hurts.\n\n**Say this out loud:** "SOLID is a means, not an end: I apply it where coupling or churn hurts and keep injection at real I/O boundaries. The principles overlap, for example a strategy map is OCP achieved through DIP, and it is only safe when every strategy honors LSP."',
   },
 ];

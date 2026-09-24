@@ -65,7 +65,7 @@ console.log(trailer.doors, trailer.wheels);`,
     tags: ['factory', 'nullish-coalescing', 'defaults'],
     source: 'notion',
     explanation:
-      '`||` falls back on **any falsy value**, so a legitimate `0` doors or an explicit empty `state` is silently replaced by the default (4 and `"new"`). `??` only falls back on `null`/`undefined`, which is why `wheels: 0` survives on the trailer. The subclass wins on `type` because its spread puts `type: "motorcycle"` *after* `...options`. In a factory that builds objects from external config this is a real data-corruption bug: prefer `??` or destructuring defaults (`{ doors = 4 }`), which also only apply for `undefined`.',
+      '`||` falls back on **any falsy value**, so a legitimate `0` doors or an explicit empty `state` is silently replaced by the default (4 and `"new"`). `??` only falls back on `null`/`undefined`, which is why `wheels: 0` survives on the trailer. `bike.type` is `"motorcycle"` because `Motorcycle` adds `type: "motorcycle"` to what it passes to `super` (the input only has `vehicleType`; putting it after `...options` would also let it override a caller-supplied `type`). In a factory that builds objects from external config this is a real data-corruption bug: prefer `??` or destructuring defaults (`{ doors = 4 }`), which also only apply for `undefined`.',
   },
   {
     id: 'design-patterns-factory-registry-prototype-keys',
@@ -183,7 +183,7 @@ export function solution(calls) {
     tags: ['singleton', 'closures', 'modules'],
     source: 'notion',
     explanation:
-      'In JavaScript the module system already gives you a singleton: a module body runs once and every importer gets the same bindings. A private `let instance` plus a lazy getter is the whole pattern; a class with a `static #instance` and a private constructor is the same idea with more ceremony.\n\nThe cost of a singleton is hidden global state: tests share it and it is hard to swap. Prefer exporting a factory and injecting the instance where you can, and keep true singletons for things that must be unique per process (a connection pool, a logger).',
+      'In JavaScript the module system already gives you a singleton: a module body runs once and every importer gets the same bindings. A private `let instance` plus a lazy getter is the whole pattern; a class with a `static #instance` and a static `getInstance()` (TypeScript can also mark the constructor `private`; JavaScript cannot) is the same idea with more ceremony.\n\nThe cost of a singleton is hidden global state: tests share it and it is hard to swap. Prefer exporting a factory and injecting the instance where you can, and keep true singletons for things that must be unique per process (a connection pool, a logger).',
   },
   {
     id: 'design-patterns-memoize-decorator-falsy-cache',
@@ -253,7 +253,7 @@ export function solution(inputs) {
     tags: ['memoization', 'decorator', 'map', 'core-25'],
     source: 'core-list',
     explanation:
-      'The truthiness check treats a cached `0` (or `""`, `false`, `null`) as a miss, so falsy results are never served from cache. Check for **presence** (`Map#has`, or `key in cache`) instead of the value.\n\nA `Map` also avoids two other object-cache traps: keys are stringified (`1` and `"1"` collide) and inherited keys such as `"constructor"` look like hits. For multi-argument functions you need a key strategy (`JSON.stringify(args)` for primitives, nested `WeakMap`s for object arguments), and for long-lived processes a bound (LRU) so the cache is not a memory leak. Memoization is only safe for **pure** functions.',
+      'The truthiness check treats a cached `0` (or `""`, `false`, `null`) as a miss, so falsy results are never served from cache. Check for **presence** (`Map#has`, or `Object.hasOwn(cache, key)`) instead of the value.\n\nA `Map` also avoids two other object-cache traps: keys are stringified (`1` and `"1"` collide) and inherited keys such as `"constructor"` look like hits. For multi-argument functions you need a key strategy (`JSON.stringify(args)` for primitives, nested `WeakMap`s for object arguments), and for long-lived processes a bound (LRU) so the cache is not a memory leak. Memoization is only safe for **pure** functions.',
   },
   {
     id: 'design-patterns-adapter-vs-facade',
@@ -263,7 +263,7 @@ export function solution(inputs) {
     level: 'mid',
     kind: 'single',
     prompt:
-      "Your domain code already depends on this interface:\n```ts\ninterface PaymentGateway {\n  charge(amountCents: number, token: string): Promise<{ id: string }>;\n}\n```\nYou write `StripeGateway implements PaymentGateway`, which translates the call into `stripe.paymentIntents.create({ amount, currency, payment_method, confirm: true })` and maps the response back. Next quarter you plan an `AdyenGateway` too. Which pattern is `StripeGateway` primarily?",
+      "Your domain code already depends on this interface:\n```ts\ninterface PaymentGateway {\n  charge(amountCents: number, token: string): Promise<{ id: string }>;\n}\n```\nYou write `StripeGateway implements PaymentGateway`, which translates the call into this Stripe request and maps the response back:\n```ts\nstripe.paymentIntents.create({\n  amount,\n  currency,\n  payment_method,\n  confirm: true,\n});\n```\nNext quarter you plan an `AdyenGateway` too. Which pattern is `StripeGateway` primarily?",
     options: [
       { id: 'a', text: 'Adapter: it converts a vendor interface into the interface your code already expects' },
       { id: 'b', text: 'Facade: it hides a complex subsystem behind one simpler entry point' },
@@ -274,7 +274,7 @@ export function solution(inputs) {
     tags: ['adapter', 'facade', 'proxy', 'decorator', 'ports-and-adapters'],
     source: 'notion',
     explanation:
-      'The deciding fact is that the **target interface already exists** (`PaymentGateway`) and the class translates an incompatible one into it: that is an Adapter, and it is exactly what makes the vendor swappable. A Facade also simplifies, but it defines a *new* simplified front over a subsystem you usually own (`BillingService.charge()` over three internal APIs) and is not about matching an expected interface. Proxy and Decorator both keep the **same** interface as the wrapped object: a Proxy controls access (caching, lazy init, rate limiting), a Decorator adds behavior (retries, logging, `withRetry(fn)`, Express middleware, HOCs).',
+      'The deciding fact is that the **target interface already exists** (`PaymentGateway`) and the class translates an incompatible one into it: that is an Adapter, and it is exactly what makes the vendor swappable. A Facade also simplifies, but it defines a *new* simplified front over a subsystem you usually own (`BillingService.charge()` over three internal APIs) and is not about matching an expected interface. Proxy and Decorator both keep the **same** interface as the wrapped object: a Proxy controls access (caching, lazy init, rate limiting), a Decorator adds behavior (retries, logging, `withRetry(fn)`, HOCs).',
   },
   {
     id: 'design-patterns-observer-emitter',
@@ -384,7 +384,7 @@ export function solution(events) {
     tags: ['observer', 'event-emitter', 'pub-sub'],
     source: 'notion',
     explanation:
-      'The first test is the trap: the `once` wrapper removes itself from the array **during** `emit`. If `emit` iterates the live array, `splice` shifts `audit` into the index the loop already visited and it is skipped on the first order. Iterating a snapshot (`[...list]`) is what Node\'s `EventEmitter` does too.\n\nReturning an unsubscribe function (as Redux `subscribe` and React effects do) is the cleanest API because the caller does not need to keep a reference to the exact listener. In long-lived processes, forgotten subscriptions are the classic Observer memory leak, which is why Node warns past 10 listeners per event.\n\n**Say this out loud:** "Observer decouples the publisher from its subscribers; the details that matter in production are snapshotting listeners during emit, always giving callers a way to unsubscribe, and isolating one listener\'s error from the rest."',
+      'The first test is the trap: the `once` wrapper removes itself from the array **during** `emit`. If `emit` iterates the live array, `splice` shifts `audit` into the index the loop already visited and it is skipped on the first order. Iterating a snapshot (`[...list]`) is what Node\'s `EventEmitter` does too.\n\nReturning an unsubscribe function (as Redux `subscribe` and React effects do) is the cleanest API because the caller does not need to keep a reference to the exact listener. In long-lived processes, forgotten subscriptions are the classic Observer memory leak, which is why Node warns past 10 listeners per event. One production detail the tests do not cover: a listener that throws aborts the loop and the listeners after it never run (Node\'s `emit` behaves the same way), so wrap each call in `try/catch` and report the error when one failing subscriber must not starve the rest.\n\n**Say this out loud:** "Observer decouples the publisher from its subscribers; the details that matter in production are snapshotting listeners during emit, always giving callers a way to unsubscribe, and isolating one listener\'s error from the rest."',
   },
   {
     id: 'design-patterns-strategy-map-shipping',
@@ -395,7 +395,7 @@ export function solution(events) {
     kind: 'code',
     language: 'typescript',
     prompt:
-      'Implement `solution(method, weightKg)` returning the shipping cost using a **strategy map** (an object or `Map` from method name to a pricing function), not a `switch`:\n\n- `standard`: 5 + 1.5 per kg\n- `express`: 15 + 3 per kg\n- `pickup`: always 0\n- any other method: `null`',
+      'Implement `solution(method, weightKg)` returning the shipping cost using a **strategy map** (a `Map`, or an object checked with `Object.hasOwn`, from method name to a pricing function), not a `switch`:\n\n- `standard`: 5 + 1.5 per kg\n- `express`: 15 + 3 per kg\n- `pickup`: always 0\n- any other method: `null`',
     starter: `export function solution(method: string, weightKg: number): number | null {
   // TODO: look the strategy up instead of branching on method
   return 0;
@@ -405,6 +405,7 @@ export function solution(events) {
       { name: 'express 2.5 kg', args: ['express', 2.5], expected: 22.5 },
       { name: 'pickup is free', args: ['pickup', 10], expected: 0 },
       { name: 'unknown method', args: ['drone', 1], expected: null },
+      { name: 'inherited key is not a method', args: ['constructor', 1], expected: null },
     ],
     solution: `type PricingStrategy = (weightKg: number) => number;
 
@@ -519,7 +520,7 @@ export function solution(ops) {
     tags: ['command', 'undo-redo'],
     source: 'notion',
     explanation:
-      'Command turns an action into an object, so it can be stored, queued, logged, retried or reversed. The subtle part is that `undo` needs the state captured at `execute` time: `delete` must remember **what** it removed (here only 3 characters, not 5), otherwise undo cannot restore it. The same shape appears in job queues (a serialized command handed to a worker) and in Redux actions, which are commands described as data.',
+      'Command turns an action into an object, so it can be stored, queued, logged, retried or reversed. The subtle part is that `undo` needs the state captured at `execute` time: `delete` must remember **what** it removed (here only 3 characters, not 5), otherwise undo cannot restore it. The same shape appears in job queues (a serialized command handed to a worker) and in Redux, where actions are plain-data messages that can be logged and replayed (Redux\'s style guide models them as events rather than commands).',
   },
   {
     id: 'design-patterns-over-patterning',
@@ -531,7 +532,7 @@ export function solution(ops) {
     prompt:
       'A pull request for a feature that sends notifications by email only introduces `NotificationFactory`, an `AbstractChannelFactory`, a `ChannelStrategy` interface with one implementation, and a `NotificationManager` singleton. The author says "this makes it extensible". How do you review it, and when would you ask for these patterns?',
     modelAnswer:
-      'I would judge each abstraction by the change it absorbs, not by whether it is a named pattern. With one channel, a strategy interface and two factory layers add indirection and files without protecting against any change we actually expect, so I would ask for a plain `sendEmailNotification` function behind a small module boundary. The singleton is the part I would push back on hardest: hidden global state makes tests order-dependent, and injecting the sender gives the same sharing without the coupling. If product confirms SMS and push are coming, a strategy map keyed by channel is the right next step and is a small refactor from a well-factored function. Abstract Factory earns its keep only when you create **families** of related objects that must stay consistent (for example per-vendor client, signer and parser), which is not the case here. The best design is usually the simplest thing that absorbs the change you expect, and patterns should be introduced when the second or third variation appears.',
+      'I would judge each abstraction by the change it absorbs, not by whether it is a named pattern. With one channel, a strategy interface and two factory layers add indirection and files without protecting against any change we actually expect, so I would ask for a plain `sendEmailNotification` function behind a small module boundary. The singleton is the part I would push back on hardest: hidden global state makes tests order-dependent, and injecting the sender gives the same sharing without the coupling. If product confirms SMS and push are coming, a strategy map keyed by channel is the right next step and is a small, reversible refactor from a well-factored function, not a rewrite, so nothing is lost by starting simple. Abstract Factory earns its keep only when you create **families** of related objects that must stay consistent (for example per-vendor client, signer and parser), which is not the case here. The best design is usually the simplest thing that absorbs the change you expect, and patterns should be introduced when the second or third variation appears.',
     rubric: [
       'Justifies patterns by the concrete problem or change they absorb, not by name',
       'Calls out the singleton as hidden global state that hurts testing and prefers injection',

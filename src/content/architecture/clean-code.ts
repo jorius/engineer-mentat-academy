@@ -14,13 +14,16 @@ export const questions: Question[] = [
     options: [
       {
         id: 'a',
-        text: '`const MS_PER_DAY = 86_400_000; const INACTIVE_AFTER_DAYS = 30; function isInactive(user) { return Date.now() - user.lastLoginAt > INACTIVE_AFTER_DAYS * MS_PER_DAY; }`',
+        text: '```js\nconst MS_PER_DAY = 86_400_000;\nconst INACTIVE_AFTER_DAYS = 30;\nfunction isInactive(user) {\n  return Date.now() - user.lastLoginAt > INACTIVE_AFTER_DAYS * MS_PER_DAY;\n}\n```',
       },
-      { id: 'b', text: '`const DAY = 86400000; function check(user) { return Date.now() - user.lastLogin > 30 * DAY; }`' },
+      {
+        id: 'b',
+        text: '```js\nconst DAY = 86400000;\nfunction check(user) {\n  return Date.now() - user.lastLogin > 30 * DAY;\n}\n```',
+      },
       { id: 'c', text: 'Keep the names and add comments: `// one day in ms` above `d` and `// true if the user is inactive` above `chk`' },
       {
         id: 'd',
-        text: '`const dayInMillisecondsConstantValue = 86400000; function checkUserLastLoginTimeAgainstThirtyDaysAndReturnBoolean(u) { ... }`',
+        text: '```js\nconst dayInMillisecondsConstantValue = 86400000;\nfunction checkUserLastLoginTimeAgainstThirtyDaysAndReturnBoolean(u) {\n  // ...\n}\n```',
       },
     ],
     answer: 'a',
@@ -38,7 +41,7 @@ export const questions: Question[] = [
     kind: 'fix',
     language: 'javascript',
     prompt:
-      "`createUser(name, email, isAdmin, isActive, sendWelcome)` takes three positional booleans, and the call in `solution` has already mixed two of them up. Refactor `createUser` to take a **single options object** with defaults `isAdmin = false`, `isActive = true`, `sendWelcome = false`, and update the call so each flag is passed by name. `request` fields that are missing must fall back to those defaults.",
+      "```js\ncreateUser(name, email, isAdmin, isActive, sendWelcome)\n```\n`createUser` takes three positional booleans, and the call in `solution` has already mixed two of them up. Refactor `createUser` to take a **single options object** with defaults `isAdmin = false`, `isActive = true`, `sendWelcome = false`, and update the call so each flag is passed by name. `request` fields that are missing must fall back to those defaults.",
     starter: `function createUser(name, email, isAdmin, isActive, sendWelcome) {
   return {
     name,
@@ -196,7 +199,7 @@ export function solution(cart, percent) {
     prompt:
       'A 180-line `processOrder` function validates input, computes prices, writes to three tables and publishes an event. It works, has almost no tests, and changes every sprint. How do you argue for refactoring it, and how do you do it safely?',
     modelAnswer:
-      'I would make the case with evidence rather than taste: how often it changes, how many incidents or review rounds it caused, and how long changes take. Before touching it I add characterization tests around its current observable behavior (inputs, rows written, event published) so the refactor is provably behavior-preserving. Then I extract in small, separately reviewable steps: validation and pricing become pure functions with unit tests, and the database writes and event publish stay in a thin orchestrating shell (functional core, imperative shell). Names come from the domain so each step reads as the business process. I would do it incrementally alongside feature work, keep each PR small, and fix the dual-write between the tables and the event with a transactional outbox as a separate, explicit change rather than hiding it in the refactor.',
+      'I would make the case with evidence rather than taste: how often it changes, how many incidents or review rounds it caused, and how long changes take. Before touching it I add characterization tests around its current observable behavior (inputs, rows written, event published) so the refactor is provably behavior-preserving. Then, rather than a rewrite, I extract in small steps that can each be reviewed and reverted on their own: validation and pricing become pure functions with unit tests, and the database writes and event publish stay in a thin orchestrating shell (functional core, imperative shell). Names come from the domain so each step reads as the business process. I would do it incrementally alongside feature work, keep each PR small, and fix the dual-write between the tables and the event with a transactional outbox as a separate, explicit change rather than hiding it in the refactor.',
     rubric: [
       'Justifies the refactor with churn, defect or lead-time evidence, not personal style',
       'Writes characterization tests before changing behavior',
