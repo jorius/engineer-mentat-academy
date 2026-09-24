@@ -308,7 +308,7 @@ describe('QuestionView', () => {
     const user = userEvent.setup();
     const { store } = setup(code);
     await user.click(button(/submit/i));
-    expect(await screen.findByText(/one: expected 1, got 0/)).toBeInTheDocument();
+    expect(await screen.findByText(/one: solution\(\) expected 1, got 0/)).toBeInTheDocument();
     expect(screen.getByText('Not yet. Try again, or show the answer.')).toBeInTheDocument();
     expect(store.get(code.id)).toBeUndefined();
   });

@@ -3,6 +3,7 @@ import type { Grader, GradeResult } from './grader';
 import type { Answer, CodeQuestion, FixQuestion, MultiQuestion, OpenQuestion, PredictQuestion, Question, SingleQuestion, SqlQuestion } from './question';
 import type { RunRequest, RunResult } from './runner/execute';
 import type { SqlRunner } from './sql/runSql';
+import { formatCall, formatValue } from './format';
 
 export type StaticGraderDeps = {
   runJs: (request: RunRequest) => Promise<RunResult>;
@@ -45,15 +46,6 @@ function linesMatch(expected: string | undefined, actual: string | undefined): b
 
 function optionText(question: SingleQuestion | MultiQuestion, id: string): string {
   return question.options.find((o) => o.id === id)?.text ?? id;
-}
-
-function formatValue(value: unknown): string {
-  try {
-    const json = JSON.stringify(value);
-    return json === undefined ? String(value) : json;
-  } catch {
-    return String(value);
-  }
 }
 
 function wrongKind(question: Question, answer: Answer): Error {
@@ -116,8 +108,9 @@ async function gradeCode(question: CodeQuestion | FixQuestion, answer: Answer, r
   const feedback = run.tests
     .filter((t) => !t.passed)
     .map((t) => {
-      const expected = question.tests.find((c) => c.name === t.name)?.expected;
-      return t.error !== undefined ? `${t.name}: ${t.error}` : `${t.name}: expected ${formatValue(expected)}, got ${formatValue(t.actual)}`;
+      const testCase = question.tests.find((c) => c.name === t.name);
+      const call = testCase === undefined ? '' : ` ${formatCall(testCase.args)}`;
+      return t.error !== undefined ? `${t.name}:${call} ${t.error}` : `${t.name}:${call} expected ${formatValue(testCase?.expected)}, got ${formatValue(t.actual)}`;
     });
   const score = run.tests.length === 0 ? 0 : passed / run.tests.length;
   return { score, verdict: score === 1 ? 'pass' : 'fail', feedback, run };

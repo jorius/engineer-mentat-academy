@@ -97,7 +97,7 @@ describe('createStaticGrader', () => {
     const half = await grader.grade(q, { kind: 'code', source: 'export function solution(a: number, b: number): number { return 3; }' });
     expect(half.score).toBe(0.5);
     expect(half.verdict).toBe('fail');
-    expect(half.feedback).toEqual(['adds big: expected 30, got 3']);
+    expect(half.feedback).toEqual(['adds big: solution(10, 20) expected 30, got 3']);
     const broken = await grader.grade(q, { kind: 'code', source: 'nope(' });
     expect(broken).toMatchObject({ score: 0, verdict: 'fail' });
     expect(broken.feedback[0]).toMatch(/SyntaxError/);

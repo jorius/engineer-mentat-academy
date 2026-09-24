@@ -5,6 +5,7 @@ import type { JSX } from 'react';
 
 // engine
 import type { Answer, CodeQuestion, FixQuestion } from '../../engine/question';
+import { formatCall, formatValue } from '../../engine/format';
 
 // components
 import { CodeEditor } from '../common/CodeEditor';
@@ -35,9 +36,14 @@ export function CodeExercise({ question, disabled, onSubmit, value, onChange, re
   return (
     <div className="space-y-3">
       <CodeEditor value={source} onChange={setSource} language={question.language} ariaLabel={t('question.solution')} readOnly={readOnly} minLines={18} />
-      <ul className="text-sm text-zinc-600 dark:text-zinc-400">
+      <ul className="space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
         {question.tests.map((test) => (
-          <li key={test.name}>{t('question.test', { name: test.name })}</li>
+          <li key={test.name} className="flex flex-wrap items-baseline gap-x-2">
+            <span>{t('question.test', { name: test.name })}</span>
+            <code className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+              {formatCall(test.args)} → {formatValue(test.expected)}
+            </code>
+          </li>
         ))}
       </ul>
       <div className="flex gap-2">
