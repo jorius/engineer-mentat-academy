@@ -73,6 +73,14 @@ TypeScript strict, explicit return types, labeled import groups, no barrel files
 - [ ] Tests: an option whose text is a fenced ```js block renders a `<pre><code class="language-js hljs">` inside the option with highlighted tokens (`hljs-keyword` present); Space and Enter toggle; locked option ignores both; existing OptionButton tests still pass (role/aria unchanged); Markdown test for `csharp`, `java`, `tsx` fences.
 - [ ] Commit: `Support fenced code blocks inside choice options`.
 
+### Task 8: Confirmation dialog for destructive actions
+
+**Files:** `src/components/primitives/ConfirmDialog.tsx` (+ test), `src/pages/Drill.tsx` (+ test), `src/pages/Settings.tsx` (+ test), locales, README (Settings/Drill sentences).
+
+- [ ] Implement spec §10 exactly. Keys under `confirm.*` in both locale files; reuse `common.cancel`, `drill.delete`, `drill.restart`, `settings.importProgress`, `settings.clearProgress`, `settings.resetEverything`, `settings.typeToConfirm`.
+- [ ] Tests per spec §10; update existing Settings tests that typed RESET into the inline field to type it inside the dialog.
+- [ ] Commit: `Add a confirmation dialog for destructive actions`.
+
 ## Self-review notes
 - Task 1 defines `describeDrill` and may already need `drill.allSubjects/allLevels/allKinds`; Task 3 must reuse them, not redefine.
 - `Home` "Drill unseen" keeps pointing at `/drill?unseen=1`; it creates a drill each click by design.

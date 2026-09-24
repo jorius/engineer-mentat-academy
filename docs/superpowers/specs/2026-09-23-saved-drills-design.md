@@ -90,3 +90,22 @@ identifiers and short expressions.
   code span is longer than about 45 characters or contains `{`, `;` or `=>` becomes a fenced block in
   the file's language, mirrored in the `.es.ts` (code untranslated). A trailing note such as
   "(no dependency array)" moves to a line of plain text after the block.
+
+## 10. Confirmation for destructive actions (added 2026-09-24, Jose's request)
+
+Every action that discards data opens a confirmation dialog before it runs. Actions covered:
+
+| Action | Where | Dialog title / body | Confirm label |
+| --- | --- | --- | --- |
+| Delete drill | My drills row | `confirm.deleteDrillTitle` "Delete this drill?" / `confirm.deleteDrillBody` "\"{{name}}\" is removed from My drills. Your answers stay in your progress." | `drill.delete` |
+| Restart drill | My drills row, finished screen | `confirm.restartDrillTitle` "Restart this drill?" / `confirm.restartDrillBody` "The drill starts over from the first question. Answers already recorded stay in your progress." | `drill.restart` |
+| Import progress | Settings → Progress | `confirm.importTitle` "Replace your progress?" / `confirm.importBody` "The file replaces every record stored in this browser." | `settings.importProgress` |
+| Clear progress | Settings → Danger zone | `confirm.clearTitle` "Clear all progress?" / `confirm.clearBody` "Attempts, scores, marks, notes and saved drills are deleted. Preferences stay." | `settings.clearProgress` |
+| Reset everything | Settings → Danger zone | `confirm.resetTitle` "Reset everything?" / `confirm.resetBody` "Progress, saved drills, preferences, theme and language go back to their defaults." | `settings.resetEverything` |
+
+Spanish: "¿Eliminar esta práctica?" / "\"{{name}}\" se quita de Mis prácticas. Tus respuestas siguen en tu progreso."; "¿Reiniciar esta práctica?" / "La práctica vuelve a empezar desde la primera pregunta. Las respuestas ya registradas siguen en tu progreso."; "¿Reemplazar tu progreso?" / "El archivo reemplaza todos los registros guardados en este navegador."; "¿Borrar todo el progreso?" / "Se eliminan intentos, puntajes, marcas, notas y prácticas guardadas. Las preferencias se conservan."; "¿Restablecer todo?" / "El progreso, las prácticas guardadas, las preferencias, el tema y el idioma vuelven a sus valores por defecto."
+
+- `src/components/primitives/ConfirmDialog.tsx`: a native `<dialog>` opened with `showModal()` when `open` is true and closed otherwise. Props `{ open; title; body; confirmLabel; cancelLabel?; danger?: boolean; typeToConfirm?: string; onConfirm; onCancel }`. Esc and the backdrop click cancel; the Cancel button (`common.cancel`) gets initial focus so Enter never confirms by accident; the confirm button is `Button variant="danger"` when `danger` (always true for the five actions). When `typeToConfirm` is set (the two Danger-zone actions pass `'RESET'`), the dialog holds the text input labelled `settings.typeToConfirm` and the confirm button stays disabled until the trimmed value matches; the Danger-zone card loses its inline field and its buttons are always enabled. `aria-labelledby` the title, `aria-describedby` the body. The dialog's `close` event (Esc) routes to `onCancel`.
+- Pages keep a single `pending` state describing which action awaits confirmation and render one `ConfirmDialog`; confirming runs the action, then clears `pending`.
+- jsdom lacks `showModal`; the component guards with `typeof dialog.showModal === 'function'` and falls back to the `open` attribute, so tests can assert on `getByRole('dialog')`.
+- Tests: the dialog renders title/body/labels and calls the right callback; Esc cancels; Delete/Restart/Import/Clear/Reset each do nothing until confirmed and run once confirmed; the typed gate still blocks the two Danger-zone actions.
