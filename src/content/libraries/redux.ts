@@ -22,6 +22,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'A reducer must be a pure function of `(state, action)`: no mutation (`state.count++`), no side effects such as network calls (`fetch`), and no non-deterministic values such as random ids or `Date.now()`, because replaying the same actions (time-travel debugging, tests, replaying a recorded action log) must produce the same state. Generate ids in the action creator (Redux Toolkit\'s `prepare` callback) and put side effects in thunks, listeners or middleware. Returning the existing state for unknown actions is required: it keeps the reference unchanged, so subscribers know nothing changed.',
+    hint: 'Ask of each case: would replaying the same actions always give the same state, without mutating the old one or touching the outside world?',
   },
   {
     id: 'redux-reducer-immutability-fix',
@@ -137,6 +138,7 @@ export function solution(actions) {
     source: 'core-list',
     explanation:
       'Redux and react-redux detect change by **reference**: `useSelector` re-renders only when the selected value is `!==` the previous one. Mutating and returning the same object means "nothing changed", so the UI goes stale, and every state in the history is secretly the same object (which also breaks time-travel debugging). The mutating version even corrupts the module-level `initialState`. Copy every level you change (`...state`, `[...state.todos, x]`, `map` with `{ ...t }`) and share untouched branches (structural sharing).\n\nThis is the classic immutability question in practice. In Redux Toolkit, the original mutating code would be legal inside `createSlice`, because Immer records the mutations on a draft and produces the new immutable state for you.',
+    hint: 'react-redux detects change by reference, so copy every level you change with spread, `map` or `filter` instead of mutating it.',
   },
   {
     id: 'redux-middleware-order',
@@ -193,6 +195,7 @@ store.dispatch({ type: 'inc' });`,
     source: 'topic-list',
     explanation:
       'Middleware wraps `dispatch` like an onion: the first middleware passed is the outermost layer. The action flows A then B into the real `dispatch`, which runs the reducer and **synchronously** notifies subscribers, and only then does control unwind back through B and A. That is why a logger middleware can print the state both before and after `next(action)`, and why thunks work: a thunk middleware intercepts function "actions" before they reach `next`.',
+    hint: 'Think of middleware as layers of an onion: which layer is outermost, and when are subscribers notified relative to the code after `next(action)`?',
   },
   {
     id: 'redux-memoized-selector',
@@ -328,6 +331,7 @@ export function solution(todos: Todo[], steps: Step[]) {
     source: 'topic-list',
     explanation:
       "`useSelector` runs the selector after **every** dispatch and re-renders when the result is `!==` the previous one. A selector that returns `filter(...)` produces a new array every time, so the component re-renders on unrelated actions. Memoizing on the input references works because reducers use structural sharing: a theme toggle creates a new root object but keeps the same `todos` array. This exercise builds the classic cache-of-one version, which is what Reselect 4 did (`defaultMemoize`, now `lruMemoize`) and why selectors shared by components with different arguments used to need a factory. Reselect 5, re-exported by Redux Toolkit 2, defaults to `weakMapMemoize`, which keeps one result per distinct set of arguments, so per-component factories are rarely needed now.\n\n**Say this out loud:** \"Selectors that derive arrays or objects must be memoized, otherwise `useSelector` sees a new reference on every dispatch and re-renders. Memoization works because immutable updates keep unchanged branches referentially equal.\"",
+    hint: 'Keep the last input results and the last output in a closure, and compare the new inputs with `===` before re-running the combiner.',
   },
   {
     id: 'redux-toolkit-immer-reassign',
@@ -360,6 +364,7 @@ Which case reducer does **not** change the store state?`,
     source: 'topic-list',
     explanation:
       '`createSlice` runs case reducers through Immer: `state` is a draft proxy, and Immer records **mutations** of that draft (the `push` in `added`, the assignment in `couponApplied`) or accepts a **returned** replacement value (as in `cleared`). `state = ...` only rebinds a local variable; the draft is untouched and nothing is returned, so Immer returns the original state. Write `return { items: [], coupon: null };` instead (or hoist that object into a named `initialState` constant and return it). The other Immer trap: you may mutate the draft **or** return a new value, not both; doing both throws.',
+    hint: 'Immer picks up two things: mutations of the draft and a returned value. Check what each case reducer does with the draft.',
   },
   {
     id: 'redux-async-thunk-vs-rtk-query',
@@ -382,5 +387,6 @@ Which case reducer does **not** change the store state?`,
     source: 'topic-list',
     explanation:
       'The stale-data symptom is a cache-invalidation problem, which is why a data-fetching layer with invalidation is the answer instead of more flags.\n\n**Say this out loud:** "Server data is a cache, not application state. I let RTK Query own fetching, caching and invalidation with tags, and keep Redux slices for the client state the server does not know about."',
+    hint: 'Separate the server cache from client state, and cover how tag-based invalidation fixes the stale screens.',
   },
 ];

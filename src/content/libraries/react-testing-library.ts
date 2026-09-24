@@ -21,6 +21,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'The guiding principle is "the more your tests resemble the way your software is used, the more confidence they give you". Users and assistive technology find controls by role and accessible name, so `getByRole` both finds the button and checks that it is exposed correctly (a `<div onClick>` would fail). The priority is roughly: role, label, placeholder, text, display value, alt text, title, and `getByTestId` only as a last resort. `getByText` works but does not prove it is a button; CSS selectors couple the test to styling.',
+    hint: 'Recall RTL\'s guiding principle: query the page the way users and assistive technology find controls.',
   },
   {
     id: 'react-testing-library-get-query-find',
@@ -42,6 +43,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '`get` = must exist now (throws with a helpful DOM dump). `query` = may not exist, returns `null`, no retry: use it for `expect(screen.queryByRole("alert")).not.toBeInTheDocument()`. `find` = will exist soon: it is `getBy` wrapped in `waitFor`, so you `await` it. The `*All*` variants follow the same rules for "none found": `getAllBy` throws, `queryAllBy` returns `[]`.',
+    hint: 'Compare the three families on two axes: what happens when nothing matches, and whether they retry.',
   },
   {
     id: 'react-testing-library-user-event',
@@ -63,6 +65,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '`fireEvent.change` dispatches one synthetic `change` event with the value already set, skipping `keydown`, `keypress`, `input` and `keyup`, so the handler that blocks letters never runs. `user.type` simulates what the browser does for each character (focus, key events, input events, respecting `preventDefault`). In user-event v14 every API returns a promise; forgetting `await` on `userEvent.type` means the assertion runs before the events finish. Create the `user` with `userEvent.setup()` before rendering.',
+    hint: 'Ask which browser events a real keystroke fires and which of them this test skips; also keep in mind that the v14 API is async.',
   },
   {
     id: 'react-testing-library-async-findby',
@@ -89,6 +92,7 @@ The test fails with "Unable to find an element with the text: Ada Lovelace". Wha
     source: 'topic-list',
     explanation:
       'On the first render the component shows its loading state; the name appears only after the mocked request resolves and state updates. `findBy*` polls until the element appears (or times out), and RTL already wraps `render`, user-event and `waitFor` in `act`, so wrapping `render` in `act` again changes nothing. A fixed sleep is slow and flaky. `queryByText` just returns `null` and the assertion still fails. If you also see "not wrapped in act(...)" warnings, it usually means an update happened after the test stopped waiting, and the fix is the same: await the UI state you expect.',
+    hint: 'The name appears only after the mocked request resolves, so reach for a query that waits and retries.',
   },
   {
     id: 'react-testing-library-waitfor-pitfalls',
@@ -110,6 +114,7 @@ The test fails with "Unable to find an element with the text: Ada Lovelace". Wha
     source: 'topic-list',
     explanation:
       '`waitFor` re-runs its callback until it stops throwing, so side effects inside it, such as `user.click(saveButton)`, may run many times (several clicks, several submissions). Put the action before `waitFor` and only assertions inside. Several assertions in one callback, like the `fetchMock` and results pair, make it wait for all of them and hide which one failed; wait for one condition, then assert the rest synchronously. An empty callback resolves on the first tick and only works by timing luck; wait for a concrete UI change instead. The synchronous `queryByRole(\'alert\')` absence check and `userEvent.setup()` before `render` are the recommended patterns.\n\n**Say this out loud:** "`waitFor` is a retry loop for assertions, so it must be free of side effects and wait for one observable condition; for elements appearing I just use `findBy`."',
+    hint: 'Remember that `waitFor` re-runs its callback until it stops throwing; ask what that does to side effects and to several assertions inside it.',
   },
   {
     id: 'react-testing-library-debounced-search-strategy',
@@ -132,5 +137,6 @@ The test fails with "Unable to find an element with the text: Ada Lovelace". Wha
     source: 'topic-list',
     explanation:
       'The hard parts interviewers probe are time (the debounce) and the network. Fake timers make time deterministic, and MSW keeps the component\'s real data-fetching code under test.\n\n**Say this out loud:** "I mock at the network boundary with MSW, control time with fake timers wired into user-event, and assert only on what the user can see, using `findBy` for anything asynchronous."',
+    hint: 'Cover controlling time (fake timers wired into user-event), mocking at the network boundary, and asserting only what the user sees in each state.',
   },
 ];

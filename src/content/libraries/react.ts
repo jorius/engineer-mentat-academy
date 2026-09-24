@@ -22,6 +22,7 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       'An effect with `[]` runs after the first commit, and the function it returns is the cleanup React calls on unmount. Without the array the effect and its cleanup run after **every** render, so you resubscribe on each render. Calling `unsubscribe()` right after `subscribe()` unsubscribes immediately. The `useMemo` variant puts a side effect in `useMemo`, which runs during render and may run more than once or be thrown away.\n\nThe better mental model is not "lifecycle" but "synchronize with an external system": if the subscription depended on a prop such as `storeId`, it would go in the dependency array, and that single effect would also replace `componentDidUpdate`.',
+    hint: 'Think about what the function returned from an effect is for, and how the dependency array controls how often setup and cleanup run.',
   },
   {
     id: 'react-strict-mode-effect-twice',
@@ -55,6 +56,7 @@ What is logged right after the first mount?`,
     source: 'topic-list',
     explanation:
       'In development, `StrictMode` mounts the component, runs its effects, simulates an unmount (running cleanups) and mounts it again. It exists to expose effects whose cleanup does not undo the setup. If the cleanup were missing you would end up with two open connections, which is exactly the bug it is trying to show you. Production runs the effect once. The double run needs a `createRoot` root; React 18\'s legacy `ReactDOM.render` roots never re-ran effects.\n\nThe wrong fix is a `useRef` flag that skips the second run; the right fix is a symmetric cleanup.',
+    hint: 'Remember what `StrictMode` does to effects in development to check that the cleanup really undoes the setup.',
   },
   {
     id: 'react-error-boundary-scope',
@@ -77,6 +79,7 @@ What is logged right after the first mount?`,
     source: 'topic-list',
     explanation:
       'Error boundaries catch errors thrown while React is rendering, in lifecycle methods and in constructors of the tree **below** them. They do not catch errors in event handlers (use `try/catch` and put the error in state), in asynchronous code (a rejected promise happens outside React\'s render), or in the boundary itself (the next boundary up handles that).\n\nTo route an async error into a boundary, call `setState(() => { throw error; })` or use `showBoundary` from `react-error-boundary`. There is still no hook equivalent of `getDerivedStateFromError`, which is one reason class components still show up in modern codebases.',
+    hint: 'Ask which errors happen while React itself is rendering or committing the tree below the boundary, and which happen outside that work.',
   },
   {
     id: 'react-hooks-rules-violations',
@@ -98,6 +101,7 @@ What is logged right after the first mount?`,
     source: 'topic-list',
     explanation:
       'React identifies each hook by its **call order** within a render, so every render must call the same hooks in the same order, and only from components or custom hooks. An early return before a hook makes the hook conditional. A loop changes the count when `fields` changes. A hook in an event-handler helper runs outside rendering entirely. Custom hooks like `useThemeColor()` are just functions whose name starts with `use` and that call hooks at their own top level, which is the approved way to share hook logic.\n\n(React 19\'s `use()` is the one exception that may be called conditionally.)',
+    hint: 'React tells hooks apart by call order. Check whether each case calls the same hooks in the same order on every render, from a component or a custom hook.',
   },
   {
     id: 'react-usestate-batched-increments',
@@ -129,6 +133,7 @@ What does the button show after one click?`,
     source: 'topic-list',
     explanation:
       '`count` is a snapshot: in this render it is `0`, so all three calls queue "set to 1". React batches them into one re-render. To build on the previous value, pass an updater: `setCount((c) => c + 1)` three times gives 3, because each updater receives the result of the previous one.',
+    hint: 'Look at the value `count` holds inside this render\'s handler, and compare passing a value with passing an updater function.',
   },
   {
     id: 'react-usereducer-cart-reducer',
@@ -236,6 +241,7 @@ export function solution(actions: Action[]): State[] {
     source: 'notion',
     explanation:
       'A reducer runs during rendering, so it must be pure: same `(state, action)` in, same state out, no mutation. A tempting `add` looks immutable but is not:\n\n```ts\nconst existing = state.lines.find((l) => l.id === action.id);\nexisting.qty++;\nreturn { ...state };\n```\n\nIt mutates the line object the previous state still points to, which is why the test records the whole history.\n\nWhy `useReducer` over several `useState` calls: the *what happened* (actions from event handlers) is separated from the *how state changes* (the reducer), the reducer can be unit-tested with no component, and one action like `clear` can describe one user interaction even when it changes many fields. Returning the same reference for unknown actions lets React bail out of the re-render.',
+    hint: 'Build new objects and arrays for every change (`map`, `filter`, spread), never modify a line the previous state still points to, and keep the same reference for unknown actions.',
   },
   {
     id: 'react-fetch-effect-race',
@@ -268,6 +274,7 @@ Users who type fast sometimes see results for an older query than the one in the
     source: 'notion',
     explanation:
       'Each effect run captures its own `query`. Cleanup runs before the next effect run, which is the hook for invalidating the previous request.\n\n**Say this out loud:** "Effects that fetch need a cleanup that cancels or ignores the previous request, otherwise the slowest response wins. In production I would not hand-roll this; React Query gives me cancellation, caching and de-duplication for free."',
+    hint: 'Cover why responses can arrive out of order, what the effect cleanup can do about the previous request (`AbortController` or an ignore flag), and which library you would reach for.',
   },
   {
     id: 'react-stale-closure-interval',
@@ -298,6 +305,7 @@ What does the component show after 5 seconds?`,
     source: 'topic-list',
     explanation:
       'The effect runs once, so the interval callback closes over the `count` of the first render, which is `0`. Every tick calls `setCount(1)`; after the first one React bails out because the value did not change. This is the classic stale closure caused by lying about dependencies (the lint rule would flag `count`).\n\nThe best fix is the updater form `setCount((c) => c + 1)`, which removes `count` from the effect entirely and keeps `[]` honest. Adding `count` to the dependencies also works, but tears down and recreates the interval every second.',
+    hint: 'Ask which render\'s `count` the interval callback closed over, given that the effect runs only once.',
   },
   {
     id: 'react-exhaustive-deps-infinite-loop',
@@ -332,6 +340,7 @@ The \`exhaustive-deps\` lint rule asked for \`load\` in the array. Now the compo
     source: 'topic-list',
     explanation:
       'Dependency arrays are not a list of "when to run"; they are a declaration of every reactive value the effect reads. Remove dependencies by changing the code, not the array.\n\n**Say this out loud:** "Dependencies are compared by reference, so functions and objects created during render invalidate the effect every time. I remove the dependency by moving it into the effect or out of the component, not by lying to the linter."',
+    hint: 'Explain how dependencies are compared for functions and objects created during render, then the ways to remove the dependency instead of silencing the linter.',
   },
   {
     id: 'react-debounced-value-logic',
@@ -383,6 +392,7 @@ export function solution(changes: Change[], delay: number): Change[] {
     source: 'notion',
     explanation:
       'The hook itself:\n\n```ts\nfunction useDebouncedValue<T>(value: T, delay = 300): T {\n  const [debounced, setDebounced] = useState(value);\n  useEffect(() => {\n    const id = setTimeout(() => setDebounced(value), delay);\n    return () => clearTimeout(id);\n  }, [value, delay]);\n  return debounced;\n}\n```\n\nThe debounce comes entirely from the dependency array plus cleanup: when `value` changes, React runs the previous cleanup (cancelling the pending timer) before running the effect again. A value survives only if nothing changes for `delay` ms. Pair it with a fetch keyed on the debounced value so the network sees one request per pause, not one per keystroke.',
+    hint: 'Walk the timeline once, comparing each change\'s fire time (`t + delay`) with the next change\'s `t`, and remember the last change has nothing after it to cancel it.',
   },
   {
     id: 'react-rerender-triggers',
@@ -404,6 +414,7 @@ export function solution(changes: Change[], delay: number): Change[] {
     source: 'notion',
     explanation:
       'A component re-renders when (1) its own state changes, (2) its parent re-renders (by default children re-render with their parent, whether or not props changed), or (3) a context it consumes changes. Refs are deliberately outside that system: writing `ref.current` never schedules a render. Mutating a prop in place does not schedule a render either; React only learns about changes through state setters, and the mutation will also defeat any `memo` comparison later.\n\nA render is not a DOM update: React re-runs the component, diffs the result and commits only what changed.\n\nWith the React Compiler enabled, the parent\'s JSX is memoized, so an unchanged `<Child />` element is skipped as if `Child` were wrapped in `memo`; that is why the prompt rules the compiler out.',
+    hint: 'List what actually schedules a render in React (state setters, parent renders, context), then ask whether each case goes through one of them.',
   },
   {
     id: 'react-memo-inline-callback',
@@ -436,6 +447,7 @@ When \`selected\` changes, which rows re-render? (The app does not use the React
     source: 'notion',
     explanation:
       '`React.memo` does a **shallow** comparison of props. The inline arrow is a new function on each render of `List`, so `onSelect` is never equal and memo never skips anything; you pay for the comparison and get nothing. Fix: pass a stable handler, e.g. `const handleSelect = useCallback((id) => setSelected(id), [])`, or pass `setSelected` directly (state setters are already stable). The same trap applies to inline objects like `style={{...}}`. With the React Compiler enabled, the arrow would be cached (it only reads the stable `setSelected`) and no row would re-render; that is why the prompt rules the compiler out.',
+    hint: 'Recall that `React.memo` compares props shallowly, and check whether every prop keeps the same reference between renders of `List`.',
   },
   {
     id: 'react-keys-index-state-fix',
@@ -492,6 +504,7 @@ export function solution(prev: Row[], drafts: string[], next: Row[]): string[] {
     source: 'notion',
     explanation:
       'During reconciliation React pairs old and new children by `key`; a matching key keeps the component instance, its state and its DOM node. With index keys, removing row 0 makes the old row 1 "become" key 0, so its state lands on the wrong item. Use a stable, unique id from the data. Index keys are acceptable only for static lists that are never filtered, sorted or edited and whose rows hold no state. Never generate keys during render (`Math.random()`, `crypto.randomUUID()`): every render would remount every row. If the data has no id, assign one when the item is **created**.',
+    hint: 'A key must identify the item itself, not its position in the array; reach for a stable id from the row data.',
   },
   {
     id: 'react-derived-state-anti-pattern',
@@ -523,6 +536,7 @@ function TicketList({ tickets }) {
     source: 'notion',
     explanation:
       '"You might not need an effect" is the idea being tested: effects are for synchronizing with systems outside React, not for transforming data React already has.\n\n**Say this out loud:** "Don\'t store what you can compute. I keep the raw data and the user\'s intent in state and derive the rest during render, memoizing only when the derivation is actually expensive."',
+    hint: 'Ask whether `filtered` is new information or something you can compute from props and state during render, and what the effect costs in extra renders.',
   },
   {
     id: 'react-state-management-choice',
@@ -546,6 +560,7 @@ function TicketList({ tickets }) {
     source: 'notion',
     explanation:
       'There is no single "state library" answer; interviewers listen for a decision table driven by who reads the state, how often it changes and whether the server owns it.\n\n**Say this out loud:** "I pick the home for state by its owner and update frequency: local state first, the URL for shareable state, a server cache for server data, Context for rare global values, and a selector-based store only for hot shared state."',
+    hint: 'Sort each piece by who owns it (the server, the URL, one component, the whole app) and how often it changes, then pick a home for each.',
   },
   {
     id: 'react-reset-state-with-key',
@@ -567,6 +582,7 @@ function TicketList({ tickets }) {
     source: 'topic-list',
     explanation:
       'React keeps state for the same component type at the same position in the tree. Changing `key` tells React it is a different instance, so it unmounts the old one and mounts a fresh one with fresh state (including every child\'s state). The `useEffect` reset works but renders once with the stale draft and only resets the one field you remembered. The lazy initializer runs only on mount. `React.memo` never remounts anything; it only skips renders.',
+    hint: 'Remember how React decides whether to keep a component\'s state: same type, same position in the tree, same `key`.',
   },
   {
     id: 'react-controlled-input-no-onchange',
@@ -588,6 +604,7 @@ function TicketList({ tickets }) {
     source: 'core-list',
     explanation:
       'React has **one-way** data flow: `value={name}` makes the input controlled, so after every input event React puts the DOM value back to `name` (no re-render is needed). Keystrokes change nothing until an `onChange` calls `setName(e.target.value)`, which is how React does what other frameworks call two-way binding. For an uncontrolled input, use `defaultValue` and read the value through a ref or `FormData` on submit. If read-only is intended, add `readOnly` to silence the warning (the warning exists only in development builds).',
+    hint: 'Recall React\'s one-way data flow: what does a controlled `value` do to the DOM after each input event when nothing updates the state?',
   },
   {
     id: 'react-large-form-performance',
@@ -610,6 +627,7 @@ function TicketList({ tickets }) {
     source: 'topic-list',
     explanation:
       'Controlled versus uncontrolled is a performance decision as well as an API one: controlled inputs put every keystroke through React state.\n\n**Say this out loud:** "Form lag is almost always the render scope of a keystroke. I shrink it, either by letting the DOM own the value with React Hook Form or by making each keystroke re-render one memoized field, and I move validation off the keystroke path."',
+    hint: 'Start from how much of the tree re-renders per keystroke, then cover shrinking that scope (uncontrolled inputs or isolated fields) and moving validation off the keystroke path.',
   },
   {
     id: 'react-memoization-trio',
@@ -632,6 +650,7 @@ function TicketList({ tickets }) {
     source: 'notion',
     explanation:
       'The classic senior list asks about memoization in general; in a React interview it becomes this question. The nuance they probe is the interaction: `useCallback` alone does nothing for performance unless the receiver is memoized or uses the function as a dependency.\n\n**Say this out loud:** "`React.memo` only helps if the props are actually stable, so I pair it with `useCallback` and `useMemo` for function and object props, and I only do that where the Profiler shows hot renders, because memoization has its own cost."',
+    hint: 'Explain how the three depend on each other through reference equality, and what memoizing costs when no hot render has been measured.',
   },
   {
     id: 'react-transition-vs-deferred',
@@ -653,5 +672,6 @@ function TicketList({ tickets }) {
     source: 'notion',
     explanation:
       'Both concurrent hooks mark work as non-urgent so React can interrupt it to keep typing responsive. `useTransition` wraps the **state update**, so you need to own the setter (wrapping `setQuery` in `startTransition` is impossible here). `useDeferredValue` wraps a **value you receive**: React first re-renders with the old deferred value, then renders the new one in the background and abandons it if another keystroke arrives. The memoization matters: the urgent render still runs `BigList` with the old deferred value, so unless the rows themselves (the JSX, not only the filtered array) are memoized on `deferred` or rendered by a `memo` child, it re-filters and re-renders all 20,000 rows anyway. `React.memo` cannot help because `query` really changes on each keystroke, and `useLayoutEffect` blocks paint even harder. Unlike a debounce there is no fixed delay: fast devices update almost immediately. For network requests you still debounce. Show `query !== deferred` as a "stale" hint.\n\n**Say this out loud:** "`useTransition` when I own the state update, `useDeferredValue` when I only receive the value; both keep input urgent and let the expensive render be interrupted, which a debounce cannot do."',
+    hint: 'Note what you own here, the state setter or only the incoming value; the two concurrent hooks differ exactly on that.',
   },
 ];

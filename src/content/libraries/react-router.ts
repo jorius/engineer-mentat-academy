@@ -21,6 +21,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '`<Link>` still renders a real `<a href>` (so it stays accessible, crawlable and supports open-in-new-tab), but it intercepts the click, calls `history.pushState` and lets the router render the new match. A plain `<a>` triggers a full document load: the JS bundle is re-evaluated and all in-memory state (React state, Redux store, caches) is lost. Use `<NavLink>` when you need an active style.',
+    hint: 'Think about what happens to the JS bundle and all in-memory state when the browser loads a whole new document.',
   },
   {
     id: 'react-router-params-are-strings',
@@ -50,6 +51,7 @@ At \`/orders/42\`, \`order\` is \`undefined\` even though an order with \`id: 42
     source: 'topic-list',
     explanation:
       'Everything in a URL is text, so `useParams` returns `{ orderId: "42" }`. Parse and validate at the boundary (`Number(orderId)` with a `NaN` check, or a Zod schema) and handle the invalid case, since users can type any URL. React Router v6+ removed regex param constraints and the `exact` prop; route ranking chooses the best match on its own.',
+    hint: 'Check the type of each side of the `===` comparison, keeping in mind where `orderId` comes from.',
   },
   {
     id: 'react-router-loaders-timing',
@@ -71,6 +73,7 @@ At \`/orders/42\`, \`order\` is \`undefined\` even though an order with \`id: 42
     source: 'topic-list',
     explanation:
       'Data routers know every matched route before rendering, so they call all matched loaders in parallel as soon as navigation starts, and render when the data is ready. (Had the user already been on `/projects/7`, only B would run: on a plain navigation the router skips loaders of routes that stay rendered with the same params, unless `shouldRevalidate` says otherwise.) Fetching in `useEffect` inside nested components creates a waterfall: the parent fetches, renders, then the child starts fetching. Read the data with `useLoaderData`; show pending UI with `useNavigation`; stream slow, non-critical data by returning a promise and rendering it with `<Await>` inside `<Suspense>`. After an `action` (form submission) the router revalidates the loaders automatically.',
+    hint: 'Remember that a data router knows every matched route before it renders anything.',
   },
   {
     id: 'react-router-navigate-replace',
@@ -92,6 +95,7 @@ At \`/orders/42\`, \`order\` is \`undefined\` even though an order with \`id: 42
     source: 'topic-list',
     explanation:
       '`replace: true` replaces the current history entry (`/login`) instead of pushing a new one, so Back skips the login form. `navigate` without `replace` pushes, so Back lands on `/login` again. Setting `window.location.href` causes a full reload and also pushes an entry. `navigate(-1)` goes back to wherever the user came from, which may not be the page they requested. `from` usually comes from the guard that redirected to login: `<Navigate to="/login" replace state={{ from: location }} />`, read with `useLocation().state`.',
+    hint: 'Think about the history stack: which calls push a new entry, and which overwrite the current one?',
   },
   {
     id: 'react-router-protected-routes',
@@ -114,5 +118,6 @@ At \`/orders/42\`, \`order\` is \`undefined\` even though an order with \`id: 42
     source: 'topic-list',
     explanation:
       'The trap answer is "wrap each page in `if (!user) return <Navigate />`": it duplicates checks, flashes content, and implies the client is a security boundary.\n\n**Say this out loud:** "I guard whole subtrees with a layout route and check auth in its middleware so nothing loads or renders before the decision, but I treat that as UX; the API enforces authorization on every request."',
+    hint: 'Cover where one guard can sit for a whole subtree, how the redirect remembers the target page, and why the server must still authorize every request.',
   },
 ];

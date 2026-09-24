@@ -21,6 +21,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '`select` lists exactly what comes back, and a relation inside `select` is loaded too. `include` means "all scalar fields **plus** these relations". The two cannot be used at the same level (combining them is a validation error), and `include` only accepts relations, so `include: { email: true }` fails. The `where: { posts: { some: {} } }` query filters to users with posts but returns only emails. Selecting only the fields you need also keeps secrets such as `passwordHash` out of API responses, and the generated types follow the selection.',
+    hint: 'Recall what `include` returns by default, and whether `select` and `include` can share the same level.',
   },
   {
     id: 'prisma-migrate-deploy',
@@ -41,6 +42,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '`migrate deploy` applies the committed migrations that have not run yet, records them in `_prisma_migrations`, and never generates new migrations or resets anything. `migrate dev` is for development: it uses a shadow database, creates new migrations from schema drift, and may offer to **reset** the database. `db push` syncs the schema without any migration history, which is fine for prototypes and dangerous for shared data. `migrate reset` drops the database. A failed migration in production is resolved with `prisma migrate resolve` after fixing it by hand, not by resetting.',
+    hint: 'Think about which commands may create migrations, drop data or skip the history, and which one is safe to run unattended.',
   },
   {
     id: 'prisma-include-query-shape',
@@ -62,6 +64,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Prisma resolves each included relation with one extra batched `IN` query and joins the results in the query engine, so `include` is **not** N+1: it is 1 + (number of relations) queries. Prisma also offers a `join` strategy (`relationLoadStrategy: "join"`), which uses a single SQL query with lateral joins and JSON aggregation on PostgreSQL. N+1 comes back when you loop and call `findMany`/`findUnique` per row yourself. Prisma Client also batches `findUnique` calls made in the same tick (its built-in dataloader), which is why GraphQL resolvers that call `findUnique` per parent stay efficient, but only for `findUnique`.\n\n**Say this out loud:** "Prisma\'s `include` batches each relation into one `IN` query, so N+1 in Prisma comes from my own loops; I fix it with `include`, one `in` query, or rely on the `findUnique` batching in resolvers."',
+    hint: 'Think about how the query engine can load a relation for many parents at once without writing a SQL join.',
   },
   {
     id: 'prisma-chunked-in-batching',
@@ -149,6 +152,7 @@ export function solution(table: Post[], authorIds: number[], chunkSize: number) 
     source: 'topic-list',
     explanation:
       'Batching trades N round trips for ceil(unique / chunkSize). Chunking matters because databases and drivers cap bind parameters per statement (PostgreSQL\'s protocol allows 65,535; SQL Server 2,100), and huge `IN` lists also produce big plans and big result sets held in memory. Prisma\'s query engine can split a plain oversized `in` list into several queries by itself, but not every filter shape (negated filters such as `notIn` fail with error P2029), and it still returns everything in one call; explicit chunks keep statement size, memory and retries under your control. De-duplicate first so repeated keys do not waste parameter slots, group with a `Map`, and map back to the caller\'s order. For truly large jobs, stream with cursor pagination (`cursor` + `take`) instead of loading everything at once.',
+    hint: 'De-duplicate with a `Set`, slice the ids into chunks of `chunkSize`, group the rows in a `Map` by `authorId`, then map back in the caller\'s order.',
   },
   {
     id: 'prisma-interactive-transactions',
@@ -171,5 +175,6 @@ export function solution(table: Post[], authorIds: number[], chunkSize: number) 
     source: 'topic-list',
     explanation:
       'Interviewers use this to see whether you understand that a transaction alone does not prevent a read-then-write race at the default isolation level (READ COMMITTED on PostgreSQL; MySQL\'s REPEATABLE READ does not stop it either), and that side effects outside the database do not belong inside it.\n\n**Say this out loud:** "I make the stock check and decrement a single conditional update, keep the transaction to database work only, and handle the payment outside it with an idempotency key and a compensating step."',
+    hint: 'Cover the read-then-write race and how a conditional update closes it, then why the payment call stays outside the transaction.',
   },
 ];

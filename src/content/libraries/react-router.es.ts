@@ -11,6 +11,7 @@ export const translations: Record<string, QuestionTranslation> = {
       d: 'Los motores de búsqueda no pueden rastrear `<a href>`, mientras que `<Link>` sí',
     },
     explanation: '`<Link>` igual renderiza un `<a href>` real (así sigue siendo accesible, rastreable y permite abrir en una pestaña nueva), pero intercepta el clic, llama a `history.pushState` y deja que el router renderice la nueva coincidencia. Un `<a>` simple dispara una carga completa del documento: el bundle de JS se vuelve a evaluar y se pierde todo el state en memoria (state de React, store de Redux, cachés). Usa `<NavLink>` cuando necesites un estilo de enlace activo.',
+    hint: 'Piensa en qué pasa con el bundle de JS y todo el estado en memoria cuando el navegador carga un documento completamente nuevo.',
   },
   'react-router-params-are-strings': {
     prompt: '```jsx\n<Route path="/orders/:orderId" element={<OrderPage />} />\n\nfunction OrderPage() {\n  const { orderId } = useParams();\n  const order = orders.find((o) => o.id === orderId); // o.id is a number\n  // ...\n}\n```\nEn `/orders/42`, `order` es `undefined` aunque existe un pedido con `id: 42`. ¿Por qué?',
@@ -21,6 +22,7 @@ export const translations: Record<string, QuestionTranslation> = {
       d: 'El `<Route>` necesita la prop `exact`',
     },
     explanation: 'Todo en una URL es texto, así que `useParams` devuelve `{ orderId: "42" }`. Parsea y valida en el borde (`Number(orderId)` con una verificación de `NaN`, o un schema de Zod) y maneja el caso inválido, porque los usuarios pueden escribir cualquier URL. React Router v6+ eliminó las restricciones de params con regex y la prop `exact`; el ranking de rutas elige la mejor coincidencia por su cuenta.',
+    hint: 'Revisa el tipo de cada lado de la comparación `===`, teniendo en cuenta de dónde viene `orderId`.',
   },
   'react-router-loaders-timing': {
     prompt: 'Con `createBrowserRouter`, una ruta padre `/projects/:id` tiene el loader A y su hija `/projects/:id/tasks` tiene el loader B. El usuario está en la página de inicio `/` y hace clic en un enlace a `/projects/7/tasks`. ¿Cuándo se ejecutan los loaders?',
@@ -31,10 +33,12 @@ export const translations: Record<string, QuestionTranslation> = {
       d: 'Solo se ejecuta B, porque los loaders pertenecen a las rutas hoja',
     },
     explanation: 'Los data routers conocen todas las rutas que coinciden antes de renderizar, así que llaman a todos los loaders coincidentes en paralelo en cuanto empieza la navegación, y renderizan cuando los datos están listos. (Si el usuario ya hubiera estado en `/projects/7`, solo se ejecutaría B: en una navegación normal el router omite los loaders de las rutas que siguen renderizadas con los mismos params, salvo que `shouldRevalidate` diga lo contrario.) Hacer fetch en `useEffect` dentro de componentes anidados crea una cascada: el padre hace fetch, renderiza y luego la hija empieza su fetch. Lee los datos con `useLoaderData`; muestra la UI pendiente con `useNavigation`; transmite en streaming los datos lentos y no críticos devolviendo una promesa y renderizándola con `<Await>` dentro de `<Suspense>`. Después de una `action` (envío de un formulario), el router revalida los loaders automáticamente.',
+    hint: 'Recuerda que un data router conoce todas las rutas que coinciden antes de renderizar nada.',
   },
   'react-router-navigate-replace': {
     prompt: 'Después de un login exitoso en `/login`, envías al usuario a la página que pidió originalmente. Presionar después el botón Atrás del navegador **no** debe regresar al formulario de login. ¿Qué llamada usas?',
     explanation: '`replace: true` reemplaza la entrada actual del historial (`/login`) en lugar de agregar una nueva, así que Atrás se salta el formulario de login. `navigate` sin `replace` agrega una entrada, así que Atrás vuelve a caer en `/login`. Asignar `window.location.href` provoca una recarga completa y además agrega una entrada. `navigate(-1)` regresa a donde sea que viniera el usuario, que puede no ser la página que pidió. `from` normalmente viene del guard que redirigió al login: `<Navigate to="/login" replace state={{ from: location }} />`, y se lee con `useLocation().state`.',
+    hint: 'Piensa en el stack del historial: ¿qué llamadas agregan una entrada nueva y cuáles sobrescriben la actual?',
   },
   'react-router-protected-routes': {
     prompt: 'Diseña la autenticación y el acceso basado en roles para una app con React Router que tiene un área pública de marketing, un área de la app para usuarios con sesión iniciada y una sección de administración. Cubre dónde viven las verificaciones, cómo se comportan las redirecciones y qué es lo que el guard del lado del cliente **no** protege.',
@@ -46,5 +50,6 @@ export const translations: Record<string, QuestionTranslation> = {
       'Deja claro que el servidor debe aplicar la autorización; los guards del cliente son solo UX',
     ],
     explanation: 'La respuesta trampa es "envolver cada página en `if (!user) return <Navigate />`": duplica verificaciones, muestra contenido por un instante e implica que el cliente es una frontera de seguridad.\n\n**Dilo en voz alta:** "Protejo subárboles completos con una layout route y verifico la autenticación en su middleware para que nada se cargue ni se renderice antes de la decisión, pero lo trato como UX; la API aplica la autorización en cada petición."',
+    hint: 'Cubre dónde puede ir un solo guard para todo un subárbol, cómo el redirect recuerda la página de destino y por qué el servidor igual debe autorizar cada request.',
   },
 };
