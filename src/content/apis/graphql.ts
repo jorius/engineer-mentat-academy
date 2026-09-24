@@ -10,7 +10,7 @@ export const questions: Question[] = [
     level: 'junior',
     kind: 'single',
     prompt:
-      'A mobile screen shows a user\'s name plus the titles of their last 3 orders. With the REST API it calls `GET /users/7` (returns 40 fields) and then `GET /users/7/orders` (returns full orders with line items). Which problems does a GraphQL query like `{ user(id: 7) { name orders(last: 3) { title } } }` address?',
+      'A mobile screen shows a user\'s name plus the titles of their last 3 orders. With the REST API it calls `GET /users/7` (returns 40 fields) and then `GET /users/7/orders` (returns full orders with line items). Which problems does a GraphQL query like this one address?\n\n```\n{\n  user(id: 7) {\n    name\n    orders(last: 3) {\n      title\n    }\n  }\n}\n```',
     options: [
       { id: 'a', text: 'Over-fetching only: the client receives fewer fields, but still needs two round trips' },
       { id: 'b', text: 'Both over-fetching (unneeded fields) and under-fetching (extra round trips), because the client selects exactly the fields and nested data it needs in one request' },
@@ -21,7 +21,7 @@ export const questions: Question[] = [
     tags: ['over-fetching', 'under-fetching'],
     source: 'notion',
     explanation:
-      '**Over-fetching**: the endpoint returns more than the screen needs (40 user fields, whole line items), wasting bandwidth, which matters on mobile. **Under-fetching**: one endpoint does not return enough, so the client makes extra round trips (user, then orders), adding latency.\n\nIn GraphQL the **client declares the shape** of the response and the server resolves nested fields in one request, so both disappear from the client\'s point of view. The work does not vanish; it moves to the server, where nested resolvers can cause N+1 queries unless you batch. GraphQL is still JSON over HTTP (usually POST); option **c** describes gRPC/protobuf.',
+      '**Over-fetching**: the endpoint returns more than the screen needs (40 user fields, whole line items), wasting bandwidth, which matters on mobile. **Under-fetching**: one endpoint does not return enough, so the client makes extra round trips (user, then orders), adding latency.\n\nIn GraphQL the **client declares the shape** of the response and the server resolves nested fields in one request, so both disappear from the client\'s point of view. The work does not vanish; it moves to the server, where nested resolvers can cause N+1 queries unless you batch. GraphQL is still JSON over HTTP (usually POST); the idea that it switches to a binary transport describes gRPC/protobuf, not GraphQL.',
   },
   {
     id: 'graphql-dataloader-per-request-context',
@@ -42,7 +42,7 @@ export const questions: Question[] = [
     tags: ['dataloader', 'resolvers', 'context'],
     source: 'topic-list',
     explanation:
-      '`context` is the per-request object shared by every resolver in one operation: it is where the authenticated user, DB handles and loaders live. Creating loaders there scopes both the **batch window** and the **memo cache** to a single request.\n\n- **a** is the dangerous distractor: a module-level cache never invalidates (stale data after writes), grows without bound, and can serve data loaded under one user\'s permissions to another user.\n- **c** creates a new loader per field call, so there is nothing to batch with and the N+1 comes back.\n- **d** `info` is the query AST and schema metadata, not a place for per-request state.\n\nFor a cross-request cache, put Redis (or HTTP caching) *below* the loader, with explicit TTLs and invalidation.',
+      '`context` is the per-request object shared by every resolver in one operation: it is where the authenticated user, DB handles and loaders live. Creating loaders there scopes both the **batch window** and the **memo cache** to a single request.\n\n- **Module level** is the dangerous distractor: a shared cache never invalidates (stale data after writes), grows without bound, and can serve data loaded under one user\'s permissions to another user.\n- **Inside each field resolver** creates a new loader per field call, so there is nothing to batch with and the N+1 comes back.\n- **`info`** is the query AST and schema metadata, not a place for per-request state.\n\nFor a cross-request cache, put Redis (or HTTP caching) *below* the loader, with explicit TTLs and invalidation.',
   },
   {
     id: 'graphql-n-plus-one-batching-predict',
@@ -179,7 +179,7 @@ export function solution(keys: number[], rows: Author[]): (Author | null)[] {
     tags: ['caching', 'rate-limiting', 'n-plus-one', 'observability'],
     source: 'notion',
     explanation:
-      '**a**: REST GETs are cacheable by URL at every layer (browser, CDN, reverse proxy). One POST endpoint defeats that; persisted queries (a hash instead of the full query) restore GET caching.\n\n**b**: partial success is normal in GraphQL (`data` plus `errors`), so you monitor the `errors` array and resolver-level metrics, not just HTTP codes.\n\n**c**: "requests per minute" means little when one query can fan out to millions of rows. You add query depth limits, cost analysis, pagination caps and, for public APIs, persisted-query allowlists.\n\n**d**: see DataLoader.\n\n**e** is false: GraphQL APIs usually evolve **without** versions. You add fields freely and deprecate old ones with `@deprecated`, then remove them once field-usage telemetry shows no clients.',
+      '**Harder HTTP/CDN caching**: REST GETs are cacheable by URL at every layer (browser, CDN, reverse proxy). One POST endpoint defeats that; persisted queries (a hash instead of the full query) restore GET caching.\n\n**Errors inside `200 OK`**: partial success is normal in GraphQL (`data` plus `errors`), so you monitor the `errors` array and resolver-level metrics, not just HTTP codes.\n\n**Arbitrarily expensive requests**: "requests per minute" means little when one query can fan out to millions of rows. You add query depth limits, cost analysis, pagination caps and, for public APIs, persisted-query allowlists.\n\n**N+1 queries**: each nested field resolver runs on its own, so a list of posts triggers one author lookup per post unless a per-request DataLoader batches them into one `WHERE id IN (...)` query.\n\nThe `/v2/graphql` claim is false: GraphQL APIs usually evolve **without** versions. You add fields freely and deprecate old ones with `@deprecated`, then remove them once field-usage telemetry shows no clients.',
   },
   {
     id: 'graphql-when-wrong-choice',

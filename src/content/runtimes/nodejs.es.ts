@@ -7,7 +7,7 @@ export const translations: Record<string, QuestionTranslation> = {
     prompt:
       'Cambias un paquete a ES modules agregando `"type": "module"` a `package.json`. ¿Qué línea de `server.js` ahora **lanza un error en tiempo de ejecución**?',
     options: {
-      c: '`const config = await import(\'./config.js\');` en el nivel superior',
+      c: '```js\nconst config = await import(\'./config.js\');\n```\n(en el nivel superior)',
     },
     explanation:
       '`__dirname`, `__filename`, `require`, `module` y `exports` son **variables del wrapper de CommonJS**: Node las inyecta envolviendo cada archivo CJS en una función. Los ES modules no se envuelven, así que `__dirname` produce un `ReferenceError`. Usa `import.meta.dirname` (Node 20.11+) o `path.dirname(fileURLToPath(import.meta.url))`, y `createRequire(import.meta.url)` si todavía necesitas `require`.\n\nEl `await` de nivel superior es válido en ESM (no lo es en CJS), los imports por defecto de los módulos integrados funcionan y `export default` es la forma de exportar en ESM. Otras diferencias de ESM que vale la pena conocer: siempre se ejecuta en modo estricto, los imports son bindings vivos de solo lectura y el grafo de módulos se carga de forma asíncrona.',
@@ -26,7 +26,7 @@ export const translations: Record<string, QuestionTranslation> = {
     prompt:
       'Un compañero marcó como `async` una función que usa mucha CPU "para que no bloquee". ¿Qué imprime esto, un valor por línea?',
     explanation:
-      'Una función `async` se ejecuta de forma **síncrona** hasta su primer `await`. Aquí no hay ningún `await`, así que todo el bucle corre en el stack de quien la llama antes de que se imprima `after call`. Solo la resolución de la promesa devuelta se difiere a una microtarea, y por eso `total 500500` sale al final.\n\n`async` cambia cómo se entrega el resultado, no dónde se ejecuta el trabajo. El comportamiento no bloqueante real viene de que el runtime haga el trabajo en otro lugar (el kernel, el pool de libuv) o de que tú muevas el trabajo de CPU a un worker thread.',
+      'Una función `async` se ejecuta de forma **síncrona** hasta su primer `await`. Aquí no hay ningún `await`, así que todo el bucle corre en el stack de quien la llama antes de que se imprima `after call`. La promesa devuelta ya está cumplida cuando `sumTo` retorna; solo el callback de `.then` se difiere, como una microtarea que corre cuando termina el script, y por eso `total 500500` sale al final.\n\n`async` cambia cómo se entrega el resultado, no dónde se ejecuta el trabajo. El comportamiento no bloqueante real viene de que el runtime haga el trabajo en otro lugar (el kernel, el pool de libuv) o de que tú muevas el trabajo de CPU a un worker thread.',
   },
 
   // event-loop-phases
@@ -87,7 +87,7 @@ console.log('sync');
   // streams-and-large-files
   'nodejs-stream-types-gzip': {
     prompt:
-      'Comprimes un archivo de log de 20 GB con `pipeline(fs.createReadStream(src), zlib.createGzip(), fs.createWriteStream(dest))`. ¿Qué tipo de stream es `zlib.createGzip()`?',
+      'Comprimes un archivo de log de 20 GB con este pipeline:\n\n```js\npipeline(\n  fs.createReadStream(src),\n  zlib.createGzip(),\n  fs.createWriteStream(dest)\n)\n```\n\n¿Qué tipo de stream es `zlib.createGzip()`?',
     options: {
       d: 'Un Duplex simple con lados de lectura y escritura independientes, como un socket TCP',
     },
@@ -101,7 +101,7 @@ console.log('sync');
       a: 'Un error en cualquier etapa llega a un solo callback o a una sola promesa rechazada, en vez de necesitar un listener de `error` en cada stream',
       b: 'Cuando cualquier etapa falla o el destino se cierra antes de tiempo, todos los streams de la cadena se destruyen, así que no se filtran descriptores de archivo ni sockets',
       c: 'Es la única forma de obtener backpressure; `.pipe()` ignora que `write()` devuelva `false`',
-      d: 'Las etapas pueden ser funciones generadoras asíncronas, p. ej. `async function* (source) { for await (const chunk of source) yield transform(chunk); }`',
+      d: 'Las etapas pueden ser funciones generadoras asíncronas, por ejemplo:\n\n```js\nasync function* (source) {\n  for await (const chunk of source) {\n    yield transform(chunk);\n  }\n}\n```',
     },
     explanation:
       '`.pipe()` **sí** implementa backpressure: pausa el origen cuando `dest.write()` devuelve `false` y lo reanuda con `drain`. Lo que no hace es manejar errores. Los errores no se propagan a lo largo de una cadena de `.pipe()`, así que un evento `error` sin manejar en un stream intermedio hace caer el proceso, y cuando el destino falla, el origen queda abierto (un fd filtrado o un socket upstream colgado).\n\n`pipeline()` conecta los errores y el cierre de cada etapa, invoca el callback una sola vez, y la versión con promesas se combina con `await` y `AbortSignal`. También acepta iterables asíncronos y etapas con generadores asíncronos, que muchas veces son la forma más clara de escribir un transform.',
@@ -123,7 +123,7 @@ Ejemplo: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` devuelve \`[[4, 4, 
     prompt:
       'Un endpoint debe aceptar la carga de un CSV de varios GB, validar y transformar cada fila e insertar las filas en Postgres. El contenedor tiene 512 MB de RAM. ¿Cómo lo diseñas para que la memoria se mantenga acotada y las fallas se manejen correctamente?',
     modelAnswer:
-      'Nunca guardo el body completo en un buffer: nada de concatenar con `req.on(\'data\')` ni de almacenamiento multipart en memoria. Armo `await pipeline(req, csvParser(), validateTransform, batcher(500), dbWriter)` con etapas en object mode. El writer de la BD es un Writable (o una etapa con un generador asíncrono) que solo invoca su callback cuando se resuelve el `INSERT` / `COPY` del lote, así que una base de datos lenta llena los buffers pequeños, `write()` devuelve `false`, el parser se pausa, el socket de la petición deja de leerse y el control de flujo de TCP frena al cliente. Esa cadena es **backpressure** de punta a punta, y mantiene la memoria en aproximadamente `highWaterMark × stages` en lugar del tamaño del archivo. `pipeline` destruye cada etapa ante un error o una desconexión del cliente, así que paso un `AbortSignal` y hago rollback o marco la importación como fallida. Las filas inválidas van a un reporte de rechazos en lugar de hacer fallar todo el archivo. Para la idempotencia, cargo los datos en una tabla de staging identificada por un id de carga y al final hago el swap o el merge, así un reintento de la carga no duplica filas. Si la importación tarda minutos, envío la carga como stream a object storage, devuelvo `202` con un id de job y dejo que un worker de cola ejecute el mismo pipeline.',
+      'Nunca guardo el body completo en un buffer: nada de concatenar con `req.on(\'data\')` ni de almacenamiento multipart en memoria. Armo `await pipeline(req, csvParser(), validateTransform, batcher(500), dbWriter)` con etapas en object mode. El writer de la BD es un Writable (o una etapa con un generador asíncrono) que solo invoca su callback cuando se resuelve el `INSERT` / `COPY` del lote, así que una base de datos lenta llena los buffers pequeños, `write()` devuelve `false`, el parser se pausa, el socket de la petición deja de leerse y el control de flujo de TCP frena al cliente. Esa cadena es **backpressure** de punta a punta, y mantiene la memoria en aproximadamente `highWaterMark × stages` en lugar del tamaño del archivo. `pipeline` destruye cada etapa ante un error o una desconexión del cliente, así que paso un `AbortSignal` y hago rollback o marco la importación como fallida. Las filas inválidas van a un reporte de rechazos en lugar de hacer fallar todo el archivo. Para la idempotencia, cargo los datos en una tabla de staging identificada por un id de carga y al final hago el swap o el merge, así un reintento de la carga no duplica filas. Si la importación tarda minutos, envío la carga como stream a object storage, devuelvo `202` con un id de job y un endpoint de estado (`GET /imports/{id}`), y dejo que un worker de cola ejecute el mismo pipeline.',
     rubric: [
       'Procesa la petición como stream con `pipeline()` y rechaza explícitamente guardar todo el body en un buffer',
       'Explica el backpressure de punta a punta: BD lenta, `write()` devuelve false, el parser se pausa, el socket y el control de flujo de TCP',
@@ -141,7 +141,7 @@ Ejemplo: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` devuelve \`[[4, 4, 
       'Cada vez que se llama a una ruta de tu API en Express, la latencia se dispara en **todas** las rutas de esa instancia. ¿Cuáles de estas operaciones, dentro de esa ruta, bloquean el event loop? Selecciona todas las que apliquen.',
     options: {
       b: '`JSON.parse` de un string de 150 MB',
-      c: '`await fetch(\'https://slow-partner.example.com/report\')` que tarda 4 segundos',
+      c: '```js\nawait fetch(\'https://slow-partner.example.com/report\')\n```\n(el partner tarda 4 segundos en responder)',
     },
     explanation:
       'Cualquier cosa que mantenga ocupado el único hilo de JavaScript bloquea **todas** las peticiones: la criptografía síncrona, el I/O de archivos síncrono y las llamadas enormes a `JSON.parse` / `JSON.stringify` (también las regex catastróficas y los ordenamientos grandes). Un `await fetch` lento solo hace lenta **esa** petición; mientras espera, el hilo queda libre para atender a las demás.\n\nSoluciones: usa las variantes asíncronas (`crypto.pbkdf2`, `fs.promises`), parsea los payloads grandes con streaming y mueve a un worker thread el trabajo de CPU que no puedas evitar. Detéctalo con `perf_hooks.monitorEventLoopDelay()` o con un perfil de CPU (`--cpu-prof`).',
@@ -173,7 +173,7 @@ Ejemplo: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` devuelve \`[[4, 4, 
       d: 'En el scope del módulo, más una consulta keep-alive con `setInterval` para que la conexión nunca quede inactiva entre invocaciones',
     },
     explanation:
-      'El scope del módulo se ejecuta una vez por **entorno de ejecución** (en el cold start), y el entorno se reutiliza en las invocaciones siguientes, así que un cliente creado ahí sobrevive a los warm starts. Pero cada entorno atiende **una invocación a la vez**, y la concurrencia escala agregando entornos, así que 500 invocaciones concurrentes significan 500 entornos. Un pool de 20 en cada uno serían 10,000 conexiones y agotaría Postgres. Por eso, una conexión por entorno y un pooler delante.\n\nCrearlo en el handler paga el handshake de TCP y TLS en cada llamada. Un `setInterval` no ayuda: el entorno queda **congelado** entre invocaciones, así que los timers no se ejecutan, y los timers pendientes pueden mantener el event loop con trabajo, lo que retrasa la respuesta salvo que `callbackWaitsForEmptyEventLoop` sea false.',
+      'El scope del módulo se ejecuta una vez por **entorno de ejecución** (en el cold start), y el entorno se reutiliza en las invocaciones siguientes, así que un cliente creado ahí sobrevive a los warm starts. Pero cada entorno atiende **una invocación a la vez**, y la concurrencia escala agregando entornos, así que 500 invocaciones concurrentes significan 500 entornos. Un pool de 20 en cada uno serían 10,000 conexiones y agotaría Postgres. Por eso, una conexión por entorno y un pooler delante.\n\nCrearlo en el handler paga el handshake de TCP y TLS en cada llamada. Un `setInterval` no ayuda: el entorno queda **congelado** entre invocaciones, así que el timer no se dispara mientras el entorno está inactivo, y la base de datos o un NAT igual pueden cortar la conexión inactiva; mejor reconecta ante un error.',
   },
   'nodejs-execution-model-choice': {
     prompt:
@@ -220,7 +220,7 @@ Ejemplo: \`solution([[1, 2], [2, 3], [4]], 2)\` devuelve \`[[1, 2], [3, 4]]\`.`,
       'Un `Set` conserva el orden de inserción, así que `[...new Set(ids.flat())]` elimina duplicados y mantiene el orden de primera aparición; después se divide en chunks de tamaño fijo.\n\nEn el batcher real, la ventana de recolección es **un tick**: el primer `load(id)` programa un flush con `queueMicrotask` / `process.nextTick` (DataLoader) o con un `setTimeout` corto para una ventana más amplia, cada `load` intermedio agrega su id y recibe una promesa, y el flush reparte la respuesta masiva por id. Eso convierte un patrón N+1 (una consulta por campo de GraphQL o por elemento) en `ceil(unique / batchSize)` llamadas. El trade-off es una pequeña latencia adicional, y un lote fallido hace fallar a todos los que llamaron dentro de él.',
   },
   'nodejs-retry-backoff-schedule': {
-    prompt: `El endpoint masivo del batcher a veces responde \`429\` o \`503\`. Calcula los tiempos de espera de los reintentos usando **backoff exponencial con tope y full jitter**.
+    prompt: `Un endpoint masivo downstream a veces responde \`429\` o \`503\`. Calcula los tiempos de espera de los reintentos usando **backoff exponencial con tope y full jitter**.
 
 \`solution(retries, baseMs, capMs, randoms)\` devuelve un arreglo de \`retries\` esperas. Para el reintento \`i\` (base 0):
 - \`ceiling = min(capMs, baseMs * 2^i)\`

@@ -20,7 +20,7 @@ export const questions: Question[] = [
     tags: ['rest-vs-rpc', 'resource-naming'],
     source: 'notion',
     explanation:
-      'In REST the **path names a resource (a plural noun)** and the **HTTP method is the verb**. Putting the verb in the path (`/createTicket`, `/tickets/delete`) is RPC style: every operation becomes a POST, so you lose the method semantics that caches, proxies, retries and tooling rely on (GET is safe and cacheable, PUT/DELETE are idempotent).\n\nOption **d** is the worst of all: a `GET` that deletes data breaks the safety guarantee, and crawlers or link prefetchers can trigger it.\n\nRPC is not wrong in general (gRPC and JSON-RPC are legitimate), but if you call an API RESTful the resources should be nouns.',
+      'In REST the **path names a resource (a plural noun)** and the **HTTP method is the verb**. Putting the verb in the path (`/createTicket`, `/tickets/delete`) is RPC style: every operation becomes a POST, so you lose the method semantics that caches, proxies, retries and tooling rely on (GET is safe and cacheable, PUT/DELETE are idempotent).\n\nThe `GET /tickets?action=...` set is the worst of all: a `GET` that deletes data breaks the safety guarantee, and crawlers or link prefetchers can trigger it.\n\nRPC is not wrong in general (gRPC and JSON-RPC are legitimate), but if you call an API RESTful the resources should be nouns.',
   },
   {
     id: 'rest-put-vs-patch-partial-body',
@@ -30,10 +30,10 @@ export const questions: Question[] = [
     level: 'junior',
     kind: 'single',
     prompt:
-      'The stored user is `{ "name": "Ana", "email": "ana@x.io", "role": "admin" }`. A client sends `PUT /users/7` with body `{ "email": "ana@y.io" }` to a server that implements PUT exactly as the HTTP spec defines it. What is stored afterwards?',
+      'The stored user is:\n\n```json\n{\n  "name": "Ana",\n  "email": "ana@x.io",\n  "role": "admin"\n}\n```\n\nA client sends `PUT /users/7` with this body to a server that implements PUT exactly as the HTTP spec defines it:\n\n```json\n{\n  "email": "ana@y.io"\n}\n```\n\nWhat is stored afterwards?',
     options: [
-      { id: 'a', text: '`{ "name": "Ana", "email": "ana@y.io", "role": "admin" }`, because PUT merges the fields it receives' },
-      { id: 'b', text: '`{ "email": "ana@y.io" }`, because PUT replaces the whole representation with the body' },
+      { id: 'a', text: '```json\n{\n  "name": "Ana",\n  "email": "ana@y.io",\n  "role": "admin"\n}\n```\nBecause PUT merges the fields it receives' },
+      { id: 'b', text: '```json\n{\n  "email": "ana@y.io"\n}\n```\nBecause PUT replaces the whole representation with the body' },
       { id: 'c', text: 'Nothing changes; PUT is idempotent, so it cannot modify an existing resource' },
       { id: 'd', text: 'A new user is created with a generated id, because PUT means create' },
     ],
@@ -41,7 +41,7 @@ export const questions: Question[] = [
     tags: ['put', 'patch'],
     source: 'notion',
     explanation:
-      '**PUT is a full replace**: the body *is* the new state of the resource, so fields you omit are gone (or reset to defaults). That is also why PUT is idempotent: sending the same full state twice leaves the same result.\n\n**PATCH is a partial update**: you send only the change (a JSON Merge Patch like `{ "email": "ana@y.io" }` or a JSON Patch operation list). Use PATCH when clients edit a few fields.\n\nMany real APIs implement PUT as a merge, which is exactly the bug that silently wipes `role` when someone later "fixes" it to follow the spec. Option **c** confuses idempotent (N calls = 1 call) with safe (no state change).',
+      '**PUT is a full replace**: the body *is* the new state of the resource, so fields you omit are gone (or reset to defaults). That is also why PUT is idempotent: sending the same full state twice leaves the same result.\n\n**PATCH is a partial update**: you send only the change (a JSON Merge Patch like `{ "email": "ana@y.io" }` or a JSON Patch operation list). Use PATCH when clients edit a few fields.\n\nMany real APIs implement PUT as a merge, which is exactly the bug that silently wipes `role` when someone later "fixes" it to follow the spec. The claim that PUT cannot modify an existing resource because it is idempotent confuses idempotent (N calls = 1 call) with safe (no state change).',
   },
   {
     id: 'rest-non-crud-actions-design',
@@ -85,7 +85,7 @@ export const questions: Question[] = [
     tags: ['401', '403', 'authz'],
     source: 'notion',
     explanation:
-      'Despite its name, **401 means "unauthenticated"**: no credentials, or credentials that are invalid or expired. It should come with a `WWW-Authenticate` header telling the client how to authenticate. **403 means "authenticated, but not allowed"**: retrying with the same identity will not help.\n\n`405` is for a method the resource does not support at all (for anyone), and it must include an `Allow` header. `400` is for a malformed request.\n\nWhen revealing that a resource *exists* is itself a leak (another tenant\'s project), many APIs return `404` instead of `403`. That is a deliberate choice, not a mistake.',
+      'Despite its name, **401 means "unauthenticated"**: no credentials, or credentials that are invalid or expired. It must come with a `WWW-Authenticate` header (RFC 9110 §15.5.2) telling the client how to authenticate. **403 means "authenticated, but not allowed"**: retrying with the same identity will not help.\n\n`405` is for a method the resource does not support at all (for anyone), and it must include an `Allow` header. `400` is for a malformed request.\n\nWhen revealing that a resource *exists* is itself a leak (another tenant\'s project), many APIs return `404` instead of `403`. That is a deliberate choice, not a mistake.',
   },
   {
     id: 'rest-status-code-choices',
@@ -99,7 +99,7 @@ export const questions: Question[] = [
       { id: 'a', text: '`POST /users` creates a user synchronously: `201 Created` with a `Location: /users/88` header' },
       { id: 'b', text: '`DELETE /users/88` succeeds and there is nothing to return: `204 No Content`' },
       { id: 'c', text: '`POST /users` with an email that already exists (unique constraint): `409 Conflict`' },
-      { id: 'd', text: 'The request body fails validation: `200 OK` with `{ "success": false, "error": "email invalid" }`' },
+      { id: 'd', text: 'The request body fails validation: `200 OK` with this body:\n\n```json\n{\n  "success": false,\n  "error": "email invalid"\n}\n```' },
       { id: 'e', text: 'The client sends malformed JSON that the parser cannot read: `500 Internal Server Error`' },
       { id: 'f', text: 'The client exceeded its quota: `429 Too Many Requests` with a `Retry-After` header' },
     ],
@@ -107,7 +107,7 @@ export const questions: Question[] = [
     tags: ['201', '204', '409', '429', 'error-handling'],
     source: 'notion',
     explanation:
-      '- **201 + Location** tells the client where the new resource lives.\n- **204** is success with an empty body; a `200` with the deleted entity is also fine.\n- **409** signals a conflict with the current state of the resource (duplicate key, version mismatch, illegal state transition).\n- **429 + Retry-After** lets well-behaved clients back off.\n\n**d** is the classic anti-pattern: a `200` for a failure blinds every proxy, retry policy, monitoring dashboard and SDK that relies on status codes. Use `400` or `422` with an error body. **e** blames the server for a client mistake; malformed JSON is `400`. A 5xx should mean "our fault", and alerting on 5xx rates only works if you keep that promise.',
+      '- **201 + Location** tells the client where the new resource lives.\n- **204** is success with an empty body; a `200` with the deleted entity is also fine.\n- **409** signals a conflict with the current state of the resource (duplicate key, version mismatch, illegal state transition).\n- **429 + Retry-After** lets well-behaved clients back off.\n\n`200 OK` with `success: false` is the classic anti-pattern: a `200` for a failure blinds every proxy, retry policy, monitoring dashboard and SDK that relies on status codes. Use `400` or `422` with an error body. Answering malformed JSON with `500` blames the server for a client mistake; malformed JSON is `400`. A 5xx should mean "our fault", and alerting on 5xx rates only works if you keep that promise.',
   },
   {
     id: 'rest-if-match-412-lost-update',

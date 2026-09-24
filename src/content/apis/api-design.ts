@@ -48,7 +48,7 @@ console.log(byCursor(page1[page1.length - 1], 2));`,
     tags: ['offset-pagination', 'cursor-pagination', 'keyset'],
     source: 'notion',
     explanation:
-      '- **a**: true, and it is the main reason admin tables with page numbers still use offsets.\n- **b**: true; the cost grows linearly with the offset, while keyset pagination seeks straight into the index.\n- **c**: true; if two rows share a `createdAt` at a page boundary, `createdAt < :last` skips the second one. Sort by `(createdAt, id)` and compare the tuple.\n- **d**: false; a total needs a separate `COUNT(*)`, which is expensive on big tables. Many APIs return `hasMore`/`nextCursor` instead of a total.\n- **e**: true; an opaque cursor is a contract ("pass me back what I gave you"), not a format clients may build or parse.\n\nRule of thumb: offset for small, stable admin lists with page numbers; cursor for feeds, infinite scroll, sync APIs and large tables.',
+      '- **No page jumps with cursors**: true, and it is the main reason admin tables with page numbers still use offsets.\n- **Deep `OFFSET` gets slower**: true; the cost grows linearly with the offset, while keyset pagination seeks straight into the index.\n- **Unique sort key with a tie-breaker**: true; if two rows share a `createdAt` at a page boundary, `createdAt < :last` skips the second one. Sort by `(createdAt, id)` and compare the tuple.\n- **Exact total count for free**: false; a total needs a separate `COUNT(*)`, which is expensive on big tables. Many APIs return `hasMore`/`nextCursor` instead of a total.\n- **Opaque cursors**: true; an opaque cursor is a contract ("pass me back what I gave you"), not a format clients may build or parse.\n\nRule of thumb: offset for small, stable admin lists with page numbers; cursor for feeds, infinite scroll, sync APIs and large tables.',
   },
   {
     id: 'api-design-keyset-cursor-page',
@@ -170,7 +170,7 @@ export function solution(rows: Row[], limit: number, cursor: string | null): Pag
     tags: ['backward-compatibility'],
     source: 'topic-list',
     explanation:
-      'A change is breaking when a client that worked yesterday fails today without changing its code.\n\n- **Additive** changes are safe: new optional response fields (**a**) and new endpoints (**e**), *provided* clients follow the tolerant-reader rule and ignore unknown fields.\n- **Removing or renaming** anything a client reads (**b**), **tightening** input rules (**c**), and **changing types** (**d**, which breaks typed clients and `===` comparisons) are breaking.\n\nThe gray zone: adding a value to a response enum can break clients that switch exhaustively over it. Document enums as open ("expect new values") from day one.',
+      'A change is breaking when a client that worked yesterday fails today without changing its code.\n\n- **Additive** changes are safe: the optional `giftMessage` response field and the new `/refunds` endpoint, *provided* clients follow the tolerant-reader rule and ignore unknown fields.\n- **Removing or renaming** anything a client reads (`total` to `totalAmount`), **tightening** input rules (making `currency` required), and **changing types** (`id` from number to string, which breaks typed clients and `===` comparisons) are breaking.\n\nThe gray zone: adding a value to a response enum can break clients that switch exhaustively over it. Document enums as open ("expect new values") from day one.',
   },
   {
     id: 'api-design-versioning-and-deprecation',
@@ -203,11 +203,11 @@ export function solution(rows: Row[], limit: number, cursor: string | null): Pag
     kind: 'single',
     prompt: 'A request fails validation because `email` is malformed and `age` is negative. Which response is the best design?',
     options: [
-      { id: 'a', text: '`200 OK` with `{ "success": false, "message": "Invalid input" }`' },
+      { id: 'a', text: '`200 OK` with this body:\n\n```json\n{\n  "success": false,\n  "message": "Invalid input"\n}\n```' },
       { id: 'b', text: '`400 Bad Request` with the plain-text body `Invalid input`' },
       {
         id: 'c',
-        text: '`422 Unprocessable Content` (or `400`), `Content-Type: application/problem+json`, body `{ "type": "https://api.acme.io/errors/validation", "title": "Invalid request", "status": 422, "errors": [{ "field": "email", "code": "invalid_format" }, { "field": "age", "code": "min", "min": 0 }] }`',
+        text: '`422 Unprocessable Content` with `Content-Type: application/problem+json` and this body:\n\n```json\n{\n  "type": "https://api.acme.io/errors/validation",\n  "title": "Invalid request",\n  "status": 422,\n  "errors": [\n    { "field": "email", "code": "invalid_format" },\n    { "field": "age", "code": "min", "min": 0 }\n  ]\n}\n```',
       },
       { id: 'd', text: '`500 Internal Server Error` with the validation library\'s stack trace, so the client can debug' },
     ],
@@ -215,7 +215,7 @@ export function solution(rows: Row[], limit: number, cursor: string | null): Pag
     tags: ['problem-details', 'error-handling', 'rfc-9457'],
     source: 'topic-list',
     explanation:
-      'A good error response has an **accurate status code** (so proxies, retries and monitoring work), a **consistent machine-readable envelope** (so every client handles every error the same way), **stable error codes** the client can branch on (not English messages), and **field-level detail** so a form can highlight both fields at once.\n\nRFC 9457 *Problem Details for HTTP APIs* (which replaced RFC 7807) standardizes that envelope: `type`, `title`, `status`, `detail`, `instance`, plus extension members such as `errors`. **a** hides the failure from HTTP tooling, **b** is not machine-readable, and **d** is a 5xx for a client mistake that also leaks internals.',
+      'A good error response has an **accurate status code** (so proxies, retries and monitoring work), a **consistent machine-readable envelope** (so every client handles every error the same way), **stable error codes** the client can branch on (not English messages), and **field-level detail** so a form can highlight both fields at once.\n\nRFC 9457 *Problem Details for HTTP APIs* (which replaced RFC 7807) standardizes that envelope: `type`, `title`, `status`, `detail`, `instance`, plus extension members such as `errors`. `200 OK` with `success: false` hides the failure from HTTP tooling, a plain-text `Invalid input` body is not machine-readable, and a `500` with a stack trace is a 5xx for a client mistake that also leaks internals. `400` is also acceptable for validation errors, as long as the body\'s `status` member matches the HTTP status (RFC 9457 requires it).',
   },
   {
     id: 'api-design-202-accepted-meaning',
@@ -247,7 +247,7 @@ export function solution(rows: Row[], limit: number, cursor: string | null): Pag
     prompt:
       'Design the API for a long-running operation (an AI agent task or a large export, 30 s to 10 min). The web app wants live progress, partner systems want to be notified when it finishes, and clients on flaky mobile networks retry requests. Walk through the endpoints and the delivery options.',
     modelAnswer:
-      '`POST /exports` validates the input, enqueues a job (SQS, BullMQ) and returns `202 Accepted` with `Location: /exports/{id}` and the job body; the POST accepts an `Idempotency-Key` so a retried submit does not start a second job. `GET /exports/{id}` is the source of truth: `status`, `progress`, timestamps, an `error` in problem-details shape on failure, and a `resultUrl` (for example a presigned S3 link) on success. Polling is the baseline every client can use; the server sends `Retry-After` to pace it. For the web app I add Server-Sent Events on `GET /exports/{id}/events` for progress or streamed tokens: SSE is plain HTTP, one-directional and auto-reconnects with `Last-Event-ID`, which is all progress needs; WebSockets only if the client must also send messages mid-task. For partners I offer webhooks: they register a URL, I POST a signed payload (HMAC over the body plus a timestamp) with retries and backoff, and the payload carries an event id so their handler can deduplicate, since delivery is at-least-once. Webhooks are a notification, not the data contract: receivers should re-fetch the job resource.',
+      '`POST /exports` validates the input, enqueues a job (SQS, BullMQ), so the work never runs inside the HTTP request where load balancer and API gateway timeouts would cut it off, and returns `202 Accepted` with `Location: /exports/{id}` and the job body; the POST accepts an `Idempotency-Key` so a retried submit does not start a second job. `GET /exports/{id}` is the source of truth: `status`, `progress`, timestamps, an `error` in problem-details shape on failure, and a `resultUrl` (for example a presigned S3 link) on success. Polling is the baseline every client can use; the server sends `Retry-After` to pace it. For the web app I add Server-Sent Events on `GET /exports/{id}/events` for progress or streamed tokens: SSE is plain HTTP, one-directional and auto-reconnects with `Last-Event-ID`, which is all progress needs; WebSockets only if the client must also send messages mid-task. For partners I offer webhooks: they register a URL, I POST a signed payload (HMAC over the body plus a timestamp) with retries and backoff, and the payload carries an event id so their handler can deduplicate, since delivery is at-least-once. Webhooks are a notification, not the data contract: receivers should re-fetch the job resource.',
     rubric: [
       '202 Accepted + Location of a job resource, with the job resource as the single source of truth',
       'Idempotency key on the submit so retries do not create duplicate jobs',

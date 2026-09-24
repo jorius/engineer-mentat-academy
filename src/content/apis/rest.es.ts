@@ -5,19 +5,19 @@ export const translations: Record<string, QuestionTranslation> = {
   'rest-resource-nouns-vs-rpc': {
     prompt: 'Estás exponiendo tickets por HTTP. ¿Qué conjunto de endpoints sigue el estilo **REST** y no el estilo RPC?',
     explanation:
-      'En REST el **path nombra un recurso (un sustantivo en plural)** y el **método HTTP es el verbo**. Poner el verbo en el path (`/createTicket`, `/tickets/delete`) es estilo RPC: cada operación se convierte en un POST, así que pierdes la semántica de los métodos de la que dependen los cachés, los proxies, los reintentos y las herramientas (GET es seguro y cacheable, PUT/DELETE son idempotentes).\n\nLa opción **d** es la peor de todas: un `GET` que borra datos rompe la garantía de seguridad, y los crawlers o el prefetch de enlaces pueden dispararlo.\n\nRPC no está mal en general (gRPC y JSON-RPC son legítimos), pero si dices que una API es RESTful, los recursos deberían ser sustantivos.',
+      'En REST el **path nombra un recurso (un sustantivo en plural)** y el **método HTTP es el verbo**. Poner el verbo en el path (`/createTicket`, `/tickets/delete`) es estilo RPC: cada operación se convierte en un POST, así que pierdes la semántica de los métodos de la que dependen los cachés, los proxies, los reintentos y las herramientas (GET es seguro y cacheable, PUT/DELETE son idempotentes).\n\nEl conjunto con `GET /tickets?action=...` es el peor de todos: un `GET` que borra datos rompe la garantía de seguridad, y los crawlers o el prefetch de enlaces pueden dispararlo.\n\nRPC no está mal en general (gRPC y JSON-RPC son legítimos), pero si dices que una API es RESTful, los recursos deberían ser sustantivos.',
   },
   'rest-put-vs-patch-partial-body': {
     prompt:
-      'El usuario guardado es `{ "name": "Ana", "email": "ana@x.io", "role": "admin" }`. Un cliente envía `PUT /users/7` con el body `{ "email": "ana@y.io" }` a un servidor que implementa PUT exactamente como lo define la especificación HTTP. ¿Qué queda guardado después?',
+      'El usuario guardado es:\n\n```json\n{\n  "name": "Ana",\n  "email": "ana@x.io",\n  "role": "admin"\n}\n```\n\nUn cliente envía `PUT /users/7` con este body a un servidor que implementa PUT exactamente como lo define la especificación HTTP:\n\n```json\n{\n  "email": "ana@y.io"\n}\n```\n\n¿Qué queda guardado después?',
     options: {
-      a: '`{ "name": "Ana", "email": "ana@y.io", "role": "admin" }`, porque PUT fusiona los campos que recibe',
-      b: '`{ "email": "ana@y.io" }`, porque PUT reemplaza toda la representación con el body',
+      a: '```json\n{\n  "name": "Ana",\n  "email": "ana@y.io",\n  "role": "admin"\n}\n```\nPorque PUT fusiona los campos que recibe',
+      b: '```json\n{\n  "email": "ana@y.io"\n}\n```\nPorque PUT reemplaza toda la representación con el body',
       c: 'Nada cambia; PUT es idempotente, así que no puede modificar un recurso existente',
       d: 'Se crea un usuario nuevo con un id generado, porque PUT significa crear',
     },
     explanation:
-      '**PUT es un reemplazo completo**: el body *es* el nuevo estado del recurso, así que los campos que omites desaparecen (o vuelven a sus valores por defecto). Por eso también PUT es idempotente: enviar el mismo estado completo dos veces deja el mismo resultado.\n\n**PATCH es una actualización parcial**: envías solo el cambio (un JSON Merge Patch como `{ "email": "ana@y.io" }` o una lista de operaciones JSON Patch). Usa PATCH cuando los clientes editan unos pocos campos.\n\nMuchas APIs reales implementan PUT como una fusión, y ese es exactamente el bug que borra `role` en silencio cuando alguien más adelante lo "arregla" para cumplir la especificación. La opción **c** confunde idempotente (N llamadas = 1 llamada) con seguro (sin cambio de estado).',
+      '**PUT es un reemplazo completo**: el body *es* el nuevo estado del recurso, así que los campos que omites desaparecen (o vuelven a sus valores por defecto). Por eso también PUT es idempotente: enviar el mismo estado completo dos veces deja el mismo resultado.\n\n**PATCH es una actualización parcial**: envías solo el cambio (un JSON Merge Patch como `{ "email": "ana@y.io" }` o una lista de operaciones JSON Patch). Usa PATCH cuando los clientes editan unos pocos campos.\n\nMuchas APIs reales implementan PUT como una fusión, y ese es exactamente el bug que borra `role` en silencio cuando alguien más adelante lo "arregla" para cumplir la especificación. La afirmación de que PUT no puede modificar un recurso existente porque es idempotente confunde idempotente (N llamadas = 1 llamada) con seguro (sin cambio de estado).',
   },
   'rest-non-crud-actions-design': {
     prompt:
@@ -38,7 +38,7 @@ export const translations: Record<string, QuestionTranslation> = {
     prompt:
       'Una petición a `DELETE /projects/42` llega con un bearer token **válido y no expirado** de un usuario cuyo rol es `viewer`. Los viewers no pueden borrar proyectos. ¿Qué código de estado encaja mejor?',
     explanation:
-      'A pesar de su nombre, **401 significa "no autenticado"**: no hay credenciales, o son inválidas o expiraron. Debería venir con un header `WWW-Authenticate` que le diga al cliente cómo autenticarse. **403 significa "autenticado, pero sin permiso"**: reintentar con la misma identidad no va a servir.\n\n`405` es para un método que el recurso no soporta en absoluto (para nadie), y debe incluir un header `Allow`. `400` es para una petición mal formada.\n\nCuando revelar que un recurso *existe* ya es en sí una fuga (el proyecto de otro tenant), muchas APIs devuelven `404` en lugar de `403`. Es una decisión deliberada, no un error.',
+      'A pesar de su nombre, **401 significa "no autenticado"**: no hay credenciales, o son inválidas o expiraron. Debe venir con un header `WWW-Authenticate` (RFC 9110 §15.5.2) que le diga al cliente cómo autenticarse. **403 significa "autenticado, pero sin permiso"**: reintentar con la misma identidad no va a servir.\n\n`405` es para un método que el recurso no soporta en absoluto (para nadie), y debe incluir un header `Allow`. `400` es para una petición mal formada.\n\nCuando revelar que un recurso *existe* ya es en sí una fuga (el proyecto de otro tenant), muchas APIs devuelven `404` en lugar de `403`. Es una decisión deliberada, no un error.',
   },
   'rest-status-code-choices': {
     prompt: '¿Qué combinaciones de escenario y respuesta son correctas? Selecciona todas las que apliquen.',
@@ -46,12 +46,12 @@ export const translations: Record<string, QuestionTranslation> = {
       a: '`POST /users` crea un usuario de forma síncrona: `201 Created` con un header `Location: /users/88`',
       b: '`DELETE /users/88` tiene éxito y no hay nada que devolver: `204 No Content`',
       c: '`POST /users` con un email que ya existe (restricción de unicidad): `409 Conflict`',
-      d: 'El body de la petición no pasa la validación: `200 OK` con `{ "success": false, "error": "email invalid" }`',
+      d: 'El body de la petición no pasa la validación: `200 OK` con este body:\n\n```json\n{\n  "success": false,\n  "error": "email invalid"\n}\n```',
       e: 'El cliente envía JSON mal formado que el parser no puede leer: `500 Internal Server Error`',
       f: 'El cliente superó su cuota: `429 Too Many Requests` con un header `Retry-After`',
     },
     explanation:
-      '- **201 + Location** le dice al cliente dónde vive el nuevo recurso.\n- **204** es éxito con body vacío; un `200` con la entidad borrada también está bien.\n- **409** señala un conflicto con el estado actual del recurso (clave duplicada, versión que no coincide, transición de estado ilegal).\n- **429 + Retry-After** permite que los clientes bien portados reduzcan el ritmo.\n\n**d** es el antipatrón clásico: un `200` para un fallo deja ciegos a todos los proxies, políticas de reintento, dashboards de monitoreo y SDKs que dependen de los códigos de estado. Usa `400` o `422` con un body de error. **e** culpa al servidor por un error del cliente; el JSON mal formado es `400`. Un 5xx debería significar "culpa nuestra", y alertar sobre la tasa de 5xx solo funciona si cumples esa promesa.',
+      '- **201 + Location** le dice al cliente dónde vive el nuevo recurso.\n- **204** es éxito con body vacío; un `200` con la entidad borrada también está bien.\n- **409** señala un conflicto con el estado actual del recurso (clave duplicada, versión que no coincide, transición de estado ilegal).\n- **429 + Retry-After** permite que los clientes bien portados reduzcan el ritmo.\n\n`200 OK` con `success: false` es el antipatrón clásico: un `200` para un fallo deja ciegos a todos los proxies, políticas de reintento, dashboards de monitoreo y SDKs que dependen de los códigos de estado. Usa `400` o `422` con un body de error. Responder `500` a un JSON mal formado culpa al servidor por un error del cliente; el JSON mal formado es `400`. Un 5xx debería significar "culpa nuestra", y alertar sobre la tasa de 5xx solo funciona si cumples esa promesa.',
   },
   'rest-if-match-412-lost-update': {
     prompt:

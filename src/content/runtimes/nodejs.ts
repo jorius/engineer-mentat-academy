@@ -13,10 +13,10 @@ export const questions: Question[] = [
     prompt:
       'You switch a package to ES modules by adding `"type": "module"` to `package.json`. Which line in `server.js` now **throws at runtime**?',
     options: [
-      { id: 'a', text: '`const publicDir = path.join(__dirname, \'public\');`' },
-      { id: 'b', text: '`import fs from \'node:fs\';`' },
-      { id: 'c', text: '`const config = await import(\'./config.js\');` at the top level' },
-      { id: 'd', text: '`export default function handler(req, res) {}`' },
+      { id: 'a', text: '```js\nconst publicDir = path.join(__dirname, \'public\');\n```' },
+      { id: 'b', text: '```js\nimport fs from \'node:fs\';\n```' },
+      { id: 'c', text: '```js\nconst config = await import(\'./config.js\');\n```\n(at the top level)' },
+      { id: 'd', text: '```js\nexport default function handler(req, res) {}\n```' },
     ],
     answer: 'a',
     tags: ['esm', 'commonjs', 'modules'],
@@ -35,7 +35,7 @@ export const questions: Question[] = [
       'Node runs your JavaScript on one thread, but libuv keeps a **thread pool** (default size 4, `UV_THREADPOOL_SIZE`). Which of these async operations are executed on that thread pool? Select all that apply.',
     options: [
       { id: 'a', text: '`fs.readFile(path, cb)`' },
-      { id: 'b', text: '`crypto.pbkdf2(password, salt, 100000, 64, \'sha512\', cb)`' },
+      { id: 'b', text: '```js\ncrypto.pbkdf2(password, salt, 100000, 64, \'sha512\', cb)\n```' },
       { id: 'c', text: 'Reading the body of an incoming HTTP request from its socket' },
       { id: 'd', text: '`dns.lookup(\'api.example.com\', cb)` (also used implicitly by `http.get` with a hostname)' },
     ],
@@ -70,7 +70,7 @@ console.log('after call');`,
     tags: ['async-await', 'blocking', 'core-25'],
     source: 'core-list',
     explanation:
-      'An `async` function runs **synchronously** until its first `await`. There is no `await` here, so the whole loop runs on the caller\'s stack before `after call` prints. Only the resolution of the returned promise is deferred to a microtask, which is why `total 500500` comes last.\n\n`async` changes how a result is delivered, not where the work runs. Real non-blocking behaviour comes from the runtime doing the work elsewhere (the kernel, libuv\'s pool) or from you moving CPU work to a worker thread.',
+      'An `async` function runs **synchronously** until its first `await`. There is no `await` here, so the whole loop runs on the caller\'s stack before `after call` prints. The returned promise is already fulfilled when `sumTo` returns; only the `.then` callback is deferred, as a microtask that runs after the script finishes, which is why `total 500500` comes last.\n\n`async` changes how a result is delivered, not where the work runs. Real non-blocking behaviour comes from the runtime doing the work elsewhere (the kernel, libuv\'s pool) or from you moving CPU work to a worker thread.',
   },
 
   // event-loop-phases
@@ -219,7 +219,7 @@ console.log('sync end');`,
     level: 'junior',
     kind: 'single',
     prompt:
-      'You compress a 20 GB log file with `pipeline(fs.createReadStream(src), zlib.createGzip(), fs.createWriteStream(dest))`. What kind of stream is `zlib.createGzip()`?',
+      'You compress a 20 GB log file with this pipeline:\n\n```js\npipeline(\n  fs.createReadStream(src),\n  zlib.createGzip(),\n  fs.createWriteStream(dest)\n)\n```\n\nWhat kind of stream is `zlib.createGzip()`?',
     options: [
       { id: 'a', text: 'Readable' },
       { id: 'b', text: 'Writable' },
@@ -245,7 +245,7 @@ console.log('sync end');`,
       { id: 'a', text: 'An error in any stage is delivered to one callback or one rejected promise instead of needing an `error` listener on every stream' },
       { id: 'b', text: 'When any stage fails or the destination closes early, every stream in the chain is destroyed, so file descriptors and sockets are not leaked' },
       { id: 'c', text: 'It is the only way to get backpressure; `.pipe()` ignores `write()` returning `false`' },
-      { id: 'd', text: 'Stages can be async generator functions, e.g. `async function* (source) { for await (const chunk of source) yield transform(chunk); }`' },
+      { id: 'd', text: 'Stages can be async generator functions, for example:\n\n```js\nasync function* (source) {\n  for await (const chunk of source) {\n    yield transform(chunk);\n  }\n}\n```' },
     ],
     answer: ['a', 'b', 'd'],
     tags: ['streams', 'pipeline', 'error-handling', 'backpressure'],
@@ -314,7 +314,7 @@ Example: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` returns \`[[4, 4, 4
     prompt:
       'An endpoint must accept a CSV upload of several GB, validate and transform each row, and insert the rows into Postgres. The container has 512 MB of RAM. How do you design it so memory stays bounded and failures are handled correctly?',
     modelAnswer:
-      'I never buffer the body: no `req.on(\'data\')` concatenation and no in-memory multipart storage. I build `await pipeline(req, csvParser(), validateTransform, batcher(500), dbWriter)` with object-mode stages. The DB writer is a Writable (or an async generator stage) that only calls its callback after the batch `INSERT` / `COPY` resolves, so a slow database fills the small buffers, `write()` returns `false`, the parser pauses, the request socket stops being read, and TCP flow control slows the client. That chain is **backpressure** end to end, and it keeps memory at roughly `highWaterMark × stages` instead of file size. `pipeline` destroys every stage on error or client disconnect, so I pass an `AbortSignal` and roll back or mark the import failed. Invalid rows go to a reject report instead of failing the whole file. For idempotency I load into a staging table keyed by an upload id and swap or merge at the end, so a retried upload does not duplicate rows. If the import takes minutes, I stream the upload to object storage, return `202` with a job id, and let a queue worker run the same pipeline.',
+      'I never buffer the body: no `req.on(\'data\')` concatenation and no in-memory multipart storage. I build `await pipeline(req, csvParser(), validateTransform, batcher(500), dbWriter)` with object-mode stages. The DB writer is a Writable (or an async generator stage) that only calls its callback after the batch `INSERT` / `COPY` resolves, so a slow database fills the small buffers, `write()` returns `false`, the parser pauses, the request socket stops being read, and TCP flow control slows the client. That chain is **backpressure** end to end, and it keeps memory at roughly `highWaterMark × stages` instead of file size. `pipeline` destroys every stage on error or client disconnect, so I pass an `AbortSignal` and roll back or mark the import failed. Invalid rows go to a reject report instead of failing the whole file. For idempotency I load into a staging table keyed by an upload id and swap or merge at the end, so a retried upload does not duplicate rows. If the import takes minutes, I stream the upload to object storage, return `202` with a job id and a status endpoint (`GET /imports/{id}`), and let a queue worker run the same pipeline.',
     rubric: [
       'Streams the request with `pipeline()` and explicitly rejects buffering the whole body',
       'Explains backpressure end to end: slow DB, `write()` false, parser pauses, socket and TCP flow control',
@@ -339,9 +339,9 @@ Example: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` returns \`[[4, 4, 4
     prompt:
       'Whenever one route of your Express API is called, latency spikes for **every** route on that instance. Which of these, inside that route, block the event loop? Select all that apply.',
     options: [
-      { id: 'a', text: '`crypto.pbkdf2Sync(password, salt, 600000, 64, \'sha512\')`' },
+      { id: 'a', text: '```js\ncrypto.pbkdf2Sync(password, salt, 600000, 64, \'sha512\')\n```' },
       { id: 'b', text: '`JSON.parse` of a 150 MB string' },
-      { id: 'c', text: '`await fetch(\'https://slow-partner.example.com/report\')` that takes 4 seconds' },
+      { id: 'c', text: '```js\nawait fetch(\'https://slow-partner.example.com/report\')\n```\n(the partner takes 4 seconds to answer)' },
       { id: 'd', text: '`fs.readFileSync(\'/data/export.csv\')`' },
     ],
     answer: ['a', 'b', 'd'],
@@ -393,7 +393,7 @@ Example: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` returns \`[[4, 4, 4
     tags: ['serverless', 'lambda', 'connection-pooling'],
     source: 'notion',
     explanation:
-      'Module scope runs once per **execution environment** (on the cold start), and the environment is reused for later invocations, so a client created there survives warm starts. But each environment handles **one invocation at a time**, and concurrency scales by adding environments, so 500 concurrent invocations means 500 environments. A pool of 20 each would be 10,000 connections and exhaust Postgres. Hence one connection per environment and a pooler in front.\n\nCreating it in the handler pays the TCP and TLS handshake on every call. A `setInterval` does not help: the environment is **frozen** between invocations, so timers do not run, and pending timers can keep the event loop non-empty, delaying the response unless `callbackWaitsForEmptyEventLoop` is false.',
+      'Module scope runs once per **execution environment** (on the cold start), and the environment is reused for later invocations, so a client created there survives warm starts. But each environment handles **one invocation at a time**, and concurrency scales by adding environments, so 500 concurrent invocations means 500 environments. A pool of 20 each would be 10,000 connections and exhaust Postgres. Hence one connection per environment and a pooler in front.\n\nCreating it in the handler pays the TCP and TLS handshake on every call. A `setInterval` does not help: the environment is **frozen** between invocations, so the timer does not fire while the environment sits idle, and the database or a NAT can still drop the idle connection; reconnect on error instead.',
   },
   {
     id: 'nodejs-execution-model-choice',
@@ -490,7 +490,7 @@ Example: \`solution([[1, 2], [2, 3], [4]], 2)\` returns \`[[1, 2], [3, 4]]\`.`,
     level: 'mid',
     kind: 'code',
     language: 'typescript',
-    prompt: `The batcher's bulk endpoint sometimes answers \`429\` or \`503\`. Compute the retry delays using **capped exponential backoff with full jitter**.
+    prompt: `A bulk downstream endpoint sometimes answers \`429\` or \`503\`. Compute the retry delays using **capped exponential backoff with full jitter**.
 
 \`solution(retries, baseMs, capMs, randoms)\` returns an array of \`retries\` delays. For retry \`i\` (0-based):
 - \`ceiling = min(capMs, baseMs * 2^i)\`
