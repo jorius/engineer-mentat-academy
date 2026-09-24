@@ -141,3 +141,7 @@ commit style. The pull request template lists the checks.
 
 TypeScript strict, explicit return types, labeled import groups, no barrel files, exact dependency
 pins, and commit subjects that start with a capitalized verb (enforced by Husky).
+
+## License
+
+[MIT](LICENSE). Use it, fork it, host it, add your own questions.
