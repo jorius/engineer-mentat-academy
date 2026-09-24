@@ -18,7 +18,7 @@ export const translations: Record<string, QuestionTranslation> = {
     prompt:
       '```csharp\n[ApiController]\n[Route("api/[controller]")]\npublic class OrdersController : ControllerBase\n{\n    private readonly IOrderService _orders;\n\n    public OrdersController(IOrderService orders)\n    {\n        _orders = orders;\n    }\n\n    [HttpGet("{id}")]\n    public IActionResult GetById(int id)\n    {\n        var order = _orders.Find(id);\n        if (order is null)\n        {\n            return NotFound();\n        }\n        return Ok(order);\n    }\n}\n```\n¿Cuál afirmación describe correctamente este controlador?',
     options: {
-      a: '`IOrderService orders` debe resolverse manualmente dentro del constructor con `HttpContext.RequestServices.GetService<IOrderService>()`; los controladores de ASP.NET Core solo soportan inyección por propiedades, no por constructor',
+      a: '`IOrderService orders` debe resolverse manualmente dentro del constructor:\n\n```csharp\n_orders = HttpContext.RequestServices.GetService<IOrderService>();\n```\nLos controladores de ASP.NET Core solo soportan inyección por propiedades, no por constructor',
       b: '`[ApiController]` es lo que hace que la ruta sea alcanzable; sin él, el enrutamiento ignora por completo `[HttpGet]`/`[Route]` y trata la clase como un objeto plano sin ruta',
       c: 'Como `GetById` devuelve `IActionResult`, la respuesta siempre se serializa como XML a menos que el cliente envíe explícitamente el encabezado `Accept: application/json` — JSON solo es un formato de reserva negociado',
       d: '`IOrderService orders` es entregado por DI cuando el controlador se activa, ya que `IOrderService` está registrado en `builder.Services`; `[Route("api/[controller]")]` más `[HttpGet("{id}")]` mapean a `GET /api/Orders/{id}`',
@@ -40,7 +40,7 @@ export const translations: Record<string, QuestionTranslation> = {
   },
   'aspnet-minimal-api-frombody-inference': {
     prompt:
-      '```csharp\npublic record CreateOrderRequest(string CustomerId, List<string> ItemIds);\n\napp.MapPost("/orders", (CreateOrderRequest request, IOrderService orders) =>\n{\n    var id = orders.Create(request.CustomerId, request.ItemIds);\n    return Results.Created($"/orders/{id}", new { id });\n});\n```\n`IOrderService` está registrado en `builder.Services`. Un cliente hace un `POST` con `{"customerId": "c1", "itemIds": ["i1"]}` como cuerpo de la petición. ¿Cómo se vinculan los dos parámetros?',
+      '```csharp\npublic record CreateOrderRequest(string CustomerId, List<string> ItemIds);\n\napp.MapPost("/orders", (CreateOrderRequest request, IOrderService orders) =>\n{\n    var id = orders.Create(request.CustomerId, request.ItemIds);\n    return Results.Created($"/orders/{id}", new { id });\n});\n```\n`IOrderService` está registrado en `builder.Services`. Un cliente hace un `POST` con este cuerpo de petición:\n\n```json\n{\n  "customerId": "c1",\n  "itemIds": ["i1"]\n}\n```\n¿Cómo se vinculan los dos parámetros?',
     options: {
       a: 'Ambos parámetros se vinculan desde el cuerpo: las minimal APIs deserializan el payload JSON de forma independiente en cada parámetro de tipo complejo, repartiendo las propiedades por nombre entre ellos',
       b: 'Las minimal APIs requieren un atributo `[FromBody]` explícito en `request`; sin él, el endpoint lanza `InvalidOperationException` al arrancar porque la fuente de binding para un parámetro `record` nunca puede inferirse',

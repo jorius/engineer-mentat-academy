@@ -21,7 +21,7 @@ export const questions: Question[] = [
     tags: ['server-components', 'use-client'],
     source: 'topic-list',
     explanation:
-      "In the App Router every component is a **Server Component** by default: it runs only on the server and ships no JavaScript, so it cannot use state, effects, event handlers or browser APIs. `'use client'` marks a **boundary**: that module and everything it imports become part of the client bundle. Put the boundary as low (as close to the leaves) as possible. Marking the root layout would push the entire tree to the client and throw away server-side data fetching and the bundle-size benefits. No hook works in Server Components, `useRef` included.",
+      "In the App Router every component is a **Server Component** by default: it runs only on the server and ships no JavaScript, so it cannot use state, effects, event handlers or browser APIs. `'use client'` marks a **boundary**: that module and everything it imports become part of the client bundle. Put the boundary as low (as close to the leaves) as possible. Marking `app/layout.tsx` would not even fix this build: the router passes each page to its layout as `children`, so `page.tsx` stays a Server Component and its import of `LikeButton` still fails; it would only turn the layout itself (and everything it imports) into client code and forbid exporting `metadata` from it. Stateful and effect hooks (`useState`, `useReducer`, `useEffect`, `useRef`, `useContext`) are unavailable in Server Components; only a few stateless ones such as `use`, `useId` and `useMemo` are allowed.",
   },
   {
     id: 'nextjs-route-handler-basics',
@@ -32,7 +32,7 @@ export const questions: Question[] = [
     kind: 'single',
     prompt: 'In the App Router, how do you expose `GET /api/users` returning JSON?',
     options: [
-      { id: 'a', text: 'Create `app/api/users/route.ts` exporting `export default function handler(req, res) { res.json(users) }`' },
+      { id: 'a', text: 'Create `app/api/users/route.ts` exporting a default handler:\n\n```ts\nexport default function handler(req, res) {\n  res.json(users);\n}\n```' },
       { id: 'b', text: 'Create `app/api/users/route.ts` exporting a named `GET` function that returns a `Response` (for example `Response.json(users)`)' },
       { id: 'c', text: 'Create `app/api/users/page.tsx` that returns the JSON object instead of JSX' },
       { id: 'd', text: 'Create `app/api/users.ts` with a default export; files under `app/api` are API routes automatically' },
@@ -83,7 +83,7 @@ export const questions: Question[] = [
     tags: ['dynamic-apis', 'static-rendering', 'next-15'],
     source: 'topic-list',
     explanation:
-      "`cookies()`, `headers()`, `draftMode()`, `connection()` and the `searchParams` page prop depend on the incoming request. Using any of them (or `fetch` with `cache: 'no-store'`, or `export const dynamic = 'force-dynamic'`) makes the route render on every request. In Next.js 15 these APIs are **async** (`await cookies()`; `params` and `searchParams` are promises), and synchronous access only works through a temporary compatibility shim that logs a warning. To keep most of the page static, read the cookie inside a small component wrapped in `<Suspense>` (with Partial Prerendering this becomes a dynamic hole in a static shell), or convert the currency on the client. `async` components alone are fine to prerender, and `generateStaticParams` is only needed for dynamic segments such as `[id]`.",
+      "`cookies()`, `headers()`, `draftMode()`, `connection()` and the `searchParams` page prop depend on the incoming request. Using any of them (or `fetch` with `cache: 'no-store'`, or `export const dynamic = 'force-dynamic'`) makes the route render on every request. In Next.js 15 these APIs are **async** (`await cookies()`; `params` and `searchParams` are promises), and synchronous access only works through a temporary compatibility shim that logs a warning. To keep the page static, convert the currency on the client. With Partial Prerendering (experimental in Next.js 15) you can instead read the cookie inside a small component wrapped in `<Suspense>`, which becomes a dynamic hole in a static shell; without PPR, `<Suspense>` only streams and the whole route is still rendered per request. `async` components alone are fine to prerender, and `generateStaticParams` is only needed for dynamic segments such as `[id]`.",
   },
   {
     id: 'nextjs-isr-stale-while-revalidate',
@@ -138,9 +138,9 @@ export const questions: Question[] = [
     kind: 'multi',
     prompt: 'Which statements about caching and revalidation in the **Next.js 15** App Router are true? Select all that apply.',
     options: [
-      { id: 'a', text: "`fetch` results are no longer stored in the Data Cache by default; opt in per request with `cache: 'force-cache'` or `next: { revalidate: N }`" },
-      { id: 'b', text: 'A route that uses no Dynamic APIs is still prerendered at build time, so an uncached `fetch` in it runs once during `next build` and its result is frozen in the static output until revalidation or redeploy' },
-      { id: 'c', text: "Calling `revalidateTag('products')` from a Server Action or Route Handler invalidates every cached `fetch` tagged `products` (via `next: { tags: ['products'] }`), on every route that used it" },
+      { id: 'a', text: "`fetch` results are no longer stored in the Data Cache by default; opt in per request:\n\n```ts\nfetch(url, { cache: 'force-cache' });\n// or\nfetch(url, { next: { revalidate: N } });\n```" },
+      { id: 'b', text: 'A route that uses no Dynamic APIs is still prerendered at build time, so a `fetch` with no cache option in it runs once during `next build` and its result is frozen in the static output until revalidation or redeploy' },
+      { id: 'c', text: "Calling `revalidateTag('products')` from a Server Action or Route Handler invalidates every cached `fetch` tagged `products`, on every route that used it. The tag is set per request:\n\n```ts\nfetch(url, { next: { tags: ['products'] } });\n```" },
       { id: 'd', text: 'You can call `revalidatePath` directly from a Client Component event handler to refresh server data' },
       { id: 'e', text: '`export const revalidate = 60` renders the page on every request and adds a 60-second CDN `Cache-Control` header' },
     ],
@@ -148,7 +148,7 @@ export const questions: Question[] = [
     tags: ['caching', 'revalidation', 'next-15', 'data-cache', 'full-route-cache'],
     source: 'topic-list',
     explanation:
-      "Next.js 14 cached `fetch` by default, which surprised many teams. Next.js 15 flipped the defaults: no Data Cache for `fetch` and no caching for `GET` Route Handlers, and the client Router Cache no longer reuses page segments (`staleTime` 0 for pages). The trap is the build-time prerendering statement: \"not cached\" does **not** mean \"fresh on every request\". A route without request-time APIs is still statically prerendered, so the data is baked in at build time. Add a Dynamic API, `cache: 'no-store'`, `connection()` or `dynamic = 'force-dynamic'` when you truly need per-request data. `revalidatePath`/`revalidateTag` are server-only; the client calls a Server Action that calls them (and `router.refresh()` only re-fetches the current route's RSC payload). `revalidate = 60` is ISR (stale-while-revalidate), not per-request rendering. Next.js 16's Cache Components (`'use cache'`, `cacheLife`, `cacheTag`) make caching explicitly opt-in again, so in an interview, name the version you are describing.\n\n**Say this out loud:** \"In Next 15, uncached fetch does not mean dynamic. If a route has no request-time APIs it is still prerendered at build time, so I decide static versus dynamic per route and invalidate with tags from Server Actions.\"",
+      "Next.js 14 cached `fetch` by default, which surprised many teams. Next.js 15 flipped the defaults: no Data Cache for `fetch` and no caching for `GET` Route Handlers, and the client Router Cache no longer reuses page segments (`staleTime` 0 for pages). The trap is the build-time prerendering statement: \"not cached\" does **not** mean \"fresh on every request\". A route without request-time APIs is still statically prerendered, so the data is baked in at build time. Add a Dynamic API, `cache: 'no-store'`, `connection()` or `dynamic = 'force-dynamic'` when you truly need per-request data. `revalidatePath`/`revalidateTag` are server-only; the client calls a Server Action that calls them (and `router.refresh()` only re-fetches the current route's RSC payload). `revalidate = 60` is ISR (stale-while-revalidate), not per-request rendering. Next.js 16's Cache Components (`'use cache'`, `cacheLife`, `cacheTag`) make caching explicitly opt-in again, so in an interview, name the version you are describing.\n\n**Say this out loud:** \"In Next 15, a fetch with no cache option is not cached, but that does not make the route dynamic. If a route has no request-time APIs it is still prerendered at build time, so I decide static versus dynamic per route and invalidate with tags from Server Actions.\"",
   },
   {
     id: 'nextjs-server-action-authorization',

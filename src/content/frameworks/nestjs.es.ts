@@ -8,7 +8,7 @@ export const translations: Record<string, QuestionTranslation> = {
     options: {
       a: 'Agrega `exports: [UsersService]` a `UsersModule` e `imports: [UsersModule]` a `OrdersModule`',
       b: 'Agrega `UsersService` también al array `providers` de `OrdersModule`',
-      c: "Decora `UsersService` con `@Injectable({ providedIn: 'root' })`",
+      c: "Decora `UsersService` así:\n\n```ts\n@Injectable({ providedIn: 'root' })\nexport class UsersService {}\n```",
       d: 'Agrega `UsersModule` al array `exports` de `OrdersModule`',
     },
     explanation:
@@ -18,8 +18,8 @@ export const translations: Record<string, QuestionTranslation> = {
     prompt:
       "```ts\n@Get(':id')\nfindOne(@Param('id') id: string) {\n  const user = this.users.get(id);\n  if (!user) throw new Error(`User ${id} not found`);\n  return user;\n}\n```\nNo hay ningún exception filter personalizado registrado. ¿Qué recibe el cliente en `GET /users/42` cuando el usuario no existe?",
     options: {
-      a: '`404` con `{ "message": "User 42 not found" }`',
-      b: '`500` con `{ "statusCode": 500, "message": "Internal server error" }`',
+      a: '`404` con este body:\n\n```json\n{\n  "message": "User 42 not found"\n}\n```',
+      b: '`500` con este body:\n\n```json\n{\n  "statusCode": 500,\n  "message": "Internal server error"\n}\n```',
       c: '`500` con el mensaje de error y el stack trace, porque `NODE_ENV` no es `production`',
       d: 'Nada: la petición se queda colgada porque la excepción no es una `HttpException`',
     },
@@ -35,19 +35,19 @@ export const translations: Record<string, QuestionTranslation> = {
       d: 'Middleware → Interceptors (antes) → Guards → Pipes → Handler de la ruta → Interceptors (después) → Exception filters (si hay error)',
     },
     explanation:
-      "El middleware se ejecuta primero y es agnóstico del framework (es middleware de Express/Fastify). Los **guards** deciden si la petición puede continuar, así que se ejecutan antes de cualquier trabajo de interceptors o pipes. Los **interceptors** envuelven al handler (código antes de `next.handle()` y operadores de RxJS después). Los **pipes** validan y transforman los argumentos del handler justo antes de la llamada. Las excepciones lanzadas por guards, interceptors, pipes o el handler van a los **exception filters**, que se resuelven desde el binding más específico hacia afuera (ruta, luego controller, luego global). Dentro de cada tipo de enhancer, el orden es global → controller → ruta. Una consecuencia que vale la pena mencionar: un guard ve la petición **cruda, sin validar**, porque los pipes de validación se ejecutan después.",
+      "El middleware se ejecuta primero; es middleware normal de Express/Fastify y no sabe qué handler de Nest se va a ejecutar. Los **guards** deciden si la petición puede continuar, así que se ejecutan antes de cualquier trabajo de interceptors o pipes. Los **interceptors** envuelven al handler (código antes de `next.handle()` y operadores de RxJS después). Los **pipes** validan y transforman los argumentos del handler justo antes de la llamada. Las excepciones lanzadas por guards, interceptors, pipes o el handler van a los **exception filters**, que se resuelven desde el binding más específico hacia afuera (ruta, luego controller, luego global). Dentro de cada tipo de enhancer, el orden es global → controller → ruta. Una consecuencia que vale la pena mencionar: un guard ve la petición **cruda, sin validar**, porque los pipes de validación se ejecutan después.",
   },
   'nestjs-validation-pipe-query-transform': {
     prompt:
       "```ts\n// main.ts\napp.useGlobalPipes(new ValidationPipe());\n\n// list-query.dto.ts\nexport class ListQueryDto {\n  @IsInt()\n  @Min(1)\n  page: number;\n}\n\n// controller\n@Get()\nlist(@Query() query: ListQueryDto) { ... }\n```\n¿Qué pasa con `GET /products?page=2` y cuál es la solución?",
     options: {
       a: 'Funciona y `query.page` es el número `2`, porque el tipo de TypeScript le indica a Nest que lo convierta',
-      b: 'Falla con 400 `page must be an integer number`: los valores del query llegan como strings. Habilita `transform: true` con `transformOptions: { enableImplicitConversion: true }`, o agrega `@Type(() => Number)` a la propiedad',
+      b: 'Falla con 400 (`page must be an integer number`): los valores del query llegan como strings. Habilita `transform: true`, junto con la conversión implícita o con `@Type` en la propiedad:\n\n```ts\nnew ValidationPipe({\n  transform: true,\n  transformOptions: { enableImplicitConversion: true },\n});\n// or keep transform: true and add\n@Type(() => Number)\npage: number;\n```',
       c: 'Falla con 400; se soluciona poniendo `ParseIntPipe` en la propiedad `page` del DTO',
       d: 'Funciona, pero `query.page` es el string `"2"` porque los validadores ignoran los parámetros de query',
     },
     explanation:
-      "Los tipos de TypeScript se borran en tiempo de ejecución; todo lo que viene en un query string o en la ruta es un string. `ValidationPipe` construye una instancia del DTO con class-transformer y ejecuta class-validator sobre ella, así que `@IsInt()` ve `\"2\"` y falla. `transform: true` hace que el pipe le pase al handler la **instancia transformada** (y convierte parámetros primitivos como `@Query('page') page: number`), mientras que `enableImplicitConversion` o un `@Type(() => Number)` explícito convierten las propiedades del DTO usando la metadata de tipos reflejada. `ParseIntPipe` es un pipe de parámetro (`@Query('page', ParseIntPipe)`), no un decorador de propiedad. En producción agrega también `whitelist: true` (elimina las propiedades desconocidas) y a menudo `forbidNonWhitelisted: true` para bloquear la asignación masiva (mass assignment).",
+      "Los tipos de TypeScript se borran en tiempo de ejecución; todo lo que viene en un query string o en la ruta es un string. `ValidationPipe` construye una instancia del DTO con class-transformer y ejecuta class-validator sobre ella, así que `@IsInt()` ve `\"2\"` y falla (`@Min(1)` también falla, así que el 400 lista ambos mensajes). `transform: true` hace que el pipe le pase al handler la **instancia transformada** (y convierte parámetros primitivos como `@Query('page') page: number`), mientras que `enableImplicitConversion` (que usa la metadata `design:type` reflejada) o un `@Type(() => Number)` explícito convierten la propiedad del DTO. `@Type` sin `transform: true` solo hace que la validación pase: el pipe le sigue entregando al handler el objeto plano original, así que `query.page` sigue siendo el string `\"2\"`. `ParseIntPipe` es un pipe de parámetro (`@Query('page', ParseIntPipe)`), no un decorador de propiedad. En producción agrega también `whitelist: true` (elimina las propiedades desconocidas) y a menudo `forbidNonWhitelisted: true` para bloquear la asignación masiva (mass assignment).",
   },
   'nestjs-guards-vs-middleware-roles': {
     prompt:
@@ -78,7 +78,7 @@ export const translations: Record<string, QuestionTranslation> = {
       "```ts\n@Injectable()\nexport class TimingInterceptor implements NestInterceptor {\n  constructor(private readonly metrics: Metrics) {}\n\n  intercept(ctx: ExecutionContext, next: CallHandler): Observable<unknown> {\n    const start = Date.now();\n    return next.handle().pipe(\n      tap(() => this.metrics.observe(Date.now() - start)),\n    );\n  }\n}\n```\nRegistrado de forma global, este interceptor mide la latencia de las peticiones exitosas, pero no registra nada para las que fallan con un 500 desde el handler o con un 403 desde un guard. ¿Por qué?",
     options: {
       a: 'Los exception filters se ejecutan antes que los interceptors, así que el observable se completa vacío cuando hay un fallo',
-      b: 'El callback de `tap` solo se ejecuta con los valores emitidos: una excepción del handler llega al interceptor como una notificación de **error** de RxJS y se lo salta (usa `finalize` o `tap({ next, error })`). El rechazo de un guard ocurre **antes** de que se ejecuten los interceptors, así que el interceptor ni siquiera ve esas peticiones',
+      b: 'El callback de `tap` solo se ejecuta con los valores emitidos: una excepción del handler llega al interceptor como una notificación de **error** de RxJS y se lo salta (usa `finalize`, o pásale a `tap` un observer con un callback `error`). El rechazo de un guard ocurre **antes** de que se ejecuten los interceptors, así que el interceptor ni siquiera ve esas peticiones',
       c: 'Nest deshabilita los interceptors globales para las respuestas que no son 2xx, para evitar logs duplicados',
       d: 'Nadie se suscribe a `next.handle()` cuando hay fallos, porque Nest solo se suscribe cuando el handler se resuelve',
     },
@@ -89,7 +89,7 @@ export const translations: Record<string, QuestionTranslation> = {
     prompt:
       '`OrdersModule` necesita `PaymentsService` para cobrarle a un cliente, y `PaymentsModule` necesita `OrdersService` para marcar un pedido como pagado cuando llega un webhook. Nest reporta una dependencia circular. ¿Cómo la resuelves y cómo estructuras los módulos para que no siga pasando?',
     modelAnswer:
-      "`forwardRef(() => PaymentsModule)` en ambos lados (más `@Inject(forwardRef(() => OrdersService))` para los providers) hace que arranque, pero solo esconde un problema de diseño y vuelve frágil el orden de inicialización, así que lo trato como último recurso. El ciclo indica que los dos módulos comparten un concepto o que uno se está metiendo en las responsabilidades del otro. Primera opción: invertir una dirección con eventos. Payments emite `PaymentSucceeded` (mediante `@nestjs/event-emitter`, CQRS o un message broker) y Orders se suscribe, así Payments ya no depende de Orders. Segunda opción: extraer la parte compartida (por ejemplo, un port `OrderStatus` o un `BillingModule` que orqueste a ambos) para que las dependencias apunten en un solo sentido. Mantengo los módulos alineados con bounded contexts y exporto solo un servicio facade acotado, nunca repositorios. La infraestructura realmente transversal (configuración, logging, base de datos) vive en módulos registrados una sola vez con `forRoot`/`forRootAsync` y marcados con `@Global()` con moderación. Una regla de lint sobre la dirección de los imports o una verificación del grafo de dependencias en CI (por ejemplo `madge` o `dependency-cruiser`) detecta los ciclos nuevos a tiempo.",
+      "`forwardRef()` en los imports de ambos módulos (`forwardRef(() => PaymentsModule)` en `OrdersModule`, `forwardRef(() => OrdersModule)` en `PaymentsModule`), más `@Inject(forwardRef(() => ...))` en los parámetros del constructor de los dos servicios, hace que arranque, pero solo esconde un problema de diseño y vuelve frágil el orden de inicialización, así que lo trato como último recurso. El ciclo indica que los dos módulos comparten un concepto o que uno se está metiendo en las responsabilidades del otro. Primera opción: invertir una dirección con eventos. Payments emite `PaymentSucceeded` (mediante `@nestjs/event-emitter`, CQRS o un message broker) y Orders se suscribe, así Payments ya no depende de Orders. Segunda opción: extraer la parte compartida (por ejemplo, un port `OrderStatus` o un `BillingModule` que orqueste a ambos) para que las dependencias apunten en un solo sentido. Mantengo los módulos alineados con bounded contexts y exporto solo un servicio facade acotado, nunca repositorios. La infraestructura realmente transversal (configuración, logging, base de datos) vive en módulos registrados una sola vez con `forRoot`/`forRootAsync` y marcados con `@Global()` con moderación. Una regla de lint sobre la dirección de los imports o una verificación del grafo de dependencias en CI (por ejemplo `madge` o `dependency-cruiser`) detecta los ciclos nuevos a tiempo.",
     rubric: [
       'Menciona `forwardRef`, pero explica por qué es un parche y no la solución',
       'Propone romper el ciclo con eventos de dominio (event emitter, CQRS o un broker) para que las dependencias apunten en un solo sentido',

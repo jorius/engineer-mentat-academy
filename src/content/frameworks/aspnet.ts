@@ -33,7 +33,7 @@ export const questions: Question[] = [
     prompt:
       '```csharp\n[ApiController]\n[Route("api/[controller]")]\npublic class OrdersController : ControllerBase\n{\n    private readonly IOrderService _orders;\n\n    public OrdersController(IOrderService orders)\n    {\n        _orders = orders;\n    }\n\n    [HttpGet("{id}")]\n    public IActionResult GetById(int id)\n    {\n        var order = _orders.Find(id);\n        if (order is null)\n        {\n            return NotFound();\n        }\n        return Ok(order);\n    }\n}\n```\nWhich statement correctly describes this controller?',
     options: [
-      { id: 'a', text: "`IOrderService orders` must be resolved manually inside the constructor with `HttpContext.RequestServices.GetService<IOrderService>()`; ASP.NET Core controllers only support property injection, not constructor injection" },
+      { id: 'a', text: "`IOrderService orders` must be resolved manually inside the constructor:\n\n```csharp\n_orders = HttpContext.RequestServices.GetService<IOrderService>();\n```\nASP.NET Core controllers only support property injection, not constructor injection" },
       { id: 'b', text: "`[ApiController]` is what makes the route reachable at all; without it, routing ignores `[HttpGet]`/`[Route]` entirely and treats the class as a plain, unrouted object" },
       { id: 'c', text: "Because `GetById` returns `IActionResult`, the response is always serialized as XML unless the client explicitly sends an `Accept: application/json` header — JSON is only a negotiated fallback" },
       { id: 'd', text: '`IOrderService orders` is supplied by DI when the controller is activated, since `IOrderService` is registered on `builder.Services`; `[Route("api/[controller]")]` plus `[HttpGet("{id}")]` map to `GET /api/Orders/{id}`' },
@@ -73,7 +73,7 @@ export const questions: Question[] = [
     level: 'mid',
     kind: 'single',
     prompt:
-      '```csharp\npublic record CreateOrderRequest(string CustomerId, List<string> ItemIds);\n\napp.MapPost("/orders", (CreateOrderRequest request, IOrderService orders) =>\n{\n    var id = orders.Create(request.CustomerId, request.ItemIds);\n    return Results.Created($"/orders/{id}", new { id });\n});\n```\n`IOrderService` is registered in `builder.Services`. A client `POST`s `{"customerId": "c1", "itemIds": ["i1"]}` as the request body. How are the two parameters bound?',
+      '```csharp\npublic record CreateOrderRequest(string CustomerId, List<string> ItemIds);\n\napp.MapPost("/orders", (CreateOrderRequest request, IOrderService orders) =>\n{\n    var id = orders.Create(request.CustomerId, request.ItemIds);\n    return Results.Created($"/orders/{id}", new { id });\n});\n```\n`IOrderService` is registered in `builder.Services`. A client `POST`s this request body:\n\n```json\n{\n  "customerId": "c1",\n  "itemIds": ["i1"]\n}\n```\nHow are the two parameters bound?',
     options: [
       { id: 'a', text: "Both parameters are bound from the body: minimal APIs deserialize the JSON payload independently into every complex-type parameter, splitting properties by name across them" },
       { id: 'b', text: "Minimal APIs require an explicit `[FromBody]` attribute on `request`; without it, the endpoint throws `InvalidOperationException` at startup because a `record` parameter's source can never be inferred" },

@@ -141,7 +141,7 @@ export const questions: Question[] = [
     level: 'junior',
     kind: 'single',
     prompt:
-      "```js\napp.get('/orders/:id', async (req, res) => {\n  throw new Error('db down');\n});\n\napp.use((err, req, res) => {\n  res.status(500).json({ error: err.message });\n});\n```\nThe custom error handler never runs; clients get Express's default HTML error page. What is wrong?",
+      "```js\napp.get('/orders/:id', async (req, res) => {\n  throw new Error('db down');\n});\n\napp.use((err, req, res) => {\n  res.status(500).json({ error: err.message });\n});\n```\nOn **Express 5**, the custom error handler never runs; clients get Express's default HTML error page. What is wrong?",
     options: [
       { id: 'a', text: 'The error handler must be registered **before** the routes it protects' },
       { id: 'b', text: 'Error handlers must be registered with `app.error(...)`, not `app.use(...)`' },
@@ -152,7 +152,7 @@ export const questions: Question[] = [
     tags: ['error-middleware', 'express-5'],
     source: 'topic-list',
     explanation:
-      "Express checks `fn.length === 4` to decide whether a layer is an error handler. With three parameters this function is treated as a normal middleware (so `err` would actually be `req`), and it is skipped while an error is being propagated. Declare `(err, req, res, next)` even if you never call `next`, and register it **after** all routes. In Express 5 the rejected promise from the async route is forwarded to `next(err)` automatically, so once the signature is fixed the handler does run.",
+      "Express checks `fn.length === 4` to decide whether a layer is an error handler. With three parameters this function is treated as a normal middleware (so `err` would actually be `req`), and it is skipped while an error is being propagated. Declare `(err, req, res, next)` even if you never call `next`, and register it **after** all routes. In Express 5 the rejected promise from the async route is forwarded to `next(err)` automatically, so once the signature is fixed the handler does run. On Express 4 the rejected promise would never reach any error handler, so the arity fix alone would not be enough there.",
   },
   {
     id: 'express-async-errors-v4-vs-v5',
@@ -165,7 +165,7 @@ export const questions: Question[] = [
       "```js\napp.get('/users/:id', async (req, res) => {\n  const user = await repo.findById(req.params.id); // rejects: connection refused\n  res.json(user);\n});\n\napp.use((err, req, res, next) => {\n  res.status(500).json({ error: 'internal' });\n});\n```\nWhat happens when `repo.findById` rejects on **Express 4** versus **Express 5** (Node 20+)?",
     options: [
       { id: 'a', text: 'Both versions forward the rejection to the error handler; the client gets a 500 JSON body' },
-      { id: 'b', text: 'Express 4 never sees the rejection: it becomes an unhandled rejection (which crashes the process by default on Node 15+) and the request hangs; Express 5 forwards the rejected promise to `next(err)`, so the error handler answers 500' },
+      { id: 'b', text: "Express 4 never sees the rejection: it becomes an unhandled rejection that crashes the process by default on Node 15+ (the client's connection drops; if an `unhandledRejection` listener keeps the process alive, the request hangs instead); Express 5 forwards the rejected promise to `next(err)`, so the error handler answers 500" },
       { id: 'c', text: 'Express 4 forwards it to the error handler; Express 5 removed automatic error forwarding in favour of `try/catch`' },
       { id: 'd', text: 'Both versions return a 500 from the default handler because the custom handler is declared after the route' },
     ],
@@ -173,7 +173,7 @@ export const questions: Question[] = [
     tags: ['async', 'express-5', 'unhandled-rejection'],
     source: 'topic-list',
     explanation:
-      "Express 4's router calls the handler and ignores its return value, so a rejected promise escapes it entirely. The usual Express 4 fixes were wrapping every handler in `try/catch` + `next(err)`, an `asyncHandler(fn)` wrapper that does `.catch(next)`, or the `express-async-errors` patch. Express 5 checks whether a handler returns a promise and calls `next(err)` when it rejects, for middleware and route handlers alike. It still does **not** catch errors thrown later inside callbacks such as `setTimeout` or an event emitter, because those are not part of the returned promise.",
+      "Express 4's router calls the handler and ignores its return value, so a rejected promise escapes it entirely. With Node's default `--unhandled-rejections=throw` the process then exits and every in-flight connection is dropped; only when something registers an `unhandledRejection` listener does the process survive, and then this request hangs with no response. The usual Express 4 fixes were wrapping every handler in `try/catch` + `next(err)`, an `asyncHandler(fn)` wrapper that does `.catch(next)`, or the `express-async-errors` patch. Express 5 checks whether a handler returns a promise and calls `next(err)` when it rejects, for middleware and route handlers alike. It still does **not** catch errors thrown later inside callbacks such as `setTimeout` or an event emitter, because those are not part of the returned promise.",
   },
   {
     id: 'express-next-semantics',
@@ -225,7 +225,7 @@ export const questions: Question[] = [
     level: 'senior',
     kind: 'single',
     prompt:
-      "```js\napp.get('/export.csv', async (req, res) => {\n  res.setHeader('Content-Type', 'text/csv');\n  for await (const row of db.streamRows()) {\n    res.write(toCsv(row)); // the DB connection drops half-way\n  }\n  res.end();\n});\n\napp.use((err, req, res, next) => {\n  logger.error(err);\n  res.status(500).json({ error: 'internal' });\n});\n```\nWhat should the error handler do for this failure?",
+      "```js\napp.get('/export.csv', async (req, res) => {\n  res.setHeader('Content-Type', 'text/csv');\n  for await (const row of db.streamRows()) {\n    res.write(toCsv(row)); // the DB connection drops half-way\n  }\n  res.end();\n});\n\napp.use((err, req, res, next) => {\n  logger.error(err);\n  res.status(500).json({ error: 'internal' });\n});\n```\nOn **Express 5**, what should the error handler do for this failure?",
     options: [
       { id: 'a', text: 'Nothing changes; `res.status(500)` will replace the partial CSV with a JSON body' },
       { id: 'b', text: 'Call `res.end()` so the client receives a truncated but "successful" 200 download' },
@@ -236,7 +236,7 @@ export const questions: Question[] = [
     tags: ['streaming', 'headers-sent', 'error-middleware'],
     source: 'topic-list',
     explanation:
-      "Once the status line and headers are on the wire you cannot change the status code. Trying produces `ERR_HTTP_HEADERS_SENT` inside your error handler. Express's docs prescribe exactly this guard: if `res.headersSent`, call `next(err)` and let the built-in handler close the socket. The client then sees an aborted transfer instead of a truncated file that looks complete. Ending the response cleanly with `res.end()` is the worst choice because it turns a failure into silent data loss.\n\n**Say this out loud:** \"An error handler has to check `res.headersSent`; after streaming has started the only honest signal left is aborting the connection, so I delegate to Express's default handler.\"",
+      "Once the status line and headers are on the wire you cannot change the status code. Trying produces `ERR_HTTP_HEADERS_SENT` inside your error handler. Express's docs prescribe exactly this guard: if `res.headersSent`, call `next(err)` and let the built-in handler close the socket. The client then sees an aborted transfer instead of a truncated file that looks complete. Ending the response cleanly with `res.end()` is the worst choice because it turns a failure into silent data loss. (This relies on Express 5 forwarding the rejected async handler to the error middleware; on Express 4 the handler would need an async wrapper to be reached at all.)\n\n**Say this out loud:** \"An error handler has to check `res.headersSent`; after streaming has started the only honest signal left is aborting the connection, so I delegate to Express's default handler.\"",
   },
   {
     id: 'express-compose-middleware-fix',
@@ -247,7 +247,7 @@ export const questions: Question[] = [
     kind: 'fix',
     language: 'typescript',
     prompt:
-      "This is a Koa-style `compose` (the model behind promise-aware middleware stacks). Each middleware gets `(ctx, next)` and `next()` returns a promise for **the whole rest of the chain**. It has two bugs:\n\n1. `await next()` does not wait for downstream async middleware, so the \"after\" half of the onion runs too early.\n2. Calling `next()` twice from the same middleware silently runs the downstream chain again; it must reject with `Error('next() called multiple times')`.\n\nFix **only `compose`**. The scenarios and `solution` below it are the test harness. Downstream errors (sync or async) must stay catchable by an upstream `try { await next() } catch {}`.",
+      "This is a Koa-style `compose` (the model behind promise-aware middleware stacks). Each middleware gets `(ctx, next)` and `next()` returns a promise for **the whole rest of the chain**. It has two bugs:\n\n1. `await next()` does not wait for downstream async middleware, so the \"after\" half of the onion runs too early.\n2. Calling `next()` twice from the same middleware silently runs the downstream chain again; it must reject with `Error('next() called multiple times')`.\n\nFix **only `compose`**. The scenarios and `solution` below it are the test harness. Downstream errors (sync or async) must stay catchable by an upstream middleware that wraps its call like this:\n\n```ts\ntry {\n  await next();\n} catch {}\n```",
     starter: `${composeTypes}${buggyCompose}${composeScenarios}`,
     tests: [
       { name: 'onion order with async middleware', args: ['onion'], expected: ['logger:in', 'auth:in', 'handler', 'auth:out', 'logger:out'] },
@@ -259,7 +259,7 @@ export const questions: Question[] = [
     tags: ['compose', 'onion-model', 'async', 'next'],
     source: 'topic-list',
     explanation:
-      "The `next` passed to each middleware must **return** `dispatch(i + 1)`. Otherwise the caller awaits `undefined`, which resolves on the next microtask while the downstream work is still pending. Returning the promise is also what makes a downstream rejection travel back up to the caller's `try/catch`; a dropped promise becomes an unhandled rejection instead. The `lastIndex` guard detects re-entry: `next()` from middleware `i` must advance the index past `i` exactly once. The `try/catch` around `fn(...)` turns a synchronous throw into a rejected promise, so callers see one error channel.\n\nExpress's own `next` is callback-style and returns nothing, which is why Express 4 could not see async errors and why Express 5 added promise-rejection handling in the router.\n\n**Say this out loud:** \"Middleware composition is an onion: `next()` has to return a promise for the entire downstream chain, otherwise post-processing runs too early and downstream errors escape as unhandled rejections.\"",
+      "The `next` passed to each middleware must **return** `dispatch(i + 1)`. Otherwise the caller awaits a promise that settles as soon as the synchronous part of `dispatch` returns, while the downstream async work is still pending. Returning the promise is also what makes a downstream rejection travel back up to the caller's `try/catch`; a dropped promise becomes an unhandled rejection instead. The `lastIndex` guard detects re-entry: `next()` from middleware `i` must advance the index past `i` exactly once. The `try/catch` around `fn(...)` turns a synchronous throw into a rejected promise, so callers see one error channel.\n\nExpress's own `next` is callback-style and returns nothing, even in Express 5, so `await next()` in Express does not wait for downstream handlers and there is no onion-style post-processing. Async errors are a separate mechanism: Express 4 ignored the promise a handler returned, and Express 5's router attaches a rejection handler to that promise and calls `next(err)`.\n\n**Say this out loud:** \"Middleware composition is an onion: `next()` has to return a promise for the entire downstream chain, otherwise post-processing runs too early and downstream errors escape as unhandled rejections.\"",
   },
   {
     id: 'express-production-hardening',
