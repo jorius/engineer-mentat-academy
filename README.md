@@ -8,6 +8,16 @@ or talk through a design and score yourself against a rubric. Nothing leaves you
 
 ![The workbench: a fix-the-code question with the editor, the hidden tests and the console](docs/screenshots/workbench.png)
 
+## A word of caution
+
+This project was vibe-coded in a single day: AI agents wrote most of the code and all of the
+questions, hints and translations, then other agents audited and fixed them. It is a study aid,
+not a reference. Some answers, explanations or hints may be wrong, outdated or debatable, and the
+runtime versions a question assumes may have moved on. Bring your own judgement: when something
+looks off, check the official documentation and primary sources before you commit it to memory,
+and open an issue or a pull request so it gets fixed. Treating every marked answer as a claim to
+verify is good interview practice anyway.
+
 ## Why it exists
 
 Interview prep sites are either flash cards or a paywall. This is a study workbench: every
@@ -56,6 +66,8 @@ On every question: up to three attempts (configurable), a hint, Show answer when
 Skip when you want to move on, Mark for review, and private notes. Code exercises have a Run
 button and a console that shows what your program logged and which tests passed. Options are
 shown in a stable shuffled order so the answer's position never helps.
+
+![A solved question: the wrong pick is struck through, the correct option is highlighted, and the explanation ends with a line to say out loud](docs/screenshots/solved.png)
 
 Keyboard: `Ctrl+Enter` submits, `Ctrl+Shift+Enter` runs, `N` next, `H` hint, `M` mark, `Esc`
 closes the notes.
