@@ -12,10 +12,10 @@ export const questions: Question[] = [
     prompt:
       'A class component subscribes to a store in `componentDidMount` and unsubscribes in `componentWillUnmount`. Which function-component code is the equivalent?',
     options: [
-      { id: 'a', text: '`useEffect(() => { subscribe(); return () => unsubscribe(); }, [])`' },
-      { id: 'b', text: '`useEffect(() => { subscribe(); unsubscribe(); }, [])`' },
-      { id: 'c', text: '`useEffect(() => { subscribe(); return () => unsubscribe(); })` (no dependency array)' },
-      { id: 'd', text: '`useMemo(() => subscribe(), [])` plus `useEffect(() => unsubscribe, [])`' },
+      { id: 'a', text: '```js\nuseEffect(() => {\n  subscribe();\n  return () => unsubscribe();\n}, []);\n```' },
+      { id: 'b', text: '```js\nuseEffect(() => {\n  subscribe();\n  unsubscribe();\n}, []);\n```' },
+      { id: 'c', text: '```js\nuseEffect(() => {\n  subscribe();\n  return () => unsubscribe();\n});\n```\n(no dependency array)' },
+      { id: 'd', text: '```js\nuseMemo(() => subscribe(), []);\nuseEffect(() => unsubscribe, []);\n```' },
     ],
     answer: 'a',
     tags: ['useEffect', 'cleanup', 'class-components'],
@@ -40,6 +40,7 @@ function Chat({ roomId }) {
 }
 
 // development build, React 18+
+const root = createRoot(document.getElementById('root'));
 root.render(<StrictMode><Chat roomId="a" /></StrictMode>);
 \`\`\`
 What is logged right after the first mount?`,
@@ -53,7 +54,7 @@ What is logged right after the first mount?`,
     tags: ['strict-mode', 'useEffect', 'cleanup'],
     source: 'topic-list',
     explanation:
-      'In development, `StrictMode` mounts the component, runs its effects, simulates an unmount (running cleanups) and mounts it again. It exists to expose effects whose cleanup does not undo the setup. If the cleanup were missing you would end up with two open connections, which is exactly the bug it is trying to show you. Production runs the effect once.\n\nThe wrong fix is a `useRef` flag that skips the second run; the right fix is a symmetric cleanup.',
+      'In development, `StrictMode` mounts the component, runs its effects, simulates an unmount (running cleanups) and mounts it again. It exists to expose effects whose cleanup does not undo the setup. If the cleanup were missing you would end up with two open connections, which is exactly the bug it is trying to show you. Production runs the effect once. The double run needs a `createRoot` root; React 18\'s legacy `ReactDOM.render` roots never re-ran effects.\n\nThe wrong fix is a `useRef` flag that skips the second run; the right fix is a symmetric cleanup.',
   },
   {
     id: 'react-error-boundary-scope',
@@ -86,7 +87,7 @@ What is logged right after the first mount?`,
     kind: 'multi',
     prompt: 'Which of these break the Rules of Hooks? Select all that apply.',
     options: [
-      { id: 'a', text: '`if (!user) return null;` placed before `const [tab, setTab] = useState("a");`' },
+      { id: 'a', text: '```js\nif (!user) return null;\nconst [tab, setTab] = useState("a");\n```\n(in this order, in a component body)' },
       { id: 'b', text: 'Calling `useState` inside a `for` loop over a `fields` prop' },
       { id: 'c', text: 'Calling `useContext(Theme)` inside a custom hook `useThemeColor()` that the component calls at its top level' },
       { id: 'd', text: 'Calling `useEffect` inside a plain helper `function track() {}` that runs from an `onClick` handler' },
@@ -234,7 +235,7 @@ export function solution(actions: Action[]): State[] {
     tags: ['useReducer', 'immutability', 'pure-functions'],
     source: 'notion',
     explanation:
-      'A reducer runs during rendering, so it must be pure: same `(state, action)` in, same state out, no mutation. `existing.qty++` followed by `return { ...state }` looks immutable but mutates the line object the previous state still points to, which is why the test records the whole history.\n\nWhy `useReducer` over several `useState` calls: the *what happened* (actions from event handlers) is separated from the *how state changes* (the reducer), the reducer can be unit-tested with no component, and one action like `clear` can describe one user interaction even when it changes many fields. Returning the same reference for unknown actions lets React bail out of the re-render.',
+      'A reducer runs during rendering, so it must be pure: same `(state, action)` in, same state out, no mutation. A tempting `add` looks immutable but is not:\n\n```ts\nconst existing = state.lines.find((l) => l.id === action.id);\nexisting.qty++;\nreturn { ...state };\n```\n\nIt mutates the line object the previous state still points to, which is why the test records the whole history.\n\nWhy `useReducer` over several `useState` calls: the *what happened* (actions from event handlers) is separated from the *how state changes* (the reducer), the reducer can be unit-tested with no component, and one action like `clear` can describe one user interaction even when it changes many fields. Returning the same reference for unknown actions lets React bail out of the re-render.',
   },
   {
     id: 'react-fetch-effect-race',
@@ -390,7 +391,7 @@ export function solution(changes: Change[], delay: number): Change[] {
     topic: 're-rendering',
     level: 'junior',
     kind: 'multi',
-    prompt: 'Which of these cause `Child` (not wrapped in `React.memo`) to re-render? Select all that apply.',
+    prompt: 'Which of these cause `Child` (not wrapped in `React.memo`, in an app that does not use the React Compiler) to re-render? Select all that apply.',
     options: [
       { id: 'a', text: '`Child` calls its own state setter with a different value' },
       { id: 'b', text: 'The parent re-renders, even though the props it passes to `Child` are identical' },
@@ -402,7 +403,7 @@ export function solution(changes: Change[], delay: number): Change[] {
     tags: ['rendering', 'context', 'refs'],
     source: 'notion',
     explanation:
-      'A component re-renders when (1) its own state changes, (2) its parent re-renders (by default children re-render with their parent, whether or not props changed), or (3) a context it consumes changes. Refs are deliberately outside that system: writing `ref.current` never schedules a render. Mutating a prop in place does not schedule a render either; React only learns about changes through state setters, and the mutation will also defeat any `memo` comparison later.\n\nA render is not a DOM update: React re-runs the component, diffs the result and commits only what changed.',
+      'A component re-renders when (1) its own state changes, (2) its parent re-renders (by default children re-render with their parent, whether or not props changed), or (3) a context it consumes changes. Refs are deliberately outside that system: writing `ref.current` never schedules a render. Mutating a prop in place does not schedule a render either; React only learns about changes through state setters, and the mutation will also defeat any `memo` comparison later.\n\nA render is not a DOM update: React re-runs the component, diffs the result and commits only what changed.\n\nWith the React Compiler enabled, the parent\'s JSX is memoized, so an unchanged `<Child />` element is skipped as if `Child` were wrapped in `memo`; that is why the prompt rules the compiler out.',
   },
   {
     id: 'react-memo-inline-callback',
@@ -423,7 +424,7 @@ function List({ tickets }) {
   ));
 }
 \`\`\`
-When \`selected\` changes, which rows re-render?`,
+When \`selected\` changes, which rows re-render? (The app does not use the React Compiler.)`,
     options: [
       { id: 'a', text: 'Only the clicked row, because `React.memo` skips the others' },
       { id: 'b', text: 'None; `selected` is not passed to any row' },
@@ -434,7 +435,7 @@ When \`selected\` changes, which rows re-render?`,
     tags: ['React.memo', 'useCallback', 'referential-equality'],
     source: 'notion',
     explanation:
-      '`React.memo` does a **shallow** comparison of props. The inline arrow is a new function on each render of `List`, so `onSelect` is never equal and memo never skips anything; you pay for the comparison and get nothing. Fix: pass a stable handler, e.g. `const handleSelect = useCallback((id) => setSelected(id), [])`, or pass `setSelected` directly (state setters are already stable). The same trap applies to inline objects like `style={{...}}`. The React Compiler, where enabled, inserts this memoization automatically.',
+      '`React.memo` does a **shallow** comparison of props. The inline arrow is a new function on each render of `List`, so `onSelect` is never equal and memo never skips anything; you pay for the comparison and get nothing. Fix: pass a stable handler, e.g. `const handleSelect = useCallback((id) => setSelected(id), [])`, or pass `setSelected` directly (state setters are already stable). The same trap applies to inline objects like `style={{...}}`. With the React Compiler enabled, the arrow would be cached (it only reads the stable `setSelected`) and no row would re-render; that is why the prompt rules the compiler out.',
   },
   {
     id: 'react-keys-index-state-fix',
@@ -511,7 +512,7 @@ function TicketList({ tickets }) {
 }
 \`\`\``,
     modelAnswer:
-      '`filtered` is derived state: it can always be computed from `tickets` and `query`, so storing it creates a second source of truth that must be kept in sync. The effect runs after paint, so every change renders once with stale data and then renders again. It is also fragile: forget a dependency and the list silently goes stale, and `useState(tickets)` only uses `tickets` for the initial value. Replace the state and the effect with a value computed during render: `const filtered = tickets.filter(...)`, wrapped in `useMemo(..., [tickets, query])` only if the filter is measurably expensive. The rule is minimal state (raw data plus user intent) and derive everything else. The same thinking applies to "reset state when a prop changes": use a `key` instead of an effect. Copying a prop into state is only right when the user edits a draft on purpose, and then the prop should be named `initialX`.',
+      '`filtered` is derived state: it can always be computed from `tickets` and `query`, so storing it creates a second source of truth that must be kept in sync. The effect runs only after the render is committed, so every change first commits a render with the stale `filtered` list and then renders again (when `tickets` changes after a fetch, users can even see that stale frame). It is also fragile: forget a dependency and the list silently goes stale, and `useState(tickets)` only uses `tickets` for the initial value. Replace the state and the effect with a value computed during render: `const filtered = tickets.filter(...)`, wrapped in `useMemo(..., [tickets, query])` only if the filter is measurably expensive. The rule is minimal state (raw data plus user intent) and derive everything else. The same thinking applies to "reset state when a prop changes": use a `key` instead of an effect. Copying a prop into state is only right when the user edits a draft on purpose, and then the prop should be named `initialX`.',
     rubric: [
       'Names it derived/duplicated state and the single-source-of-truth problem',
       'Explains the extra render with stale data caused by syncing in an effect',
@@ -575,7 +576,7 @@ function TicketList({ tickets }) {
     level: 'junior',
     kind: 'single',
     prompt:
-      'Interviewers ask about data binding. In React, `const [name, setName] = useState("Ada")` and the JSX renders `<input value={name} />` with no `onChange`. What happens when the user types?',
+      'Interviewers ask about data binding. In a development build of React, `const [name, setName] = useState("Ada")` and the JSX renders `<input value={name} />` with no `onChange`. What happens when the user types?',
     options: [
       { id: 'a', text: 'The input and `name` both update (two-way binding)' },
       { id: 'b', text: 'The input keeps showing "Ada", and React warns that `value` was provided without `onChange`' },
@@ -586,7 +587,7 @@ function TicketList({ tickets }) {
     tags: ['controlled-components', 'data-binding', 'core-25'],
     source: 'core-list',
     explanation:
-      'React has **one-way** data flow: `value={name}` makes the input controlled, so on every render React forces the DOM value back to `name`. Keystrokes change nothing until an `onChange` calls `setName(e.target.value)`, which is how React does what other frameworks call two-way binding. For an uncontrolled input, use `defaultValue` and read the value through a ref or `FormData` on submit. If read-only is intended, add `readOnly` to silence the warning.',
+      'React has **one-way** data flow: `value={name}` makes the input controlled, so after every input event React puts the DOM value back to `name` (no re-render is needed). Keystrokes change nothing until an `onChange` calls `setName(e.target.value)`, which is how React does what other frameworks call two-way binding. For an uncontrolled input, use `defaultValue` and read the value through a ref or `FormData` on submit. If read-only is intended, add `readOnly` to silence the warning (the warning exists only in development builds).',
   },
   {
     id: 'react-large-form-performance',
@@ -640,9 +641,9 @@ function TicketList({ tickets }) {
     level: 'senior',
     kind: 'single',
     prompt:
-      'A parent component you do not own passes `query` (updated on every keystroke) to your `<BigList query={query} />`, which filters and renders 20,000 rows. Typing in the search box lags. You may change only `BigList`. Which is the right tool?',
+      'In a React 19 app rendered with `createRoot`, a parent component you do not own passes `query` (updated on every keystroke) to your `<BigList query={query} />`, which filters and renders 20,000 rows. Typing in the search box lags. You may change only `BigList`. Which is the right tool?',
     options: [
-      { id: 'a', text: '`const deferred = useDeferredValue(query)` and filter with `deferred` inside `useMemo`' },
+      { id: 'a', text: '`const deferred = useDeferredValue(query)`, and build the filtered rows from `deferred` inside `useMemo` (or pass `deferred` to a `memo`-wrapped list)' },
       { id: 'b', text: '`useTransition`, wrapping `setQuery` in `startTransition`' },
       { id: 'c', text: 'Wrap `BigList` in `React.memo`' },
       { id: 'd', text: 'Filter inside `useLayoutEffect` so the work happens before paint' },
@@ -651,6 +652,6 @@ function TicketList({ tickets }) {
     tags: ['useDeferredValue', 'useTransition', 'concurrent-rendering'],
     source: 'notion',
     explanation:
-      'Both concurrent hooks mark work as non-urgent so React can interrupt it to keep typing responsive. `useTransition` wraps the **state update**, so you need to own the setter (wrapping `setQuery` in `startTransition` is impossible here). `useDeferredValue` wraps a **value you receive**: React first re-renders with the old deferred value, then renders the new one in the background and abandons it if another keystroke arrives. The `useMemo` matters: without it the urgent render still re-filters. `React.memo` cannot help because `query` really changes on each keystroke, and `useLayoutEffect` blocks paint even harder. Unlike a debounce there is no fixed delay: fast devices update almost immediately. For network requests you still debounce. Show `query !== deferred` as a "stale" hint.\n\n**Say this out loud:** "`useTransition` when I own the state update, `useDeferredValue` when I only receive the value; both keep input urgent and let the expensive render be interrupted, which a debounce cannot do."',
+      'Both concurrent hooks mark work as non-urgent so React can interrupt it to keep typing responsive. `useTransition` wraps the **state update**, so you need to own the setter (wrapping `setQuery` in `startTransition` is impossible here). `useDeferredValue` wraps a **value you receive**: React first re-renders with the old deferred value, then renders the new one in the background and abandons it if another keystroke arrives. The memoization matters: the urgent render still runs `BigList` with the old deferred value, so unless the rows themselves (the JSX, not only the filtered array) are memoized on `deferred` or rendered by a `memo` child, it re-filters and re-renders all 20,000 rows anyway. `React.memo` cannot help because `query` really changes on each keystroke, and `useLayoutEffect` blocks paint even harder. Unlike a debounce there is no fixed delay: fast devices update almost immediately. For network requests you still debounce. Show `query !== deferred` as a "stale" hint.\n\n**Say this out loud:** "`useTransition` when I own the state update, `useDeferredValue` when I only receive the value; both keep input urgent and let the expensive render be interrupted, which a debounce cannot do."',
   },
 ];

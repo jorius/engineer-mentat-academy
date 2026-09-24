@@ -11,10 +11,10 @@ export const questions: Question[] = [
     kind: 'single',
     prompt: "Which Prisma query returns each user's `email` and their `posts`, and **no other** `User` fields?",
     options: [
-      { id: 'a', text: '`prisma.user.findMany({ select: { email: true, posts: true } })`' },
-      { id: 'b', text: '`prisma.user.findMany({ select: { email: true }, include: { posts: true } })`' },
-      { id: 'c', text: '`prisma.user.findMany({ include: { email: true, posts: true } })`' },
-      { id: 'd', text: '`prisma.user.findMany({ where: { posts: { some: {} } }, select: { email: true } })`' },
+      { id: 'a', text: '```ts\nprisma.user.findMany({\n  select: { email: true, posts: true },\n});\n```' },
+      { id: 'b', text: '```ts\nprisma.user.findMany({\n  select: { email: true },\n  include: { posts: true },\n});\n```' },
+      { id: 'c', text: '```ts\nprisma.user.findMany({\n  include: { email: true, posts: true },\n});\n```' },
+      { id: 'd', text: '```ts\nprisma.user.findMany({\n  where: { posts: { some: {} } },\n  select: { email: true },\n});\n```' },
     ],
     answer: 'a',
     tags: ['select', 'include', 'prisma-client'],
@@ -50,7 +50,7 @@ export const questions: Question[] = [
     level: 'senior',
     kind: 'single',
     prompt:
-      'Using the classic `query` relation load strategy, what does `prisma.user.findMany({ take: 100, include: { posts: true } })` send to the database?',
+      'Using the classic `query` relation load strategy, what does this call send to the database?\n```ts\nprisma.user.findMany({\n  take: 100,\n  include: { posts: true },\n});\n```',
     options: [
       { id: 'a', text: '101 queries: one for the users and one per user for posts' },
       { id: 'b', text: 'One query with a `LEFT JOIN` between `User` and `Post`' },
@@ -72,7 +72,7 @@ export const questions: Question[] = [
     kind: 'code',
     language: 'typescript',
     prompt:
-      "A nightly job needs post titles for tens of thousands of author ids. One `findMany` per author is N+1; one `findMany` with every id in a single `in` list exceeds the driver's bind-parameter limit. `findMany` below is a fake of `prisma.post.findMany({ where: { authorId: { in: ids } } })` that counts queries and throws when a call binds more than `chunkSize` ids.\n\nReturn `{ queries, titles }` where `titles[i]` holds the titles for `authorIds[i]` (table order, `[]` when none). De-duplicate the ids, split them into chunks of at most `chunkSize`, and send one query per chunk. Send no query for an empty list.",
+      "A nightly job needs post titles for tens of thousands of author ids. One `findMany` per author is N+1; one `findMany` with every id in a single `in` list builds one enormous statement and loads every row at once, and Prisma cannot always split it for you. `findMany` below fakes this call, counting queries and throwing when a call binds more than `chunkSize` ids:\n```ts\nprisma.post.findMany({\n  where: { authorId: { in: ids } },\n});\n```\n\nReturn `{ queries, titles }` where `titles[i]` holds the titles for `authorIds[i]` (table order, `[]` when none). De-duplicate the ids, split them into chunks of at most `chunkSize`, and send one query per chunk. Send no query for an empty list.",
     starter: `type Post = { id: number; authorId: number; title: string };
 
 export function solution(table: Post[], authorIds: number[], chunkSize: number) {
@@ -148,7 +148,7 @@ export function solution(table: Post[], authorIds: number[], chunkSize: number) 
     tags: ['n-plus-one', 'batching', 'chunking', 'bind-parameters'],
     source: 'topic-list',
     explanation:
-      'Batching trades N round trips for ceil(unique / chunkSize). Chunking matters because databases and drivers cap bind parameters per statement (PostgreSQL\'s protocol allows 65,535; SQL Server 2,100), and huge `IN` lists also produce big plans and big result sets held in memory. De-duplicate first so repeated keys do not waste parameter slots, group with a `Map`, and map back to the caller\'s order. For truly large jobs, stream with cursor pagination (`cursor` + `take`) instead of loading everything at once.',
+      'Batching trades N round trips for ceil(unique / chunkSize). Chunking matters because databases and drivers cap bind parameters per statement (PostgreSQL\'s protocol allows 65,535; SQL Server 2,100), and huge `IN` lists also produce big plans and big result sets held in memory. Prisma\'s query engine can split a plain oversized `in` list into several queries by itself, but not every filter shape (negated filters such as `notIn` fail with "Query parameter limit exceeded"), and it still returns everything in one call; explicit chunks keep statement size, memory and retries under your control. De-duplicate first so repeated keys do not waste parameter slots, group with a `Map`, and map back to the caller\'s order. For truly large jobs, stream with cursor pagination (`cursor` + `take`) instead of loading everything at once.',
   },
   {
     id: 'prisma-interactive-transactions',
@@ -170,6 +170,6 @@ export function solution(table: Post[], authorIds: number[], chunkSize: number) 
     tags: ['transactions', 'concurrency', 'optimistic-locking', 'idempotency'],
     source: 'topic-list',
     explanation:
-      'Interviewers use this to see whether you understand that a transaction alone does not prevent a read-then-write race at the default READ COMMITTED isolation, and that side effects outside the database do not belong inside it.\n\n**Say this out loud:** "I make the stock check and decrement a single conditional update, keep the transaction to database work only, and handle the payment outside it with an idempotency key and a compensating step."',
+      'Interviewers use this to see whether you understand that a transaction alone does not prevent a read-then-write race at the default isolation level (READ COMMITTED on PostgreSQL; MySQL\'s REPEATABLE READ does not stop it either), and that side effects outside the database do not belong inside it.\n\n**Say this out loud:** "I make the stock check and decrement a single conditional update, keep the transaction to database work only, and handle the payment outside it with an idempotency key and a compensating step."',
   },
 ];

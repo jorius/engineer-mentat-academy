@@ -59,7 +59,7 @@ At \`/orders/42\`, \`order\` is \`undefined\` even though an order with \`id: 42
     level: 'mid',
     kind: 'single',
     prompt:
-      'With `createBrowserRouter`, a parent route `/projects/:id` has loader A and its child `/projects/:id/tasks` has loader B. The user clicks a link to `/projects/7/tasks`. When do the loaders run?',
+      'With `createBrowserRouter`, a parent route `/projects/:id` has loader A and its child `/projects/:id/tasks` has loader B. The user is on the home page `/` and clicks a link to `/projects/7/tasks`. When do the loaders run?',
     options: [
       { id: 'a', text: 'A and B start in parallel before the new routes render; the old page stays visible with `useNavigation().state === "loading"`' },
       { id: 'b', text: 'A runs, the parent renders, then B runs when the child mounts' },
@@ -70,7 +70,7 @@ At \`/orders/42\`, \`order\` is \`undefined\` even though an order with \`id: 42
     tags: ['loaders', 'data-router', 'waterfalls'],
     source: 'topic-list',
     explanation:
-      'Data routers know every matched route before rendering, so they call all matched loaders in parallel as soon as navigation starts, and render when the data is ready. Fetching in `useEffect` inside nested components creates a waterfall: the parent fetches, renders, then the child starts fetching. Read the data with `useLoaderData`; show pending UI with `useNavigation`; stream slow, non-critical data by returning a promise and rendering it with `<Await>` inside `<Suspense>`. After an `action` (form submission) the router revalidates the loaders automatically.',
+      'Data routers know every matched route before rendering, so they call all matched loaders in parallel as soon as navigation starts, and render when the data is ready. (Had the user already been on `/projects/7`, only B would run: on a plain navigation the router skips loaders of routes that stay rendered with the same params, unless `shouldRevalidate` says otherwise.) Fetching in `useEffect` inside nested components creates a waterfall: the parent fetches, renders, then the child starts fetching. Read the data with `useLoaderData`; show pending UI with `useNavigation`; stream slow, non-critical data by returning a promise and rendering it with `<Await>` inside `<Suspense>`. After an `action` (form submission) the router revalidates the loaders automatically.',
   },
   {
     id: 'react-router-navigate-replace',
@@ -82,10 +82,10 @@ At \`/orders/42\`, \`order\` is \`undefined\` even though an order with \`id: 42
     prompt:
       'After a successful login on `/login`, you send the user to the page they originally requested. Pressing the browser Back button afterwards must **not** return to the login form. Which call do you use?',
     options: [
-      { id: 'a', text: '`navigate(from ?? "/dashboard", { replace: true })`' },
-      { id: 'b', text: '`navigate(from ?? "/dashboard")`' },
-      { id: 'c', text: '`window.location.href = from ?? "/dashboard"`' },
-      { id: 'd', text: '`navigate(-1)`' },
+      { id: 'a', text: '```js\nnavigate(from ?? "/dashboard", {\n  replace: true,\n});\n```' },
+      { id: 'b', text: '```js\nnavigate(from ?? "/dashboard");\n```' },
+      { id: 'c', text: '```js\nwindow.location.href = from ?? "/dashboard";\n```' },
+      { id: 'd', text: '```js\nnavigate(-1);\n```' },
     ],
     answer: 'a',
     tags: ['useNavigate', 'history', 'auth-redirect'],
@@ -103,16 +103,16 @@ At \`/orders/42\`, \`order\` is \`undefined\` even though an order with \`id: 42
     prompt:
       'Design authentication and role-based access for a React Router app with a public marketing area, a signed-in app area, and an admin section. Cover where the checks live, how redirects behave, and what the client-side guard does **not** protect.',
     modelAnswer:
-      'I group routes under layout routes: a public layout, an authenticated layout and an admin layout nested inside it, each rendering an `<Outlet />`. With a data router, the check goes in the layout route\'s loader: if there is no session, `throw redirect("/login?from=" + encodeURIComponent(path))`, and if the role is wrong, throw a 403 response handled by the route\'s `errorElement`. Because loaders run before rendering, protected UI never flashes, and one check covers every child route. Without loaders, a `<RequireAuth>` layout component renders `<Navigate replace state={{ from: location }} />` while showing a spinner during the session check. After login I navigate to `from` with `replace` so Back does not return to the form. Admin routes are code-split with `lazy` so the admin bundle is not shipped to everyone. Most important: client guards are UX, not security; every API endpoint must enforce authentication and authorization on the server, because anyone can call the API or change the JavaScript.',
+      'I group routes under layout routes: a public layout, an authenticated layout and an admin layout nested inside it, each rendering an `<Outlet />`. With a data router, the check goes in the layout route\'s `middleware` (always on in React Router v8; behind `future.v8_middleware` in v7): if there is no session, `throw redirect("/login?from=" + encodeURIComponent(path))`, and if the role is wrong, throw a 403 response handled by the route\'s `errorElement`. Middleware runs before any loader, so one check covers every child route and protected UI never flashes. A redirect thrown only from the parent\'s loader is not enough, because matched loaders run in parallel and the child loaders would still run. Without a data router, a `<RequireAuth>` layout component shows a spinner while the session check is pending, then renders `<Navigate to="/login" replace state={{ from: location }} />` if there is no session. After login I navigate to `from` with `replace`, following it only if it is a same-origin path (no open redirect), so Back does not return to the form. Admin routes are code-split with `lazy` so the admin bundle is not shipped to everyone. Most important: client guards are UX, not security; every API endpoint must enforce authentication and authorization on the server, because anyone can call the API or change the JavaScript.',
     rubric: [
       'Uses nested layout routes with `<Outlet />` so one check covers a subtree',
-      'Puts the check in a loader (`redirect`) or a guard component with `<Navigate replace>` and preserves the original location',
+      'Puts the check in layout-route middleware (or in every loader, knowing matched loaders run in parallel) or in a guard component with `<Navigate replace>`, and preserves the original location',
       'Handles the loading state and avoids flashing protected content',
       'States clearly that the server must enforce authorization; client guards are UX only',
     ],
     tags: ['auth', 'layout-routes', 'loaders', 'security'],
     source: 'topic-list',
     explanation:
-      'The trap answer is "wrap each page in `if (!user) return <Navigate />`": it duplicates checks, flashes content, and implies the client is a security boundary.\n\n**Say this out loud:** "I guard whole subtrees with a layout route and check auth in its loader so nothing renders before the decision, but I treat that as UX; the API enforces authorization on every request."',
+      'The trap answer is "wrap each page in `if (!user) return <Navigate />`": it duplicates checks, flashes content, and implies the client is a security boundary.\n\n**Say this out loud:** "I guard whole subtrees with a layout route and check auth in its middleware so nothing loads or renders before the decision, but I treat that as UX; the API enforces authorization on every request."',
   },
 ];

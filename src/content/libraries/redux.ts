@@ -11,17 +11,17 @@ export const questions: Question[] = [
     kind: 'multi',
     prompt: 'Which of these break the rules for a plain Redux reducer (no Redux Toolkit)? Select all that apply.',
     options: [
-      { id: 'a', text: '`return { ...state, items: [...state.items, action.item] };`' },
-      { id: 'b', text: '`state.count++; return state;`' },
-      { id: 'c', text: "`fetch('/api/audit', { method: 'POST', body: JSON.stringify(action) });`" },
+      { id: 'a', text: '```js\nreturn {\n  ...state,\n  items: [...state.items, action.item],\n};\n```' },
+      { id: 'b', text: '```js\nstate.count++;\nreturn state;\n```' },
+      { id: 'c', text: "```js\nfetch('/api/audit', {\n  method: 'POST',\n  body: JSON.stringify(action),\n});\n```" },
       { id: 'd', text: 'Creating the new item with `id: crypto.randomUUID()` inside the reducer' },
-      { id: 'e', text: '`return state;` for an action type the reducer does not handle' },
+      { id: 'e', text: '```js\nreturn state;\n```\n(for an action type the reducer does not handle)' },
     ],
     answer: ['b', 'c', 'd'],
     tags: ['reducers', 'pure-functions', 'immutability'],
     source: 'topic-list',
     explanation:
-      'A reducer must be a pure function of `(state, action)`: no mutation (`state.count++`), no side effects such as network calls (`fetch`), and no non-deterministic values such as random ids or `Date.now()`, because replaying the same actions (time-travel debugging, tests, SSR hydration) must produce the same state. Generate ids in the action creator (Redux Toolkit\'s `prepare` callback) and put side effects in thunks, listeners or middleware. Returning the existing state for unknown actions is required: it keeps the reference unchanged, so subscribers know nothing changed.',
+      'A reducer must be a pure function of `(state, action)`: no mutation (`state.count++`), no side effects such as network calls (`fetch`), and no non-deterministic values such as random ids or `Date.now()`, because replaying the same actions (time-travel debugging, tests, replaying a recorded action log) must produce the same state. Generate ids in the action creator (Redux Toolkit\'s `prepare` callback) and put side effects in thunks, listeners or middleware. Returning the existing state for unknown actions is required: it keeps the reference unchanged, so subscribers know nothing changed.',
   },
   {
     id: 'redux-reducer-immutability-fix',
@@ -327,7 +327,7 @@ export function solution(todos: Todo[], steps: Step[]) {
     tags: ['selectors', 'reselect', 'memoization', 'useSelector', 'core-25'],
     source: 'topic-list',
     explanation:
-      "`useSelector` runs the selector after **every** dispatch and re-renders when the result is `!==` the previous one. A selector that returns `filter(...)` produces a new array every time, so the component re-renders on unrelated actions. Memoizing on the input references works because reducers use structural sharing: a theme toggle creates a new root object but keeps the same `todos` array. Reselect's `createSelector` (re-exported by Redux Toolkit) does exactly this with a cache size of 1, which is why a selector shared by several components with different arguments needs a factory (one selector instance per component) or a bigger cache.\n\n**Say this out loud:** \"Selectors that derive arrays or objects must be memoized, otherwise `useSelector` sees a new reference on every dispatch and re-renders. Memoization works because immutable updates keep unchanged branches referentially equal.\"",
+      "`useSelector` runs the selector after **every** dispatch and re-renders when the result is `!==` the previous one. A selector that returns `filter(...)` produces a new array every time, so the component re-renders on unrelated actions. Memoizing on the input references works because reducers use structural sharing: a theme toggle creates a new root object but keeps the same `todos` array. This exercise builds the classic cache-of-one version, which is what Reselect 4 did (`defaultMemoize`, now `lruMemoize`) and why selectors shared by components with different arguments used to need a factory. Reselect 5, re-exported by Redux Toolkit 2, defaults to `weakMapMemoize`, which keeps one result per distinct set of arguments, so per-component factories are rarely needed now.\n\n**Say this out loud:** \"Selectors that derive arrays or objects must be memoized, otherwise `useSelector` sees a new reference on every dispatch and re-renders. Memoization works because immutable updates keep unchanged branches referentially equal.\"",
   },
   {
     id: 'redux-toolkit-immer-reassign',
@@ -359,7 +359,7 @@ Which case reducer does **not** change the store state?`,
     tags: ['immer', 'createSlice'],
     source: 'topic-list',
     explanation:
-      '`createSlice` runs case reducers through Immer: `state` is a draft proxy, and Immer records **mutations** of that draft (the `push` in `added`, the assignment in `couponApplied`) or accepts a **returned** replacement value (as in `cleared`). `state = ...` only rebinds a local variable; the draft is untouched and nothing is returned, so Immer returns the original state. Write `return initialState` instead. The other Immer trap: you may mutate the draft **or** return a new value, not both; doing both throws.',
+      '`createSlice` runs case reducers through Immer: `state` is a draft proxy, and Immer records **mutations** of that draft (the `push` in `added`, the assignment in `couponApplied`) or accepts a **returned** replacement value (as in `cleared`). `state = ...` only rebinds a local variable; the draft is untouched and nothing is returned, so Immer returns the original state. Write `return { items: [], coupon: null };` instead (or hoist that object into a named `initialState` constant and return it). The other Immer trap: you may mutate the draft **or** return a new value, not both; doing both throws.',
   },
   {
     id: 'redux-async-thunk-vs-rtk-query',

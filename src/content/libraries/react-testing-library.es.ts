@@ -18,19 +18,19 @@ export const translations: Record<string, QuestionTranslation> = {
     explanation: '`get` = debe existir ahora (lanza un error con un volcado útil del DOM). `query` = puede no existir, devuelve `null`, sin reintentos: úsalo para `expect(screen.queryByRole("alert")).not.toBeInTheDocument()`. `find` = va a existir pronto: es `getBy` envuelto en `waitFor`, así que le haces `await`. Las variantes `*All*` siguen las mismas reglas para "no se encontró nada": `getAllBy` lanza un error, `queryAllBy` devuelve `[]`.',
   },
   'react-testing-library-user-event': {
-    prompt: 'Un input de teléfono bloquea las letras en un handler `onKeyDown`. El test `fireEvent.change(input, { target: { value: "abc" } })` seguido de una aserción de que el valor está vacío **falla**, aunque el componente funciona en el navegador. ¿Qué cambio hace que el test ejercite la interacción real?',
+    prompt: 'Un input de teléfono bloquea las letras en un handler `onKeyDown`. Este test **falla**, aunque el componente funciona en el navegador:\n```js\nfireEvent.change(input, {\n  target: { value: "abc" },\n});\nexpect(input).toHaveValue("");\n```\n¿Qué cambio hace que el test ejercite la interacción real?',
     options: {
-      a: '`const user = userEvent.setup();` y luego `await user.type(input, \'abc\')`',
-      c: '`userEvent.type(input, \'abc\')` sin `await` (user-event v14)',
+      a: '```js\nconst user = userEvent.setup();\nawait user.type(input, \'abc\');\n```',
+      c: '```js\nuserEvent.type(input, \'abc\');\n```\nsin `await` (user-event v14)',
     },
     explanation: '`fireEvent.change` despacha un único evento sintético `change` con el valor ya asignado, saltándose `keydown`, `keypress`, `input` y `keyup`, así que el handler que bloquea las letras nunca se ejecuta. `user.type` simula lo que hace el navegador con cada carácter (foco, eventos de teclado, eventos de input, respetando `preventDefault`). En user-event v14 cada API devuelve una promesa; olvidar el `await` en `userEvent.type` significa que la aserción se ejecuta antes de que terminen los eventos. Crea el `user` con `userEvent.setup()` antes de renderizar.',
   },
   'react-testing-library-async-findby': {
     prompt: '```jsx\ntest(\'shows the user name\', () => {\n  render(<UserCard id="1" />); // fetches the user in an effect (mocked with MSW)\n  expect(screen.getByText(\'Ada Lovelace\')).toBeInTheDocument();\n});\n```\nEl test falla con "Unable to find an element with the text: Ada Lovelace". ¿Cuál es la corrección correcta?',
     options: {
-      a: 'Hacer el test `async` y usar `expect(await screen.findByText(\'Ada Lovelace\')).toBeInTheDocument()`',
+      a: 'Hacer el test `async` y usar:\n```js\nexpect(\n  await screen.findByText(\'Ada Lovelace\'),\n).toBeInTheDocument();\n```',
       b: 'Envolver `render(...)` en `act(...)`',
-      c: 'Agregar `await new Promise((r) => setTimeout(r, 100))` antes de `getByText`',
+      c: 'Agregar esto antes de `getByText`:\n```js\nawait new Promise((r) => setTimeout(r, 100));\n```',
       d: 'Usar `screen.queryByText` en lugar de `getByText`',
     },
     explanation: 'En el primer render el componente muestra su estado de carga; el nombre aparece solo después de que la petición mockeada se resuelve y el state se actualiza. `findBy*` consulta repetidamente hasta que el elemento aparece (o vence el timeout), y RTL ya envuelve `render`, user-event y `waitFor` en `act`, así que volver a envolver `render` en `act` no cambia nada. Una espera fija es lenta e inestable. `queryByText` solo devuelve `null` y la aserción igual falla. Si además ves advertencias de "not wrapped in act(...)", normalmente significa que ocurrió una actualización después de que el test dejó de esperar, y la corrección es la misma: espera con await el estado de la UI que esperas.',
@@ -38,8 +38,8 @@ export const translations: Record<string, QuestionTranslation> = {
   'react-testing-library-waitfor-pitfalls': {
     prompt: 'Estás revisando una suite de tests. ¿Cuáles de estos son anti-patrones? Selecciona todas las que apliquen.',
     options: {
-      d: '`await waitFor(() => {})` para "dejar que se vacíen las actualizaciones pendientes"',
-      e: '`const user = userEvent.setup()` antes de `render`, y luego `await user.click(...)`',
+      d: '```js\nawait waitFor(() => {});\n```\npara "dejar que se vacíen las actualizaciones pendientes"',
+      e: '```js\nconst user = userEvent.setup();\nrender(...);\nawait user.click(...);\n```',
     },
     explanation: '`waitFor` vuelve a ejecutar su callback hasta que deja de lanzar errores, así que los efectos secundarios dentro de él, como `user.click(saveButton)`, pueden ejecutarse muchas veces (varios clics, varios envíos). Pon la acción antes de `waitFor` y solo aserciones dentro. Varias aserciones en un mismo callback, como el par de `fetchMock` y los resultados, lo hacen esperar a todas y ocultan cuál falló; espera una condición y luego afirma el resto de forma síncrona. Un callback vacío se resuelve en el primer tick y solo funciona por suerte con los tiempos; en su lugar, espera un cambio concreto en la UI. La comprobación síncrona de ausencia con `queryByRole(\'alert\')` y `userEvent.setup()` antes de `render` son los patrones recomendados.\n\n**Dilo en voz alta:** "`waitFor` es un bucle de reintentos para aserciones, así que no debe tener efectos secundarios y debe esperar una sola condición observable; para elementos que aparecen, simplemente uso `findBy`."',
   },
