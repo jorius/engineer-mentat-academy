@@ -9,6 +9,7 @@ import { useTheme } from '../contexts/ThemeContext';
 // hooks
 import { usePreferences } from '../hooks/usePreferences';
 import { useProgress } from '../hooks/useProgress';
+import { useDrills } from '../hooks/useDrills';
 
 // engine
 import { EDITOR_THEMES } from '../engine/editorThemes';
@@ -54,6 +55,7 @@ const PREVIEW_CODE = ['function greet(name: string): string {', "  return `Hello
 export function Settings(): JSX.Element {
   const { t } = useTranslation();
   const { store, progress } = useProgress();
+  const { store: drillsStore } = useDrills();
   const { preferences, store: preferencesStore } = usePreferences();
   const theme = useTheme();
   const [message, setMessage] = useState<StatusMessage | null>(null);
@@ -88,12 +90,14 @@ export function Settings(): JSX.Element {
 
   const clearProgress = (): void => {
     store.reset();
+    drillsStore.reset();
     setMessage({ key: 'settings.cleared' });
     setConfirmText('');
   };
 
   const resetEverything = (): void => {
     store.reset();
+    drillsStore.reset();
     preferencesStore.reset();
     theme.reset();
     try {

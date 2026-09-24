@@ -13,8 +13,11 @@ import { ThemeProvider } from '../contexts/ThemeContext';
 // hooks
 import { PreferencesProvider } from '../hooks/usePreferences';
 import { ProgressProvider } from '../hooks/useProgress';
+import { DrillsProvider } from '../hooks/useDrills';
 
 // engine
+import { createDrillsStore } from '../engine/drills';
+import type { DrillsStore } from '../engine/drills';
 import { createProgressStore } from '../engine/progress';
 import { createPreferencesStore, DEFAULT_PREFERENCES } from '../engine/preferences';
 import type { ProgressStore } from '../engine/progress';
@@ -25,13 +28,15 @@ import i18n, { LANGUAGE_KEY } from '../i18n';
 
 const originalUrlStatics = { createObjectURL: URL.createObjectURL, revokeObjectURL: URL.revokeObjectURL };
 
-function renderSettings(options?: { progressStore?: ProgressStore; preferencesStore?: PreferencesStore }): void {
+function renderSettings(options?: { progressStore?: ProgressStore; preferencesStore?: PreferencesStore; drillsStore?: DrillsStore }): void {
   render(
     <MemoryRouter>
       <PreferencesProvider store={options?.preferencesStore}>
         <ThemeProvider>
           <ProgressProvider store={options?.progressStore ?? createProgressStore(null)}>
-            <Settings />
+            <DrillsProvider store={options?.drillsStore ?? createDrillsStore(null)}>
+              <Settings />
+            </DrillsProvider>
           </ProgressProvider>
         </ThemeProvider>
       </PreferencesProvider>
@@ -162,6 +167,16 @@ describe('Settings', () => {
     await waitFor(() => expect(localStorage.getItem('ema:theme')).toBe('dark'));
     expect(await screen.findByRole('status')).toHaveTextContent(/everything was reset/i);
     expect(screen.getByLabelText(/type reset to confirm/i)).toHaveValue('');
+  });
+
+  it.each([/clear progress/i, /reset everything/i])('clears saved drills on %s', async (name) => {
+    const user = userEvent.setup();
+    const drillsStore = createDrillsStore(null);
+    drillsStore.create({ query: 'unseen=1', questionIds: ['q1', 'q2'] });
+    renderSettings({ drillsStore });
+    await user.type(screen.getByLabelText(/type reset to confirm/i), 'RESET');
+    await user.click(screen.getByRole('button', { name }));
+    expect(drillsStore.all()).toEqual([]);
   });
 
   it('lets the language detector pick the language again after a full reset', async () => {

@@ -12,12 +12,14 @@ import { ThemeProvider } from '../contexts/ThemeContext';
 import { GraderProvider } from '../contexts/GraderContext';
 
 // engine
+import { createDrillsStore } from '../engine/drills';
 import { createProgressStore } from '../engine/progress';
 import type { ProgressStore } from '../engine/progress';
 
 // hooks
 import { PreferencesProvider } from '../hooks/usePreferences';
 import { ProgressProvider } from '../hooks/useProgress';
+import { DrillsProvider } from '../hooks/useDrills';
 
 // utils
 import { parseDrillFilter } from '../utils/drillFilter';
@@ -30,9 +32,11 @@ function renderAt(path: string, store?: ProgressStore): Router {
     <PreferencesProvider>
       <ThemeProvider>
         <ProgressProvider store={store}>
-          <GraderProvider>
-            <RouterProvider router={router} />
-          </GraderProvider>
+          <DrillsProvider store={createDrillsStore(null)}>
+            <GraderProvider>
+              <RouterProvider router={router} />
+            </GraderProvider>
+          </DrillsProvider>
         </ProgressProvider>
       </ThemeProvider>
     </PreferencesProvider>,

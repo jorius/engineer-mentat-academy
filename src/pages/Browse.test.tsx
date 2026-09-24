@@ -16,12 +16,14 @@ import { filterQuestions, loadQuestions } from '../engine/registry';
 
 // i18n
 import i18n from '../i18n';
+import { createDrillsStore } from '../engine/drills';
 import { createProgressStore } from '../engine/progress';
 import type { ProgressStore } from '../engine/progress';
 
 // hooks
 import { PreferencesProvider } from '../hooks/usePreferences';
 import { ProgressProvider } from '../hooks/useProgress';
+import { DrillsProvider } from '../hooks/useDrills';
 
 function renderAt(path: string, store?: ProgressStore): void {
   const router = createMemoryRouter(routes, { initialEntries: [path] });
@@ -29,9 +31,11 @@ function renderAt(path: string, store?: ProgressStore): void {
     <PreferencesProvider>
       <ThemeProvider>
         <ProgressProvider store={store}>
-          <GraderProvider>
-            <RouterProvider router={router} />
-          </GraderProvider>
+          <DrillsProvider store={createDrillsStore(null)}>
+            <GraderProvider>
+              <RouterProvider router={router} />
+            </GraderProvider>
+          </DrillsProvider>
         </ProgressProvider>
       </ThemeProvider>
     </PreferencesProvider>,

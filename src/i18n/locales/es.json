@@ -72,7 +72,10 @@
     "all": "Todos",
     "matchCount_one": "{{count}} pregunta coincide",
     "matchCount_other": "{{count}} preguntas coinciden",
-    "start": "Empezar práctica"
+    "start": "Empezar práctica",
+    "allSubjects": "Todos los temas",
+    "allLevels": "todos los niveles",
+    "allKinds": "todos los tipos"
   },
   "mock": {
     "title": "Entrevista simulada",

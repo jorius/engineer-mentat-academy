@@ -14,6 +14,7 @@ import { GraderProvider } from './contexts/GraderContext';
 // hooks
 import { PreferencesProvider } from './hooks/usePreferences';
 import { ProgressProvider } from './hooks/useProgress';
+import { DrillsProvider } from './hooks/useDrills';
 
 function renderAt(path: string): void {
   const router = createMemoryRouter(routes, { initialEntries: [path] });
@@ -21,9 +22,11 @@ function renderAt(path: string): void {
     <PreferencesProvider>
       <ThemeProvider>
         <ProgressProvider>
-          <GraderProvider>
-            <RouterProvider router={router} />
-          </GraderProvider>
+          <DrillsProvider>
+            <GraderProvider>
+              <RouterProvider router={router} />
+            </GraderProvider>
+          </DrillsProvider>
         </ProgressProvider>
       </ThemeProvider>
     </PreferencesProvider>,

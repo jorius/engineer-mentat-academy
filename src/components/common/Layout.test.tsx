@@ -14,6 +14,7 @@ import { GraderProvider } from '../../contexts/GraderContext';
 // hooks
 import { PreferencesProvider } from '../../hooks/usePreferences';
 import { ProgressProvider } from '../../hooks/useProgress';
+import { DrillsProvider } from '../../hooks/useDrills';
 
 // i18n
 import i18n from '../../i18n';
@@ -24,9 +25,11 @@ function renderAt(path: string): void {
     <PreferencesProvider>
       <ThemeProvider>
         <ProgressProvider>
-          <GraderProvider>
-            <RouterProvider router={router} />
-          </GraderProvider>
+          <DrillsProvider>
+            <GraderProvider>
+              <RouterProvider router={router} />
+            </GraderProvider>
+          </DrillsProvider>
         </ProgressProvider>
       </ThemeProvider>
     </PreferencesProvider>,

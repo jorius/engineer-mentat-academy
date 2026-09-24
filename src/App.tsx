@@ -9,6 +9,7 @@ import { GraderProvider } from './contexts/GraderContext';
 // hooks
 import { PreferencesProvider } from './hooks/usePreferences';
 import { ProgressProvider } from './hooks/useProgress';
+import { DrillsProvider } from './hooks/useDrills';
 
 // components
 import { Layout } from './components/common/Layout';
@@ -49,9 +50,11 @@ export function App(): JSX.Element {
     <PreferencesProvider>
       <ThemeProvider>
         <ProgressProvider>
-          <GraderProvider>
-            <RouterProvider router={router} />
-          </GraderProvider>
+          <DrillsProvider>
+            <GraderProvider>
+              <RouterProvider router={router} />
+            </GraderProvider>
+          </DrillsProvider>
         </ProgressProvider>
       </ThemeProvider>
     </PreferencesProvider>
