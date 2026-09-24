@@ -28,6 +28,13 @@ describe('formatJsValue', () => {
     expect(formatJsValue("it's")).toBe("'it\\'s'");
     expect(formatJsValue({})).toBe('{}');
   });
+
+  it('keeps special numbers, bigints and non-plain objects readable', () => {
+    expect(formatJsValue([NaN, Infinity, -Infinity, -0, 1.5])).toBe('[NaN, Infinity, -Infinity, -0, 1.5]');
+    expect(formatJsValue(10n)).toBe('10n');
+    expect(formatJsValue(new Date(0))).toBe(new Date(0).toString());
+    expect(formatJsValue(Object.create(null))).toBe('{}');
+  });
 });
 
 describe('formatTestBlock', () => {

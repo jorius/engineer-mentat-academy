@@ -1,6 +1,7 @@
 // packages
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import type { JSX } from 'react';
 
 // engine
@@ -13,12 +14,12 @@ import { Button } from '../primitives/Button';
 
 type Props = { run: RunResult | null; tests: readonly TestCase[]; open: boolean; onToggle: () => void; onClear: () => void };
 
-function outcomeDetail(outcome: TestOutcome, tests: readonly TestCase[]): string {
+function outcomeDetail(outcome: TestOutcome, tests: readonly TestCase[], t: TFunction): string {
   if (outcome.error !== undefined) {
     return outcome.error;
   }
   const expected = tests.find((test) => test.name === outcome.name)?.expected;
-  return `expected ${formatJsValue(expected)}, got ${formatJsValue(outcome.actual)}`;
+  return t('console.expectedGot', { expected: formatJsValue(expected), actual: formatJsValue(outcome.actual) });
 }
 
 function lineCount(run: RunResult | null): number {
@@ -75,7 +76,7 @@ export function ConsolePanel({ run, tests, open, onToggle, onClear }: Props): JS
             {run?.tests.map((outcome) => (
               <div key={`test-${outcome.name}`} data-console-line className={outcome.passed ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
                 <span aria-hidden="true">{outcome.passed ? '✓' : '✗'}</span> <span className="sr-only">{outcome.passed ? t('console.passed') : t('console.failed')}: </span>
-                {outcome.passed ? outcome.name : `${outcome.name} — ${outcomeDetail(outcome, tests)}`}
+                {outcome.passed ? outcome.name : `${outcome.name} — ${outcomeDetail(outcome, tests, t)}`}
               </div>
             ))}
             {run !== null && run.status !== 'ok' && (

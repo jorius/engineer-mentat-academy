@@ -37,9 +37,9 @@ export function CodeExercise({ question, disabled, onSubmit, value, onChange, re
   return (
     <div className="space-y-3">
       <CodeEditor value={source} onChange={setSource} language={question.language} ariaLabel={t('question.solution')} readOnly={readOnly} minLines={18} />
-      <div aria-label={t('question.hiddenTests')} className="text-sm">
+      <section aria-label={t('question.hiddenTests')} className="text-sm">
         <Markdown text={formatTestBlock(question.tests, question.language, (name): string => t('question.test', { name }))} />
-      </div>
+      </section>
       <div className="flex gap-2">
         {!submitLabelHidden && (
           <Button disabled={disabled} onClick={(): void => onSubmit({ kind: 'code', source })}>{t('question.submit')}</Button>

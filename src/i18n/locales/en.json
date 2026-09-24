@@ -257,7 +257,8 @@
     "clear": "Clear",
     "empty": "Nothing logged yet. Run the tests to see console output.",
     "passed": "passed",
-    "failed": "failed"
+    "failed": "failed",
+    "expectedGot": "expected {{expected}}, got {{actual}}"
   },
   "feedback": {
     "pass": "Correct",

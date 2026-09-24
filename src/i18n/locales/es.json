@@ -257,7 +257,8 @@
     "clear": "Limpiar",
     "empty": "Todavía no hay salida. Ejecuta las pruebas para ver la consola.",
     "passed": "pasó",
-    "failed": "falló"
+    "failed": "falló",
+    "expectedGot": "esperado {{expected}}, obtenido {{actual}}"
   },
   "feedback": {
     "pass": "Correcto",

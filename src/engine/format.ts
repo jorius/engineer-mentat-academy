@@ -10,13 +10,27 @@ export function formatValue(value: unknown): string {
 
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
 
+function isPlainObject(value: object): boolean {
+  const proto: unknown = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
 /** A value the way a JavaScript developer writes it: `{ total: 5, tags: ['a', 'b'] }`. */
 export function formatJsValue(value: unknown): string {
   if (typeof value === 'string') {
     return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
   }
+  if (typeof value === 'number') {
+    return Object.is(value, -0) ? '-0' : String(value);
+  }
+  if (typeof value === 'bigint') {
+    return `${value}n`;
+  }
   if (Array.isArray(value)) {
     return `[${value.map(formatJsValue).join(', ')}]`;
+  }
+  if (value !== null && typeof value === 'object' && !isPlainObject(value)) {
+    return String(value);
   }
   if (value !== null && typeof value === 'object') {
     const entries = Object.entries(value as Record<string, unknown>).map(

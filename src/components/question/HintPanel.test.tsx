@@ -26,4 +26,9 @@ describe('HintPanel', () => {
     render(<HintPanel hint="Piensa en el alcance." />);
     expect(within(screen.getByRole('note')).getByText('Pista')).toBeInTheDocument();
   });
+
+  it('takes focus when it appears so keyboard users land on the revealed hint', () => {
+    render(<HintPanel hint="Think about `this`." />);
+    expect(document.activeElement).toBe(screen.getByRole('note'));
+  });
 });
