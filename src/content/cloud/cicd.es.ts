@@ -13,6 +13,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Si reconstruyes por entorno, lo que probaste en staging no es lo que corre en producción: la resolución de dependencias, las actualizaciones de la imagen base o los flags de build pueden diferir. **Construye una vez, despliega muchas**: produce un artefacto inmutable y versionado, guárdalo en un registry y promuévelo por referencia (tag o digest), mientras la configuración y los secretos específicos de cada entorno vienen del propio entorno (parameter store, secrets manager, variables de entorno). `latest` es mutable, así que no puedes saber qué está corriendo ni hacer rollback de forma confiable.',
+    hint:
+      'Pregúntate si lo que probaste en staging es, byte por byte, lo que llega a producción, y de dónde debería salir la configuración específica de cada entorno.',
   },
   'cicd-blue-green-vs-canary': {
     prompt:
@@ -25,6 +27,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '**Blue/green** ejecuta la versión nueva como un entorno paralelo completo, lo prueba y luego cambia el router o el DNS en un solo paso; el rollback es instantáneo (volver a cambiar), pero duplica la capacidad durante el cambio y todos los usuarios llegan a v2 al mismo tiempo. **Canary** limita el blast radius exponiendo primero un porcentaje pequeño y condicionando cada paso a las métricas (automated canary analysis). **Rolling** reemplaza instancias por lotes sin control a nivel de tráfico ni una comparación limpia. En términos de AWS: CodeDeploy soporta desplazamiento canary y lineal para Lambda y ECS, los alias de Lambda soportan tráfico ponderado, y los target groups ponderados del ALB lo hacen para servicios. Ojo con el vocabulario: AWS llama "blue/green" a su tipo de despliegue de ECS incluso cuando desplaza el tráfico en pasos canary o lineales entre los dos task sets; lo que hace que este escenario sea un canary es la primera porción pequeña, condicionada a métricas y comparada con v1 en vivo, no la cantidad de entornos. Todas requieren cambios de esquema compatibles hacia atrás, porque dos versiones corren al mismo tiempo.',
+    hint:
+      'Fíjate en cuánto tráfico ve la versión nueva en cada paso, y en si continuar depende de comparar sus métricas con las de la versión anterior.',
   },
   'cicd-pipeline-quality-gates': {
     prompt:
@@ -37,12 +41,16 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Los buenos gates son **rápidos, deterministas y significativos**: corrección (tipos, tests), capacidad de build, seguridad (SCA, SAST, escaneo de secretos, escaneo de imágenes) y, para la promoción a producción, también un smoke test y métricas de salud o de canary después del despliegue. Las aprobaciones manuales en todas partes frenan la entrega sin aportar señal; resérvalas para producción (o reemplázalas por automated canary analysis). El 100% de cobertura invita a escribir tests que no verifican nada; usa un umbral razonable o cobertura sobre las líneas cambiadas. Los tests inestables (flaky) se deben corregir o poner en cuarentena, porque un gate que la gente aprende a volver a ejecutar no es un gate.',
+    hint:
+      'Un buen gate es rápido, determinista y aporta señal real; pregúntate de cada verificación si detecta problemas o solo frena la entrega e invita a hacer trampa.',
   },
   'cicd-canary-gate-decision': {
     prompt:
       'Implementa el paso de decisión de un automated canary analysis. `solution(baseline, canary)` recibe estas métricas de la versión anterior y de la nueva sobre la misma ventana:\n\n```ts\ntype Metrics = {\n  requests: number;\n  errors: number;\n  p99Ms: number;\n};\n```\n\nDevuelve:\n\n- `\'wait\'` si el canary tiene menos de **500** solicitudes (todavía no hay suficientes datos);\n- en otro caso, `\'rollback\'` si la tasa de errores del canary (`errors / requests`) está **más de 1 punto porcentual** por encima de la tasa de errores del baseline, **o** si el p99 del canary está **más de un 20%** por encima del p99 del baseline;\n- en otro caso, `\'promote\'`.',
     explanation:
       'Las tres reglas reflejan un canary analysis real (Argo Rollouts, Flagger, Spinnaker Kayenta, CodeDeploy con alarmas de CloudWatch). Compara **tasas**, no conteos crudos: el canary recibe mucho menos tráfico que el baseline, así que su cantidad absoluta de errores siempre es menor. La regla de muestra mínima evita promover (o hacer rollback) por el ruido de un puñado de solicitudes. Compara contra el **baseline en vivo** sobre la misma ventana en lugar de un umbral fijo, para que un incidente global o un pico de tráfico no culpe al canary. Los sistemas de producción agregan pruebas estadísticas y exigen varios intervalos sanos consecutivos antes de cada paso.',
+    hint:
+      'Revisa primero el tamaño de la muestra, luego compara tasas de error (no conteos brutos) y una razón de latencia contra la baseline; cuidado con las comparaciones estrictas frente a inclusivas en los umbrales.',
   },
   'cicd-migrations-and-rollback': {
     prompt:
@@ -58,5 +66,7 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'Señal de senior: reconocer que la base de datos es la parte que no puedes revertir al instante, así que cada cambio de esquema debe ser compatible tanto con la versión anterior como con la siguiente del código.\n\n**Dilo en voz alta:** "Construyo una vez, promuevo la misma imagen, despliego de forma progresiva con rollback automático, y hago que cada migración sea expand-then-contract para que el código viejo y el nuevo puedan correr contra el mismo esquema; el código hace rollback, el esquema avanza."',
+    hint:
+      'Recuerda que el código viejo y el nuevo corren contra el mismo esquema durante un rollout; cubre un único artefacto promovido, expand and contract y por qué el esquema avanza hacia adelante.',
   },
 };

@@ -12,6 +12,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '**IaaS / PaaS / SaaS** describen *qué* le compras a un proveedor y cuánto del stack administras tú. **IaC** describe *cómo* administras infraestructura de cualquier tipo: archivos declarativos en Git, revisados en pull requests y aplicados por automatización, de modo que los entornos sean reproducibles y los cambios auditables en lugar de hacerse a mano con clics en una consola. Puedes usar IaC para administrar recursos IaaS, servicios PaaS, DNS, configuración de SaaS (GitHub, Datadog) y más.',
+    hint:
+      'Un término describe lo que compras a un proveedor y el otro cómo gestionas la infraestructura; asigna cada uno a su categoría.',
   },
   'iac-terraform-saved-plan-apply': {
     prompt:
@@ -24,6 +26,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '`terraform plan` refresca el state, lo compara con tu configuración y propone acciones de crear, actualizar, reemplazar o destruir sin cambiar nada. Un `terraform apply` a secas calcula un plan **nuevo** en el momento del apply, que puede diferir de lo que se revisó si el código, el state o la infraestructura real cambiaron entre medio. Un plan guardado fija las acciones revisadas, y Terraform lo rechaza por obsoleto si el state avanzó. Los archivos de plan pueden contener valores sensibles en texto plano, así que trátalos como artefactos de build secretos, no como commits; muéstralos para revisión con `terraform show`.',
+    hint:
+      'Piensa en qué garantiza un archivo de plan guardado sobre los cambios que se aplican, y qué debería pasar si algo cambió entre la revisión y el apply.',
   },
   'iac-terraform-remote-state-locking': {
     prompt:
@@ -36,6 +40,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'El state mapea las direcciones de tus recursos a los IDs de los recursos reales y guarda sus atributos, para que Terraform sepa qué le pertenece y qué debe cambiar. Tiene que estar **compartido** (todos ven lo más reciente), **bloqueado** (un solo escritor a la vez) y **protegido** (contiene secretos en texto plano, como contraseñas generadas). Un backend remoto da las tres cosas. Para S3, Terraform 1.11+ soporta locking nativo con un objeto `.tflock` en el bucket (experimental en 1.10); la antigua tabla de lock en DynamoDB está deprecada desde 1.11. Habilita el versionado del bucket para recuperarte de una escritura errónea. Los workspaces con el mismo backend solo crean states separados para la misma configuración; no resuelven los applies concurrentes sobre un mismo entorno.',
+    hint:
+      'El problema de fondo son dos escritores sobre un mismo archivo compartido sin exclusión mutua; pregúntate qué cambio agrega realmente un lock y saca el estado de Git.',
   },
   'iac-terraform-module-practices': {
     prompt: '¿Cuáles son buenas prácticas para módulos reutilizables de Terraform? Selecciona todas las que apliquen.',
@@ -47,12 +53,16 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un módulo es una función: entradas tipadas, salidas y ninguna configuración global oculta. Fijar versiones evita que un cambio en un módulo se propague en silencio a todos los entornos. La configuración del provider pertenece al módulo **raíz** y se pasa hacia abajo (de forma implícita, o con `providers = { aws = aws.us_east_1 }`); un módulo hijo con su propio bloque `provider` no se puede usar con `count`, `for_each` ni `depends_on`, y quitarlo después deja recursos huérfanos. Una sola raíz gigante significa plans enormes, applies lentos y un blast radius grande; divide el state por ciclo de vida y por dueño (red, datos, servicios) y conéctalos mediante outputs o data sources.',
+    hint:
+      'Piensa en qué hace que un módulo sea seguro de reutilizar entre llamadores: el versionado, una interfaz clara y tipada, y quién debería configurar los providers.',
   },
   'iac-terraform-plan-diff': {
     prompt:
       'Modela lo que hace `terraform plan`. Implementa `solution(desired, current, forceNew)`, donde `desired` (tu configuración) y `current` (el state refrescado) mapean direcciones de recursos a objetos planos de atributos, y `forceNew` lista los nombres de atributos cuyo cambio exige reemplazo. Devuelve un `Plan` en el que cada arreglo lista sus direcciones **ordenadas**:\n\n```ts\ntype Plan = {\n  create: string[];\n  update: string[];\n  replace: string[];\n  destroy: string[];\n};\n```\n\n- `create`: solo en `desired`.\n- `destroy`: solo en `current`.\n- Para las direcciones presentes en ambos, compara la unión de las keys de atributos con `!==` (una key que falta en un lado cuenta como cambio). Sin cambios: omitir. Cualquier key cambiada que esté en `forceNew`: `replace`. En otro caso: `update`.',
     explanation:
       'Este es el núcleo de toda herramienta declarativa de IaC: comparar la configuración deseada con la realidad refrescada. El caso interesante es **replace**: algunos atributos no pueden cambiar in place (el `ami` de EC2, el `engine` de RDS, el nombre de un bucket), así que el provider los marca como `ForceNew` y el plan muestra `-/+ must be replaced`. En producción, de ahí salen los incidentes, así que quienes revisan buscan primero los reemplazos. Las mitigaciones son `lifecycle { create_before_destroy = true }` para evitar downtime, `prevent_destroy = true` en recursos con estado, y bloques `moved` cuando solo renombraste una dirección (de lo contrario, un renombre parece un destroy más un create).',
+    hint:
+      'Recorre las claves de ambos mapas; para las direcciones compartidas compara la unión de nombres de atributos, revisa si alguno que cambió está en `forceNew` y ordena cada lista al final.',
   },
   'iac-terraform-drift-handling': {
     prompt:
@@ -65,6 +75,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Por defecto, `plan` refresca los recursos administrados desde la API del provider, así que las ediciones hechas por fuera aparecen como cambios que el apply **revertiría** para que coincidan con el código. Ese es el punto de IaC: el código es la fuente de verdad. La decisión es organizacional: conservar el cambio agregándolo a HCL (revisado, y luego el plan no muestra diferencias) o dejar que el apply lo elimine. `plan -refresh-only` / `apply -refresh-only` muestra o acepta el drift en el state sin tocar la infraestructura. Para atributos que legítimamente se administran en otro lado (el desired count de un autoscaler), usa `lifecycle { ignore_changes = [...] }`. Advertencias: el plan ve esta regla solo porque las reglas son inline, así que todo el conjunto de reglas es un atributo que Terraform administra. Con recursos `aws_vpc_security_group_ingress_rule` separados, la regla de la consola sería un objeto nuevo que Terraform nunca creó y el plan no mostraría nada, porque el drift solo se detecta en lo que Terraform administra. Mezclar reglas inline con recursos de regla separados causa un vaivén interminable. Los plans programados de detección de drift en CI lo detectan temprano.\n\n**Dilo en voz alta:** "El plan refresca, así que los cambios hechos en la consola aparecen como drift que el apply revertiría; o codificamos el cambio o dejamos que Terraform lo deshaga, y ejecutamos detección de drift programada para que esto no sea una sorpresa."',
+    hint:
+      'Recuerda qué hace `plan` por defecto con la infraestructura real antes de comparar, y que las reglas inline hacen que el recurso sea dueño del conjunto completo de reglas.',
   },
   'iac-cloudformation-stacks-change-sets': {
     prompt: '¿Qué afirmaciones sobre los stacks y change sets de CloudFormation son verdaderas? Selecciona todas las que apliquen.',
@@ -76,6 +88,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un **stack** es la unidad de despliegue: CloudFormation rastrea sus recursos del lado del servidor (el equivalente al state de Terraform, que AWS administra por ti) y aplica las actualizaciones de forma transaccional, haciendo rollback si algo falla. Los **change sets** son el `plan` de CloudFormation; la columna `Replacement` es lo que revisas antes de tocar bases de datos. La detección de drift es **bajo demanda** y solo reporta. Revertir es opcional: un drift-aware change set (`--deployment-mode REVERT_DRIFT`, disponible desde noviembre de 2025) compara la plantilla con el estado real de los recursos y devuelve las propiedades con drift a su valor, mientras que un change set estándar solo compara la plantilla anterior con la nueva e ignora el drift. Protege los recursos con estado con `DeletionPolicy: Retain` o `Snapshot` y `UpdateReplacePolicy`, agrega stack policies para bloquear actualizaciones a recursos críticos y activa la protección contra terminación en los stacks de producción.\n\n**Dilo en voz alta:** "Siempre despliego a través de un change set y leo la columna Replacement, y pongo políticas de borrado Retain o Snapshot en todo lo que tenga estado, porque un rollback no puede recuperar datos borrados."',
+    hint:
+      'Recuerda qué muestra un change set, el comportamiento por defecto ante un update fallido, y cómo CloudFormation registra los recursos que posee un stack y detecta el drift.',
   },
   'iac-terraform-vs-cloudformation-choice': {
     prompt:
@@ -91,5 +105,7 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'Señal de senior: nada de tribalismo de herramientas; la respuesta dice quién es dueño del state, cómo se comportan los fallos y el rollback, y qué usa ya la organización.\n\n**Dilo en voz alta:** "Solo AWS y queremos que AWS sea dueño del state y del rollback: CloudFormation o CDK. Múltiples providers y un solo flujo de trabajo para todo: Terraform, aceptando que el backend del state es nuestro."',
+    hint:
+      'Parte del alcance (solo AWS o varios proveedores), y luego sopesa quién gestiona el estado y el rollback, el ecosistema de módulos, CDK o HCL, y las habilidades del equipo.',
   },
 };

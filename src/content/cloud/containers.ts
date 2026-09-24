@@ -22,6 +22,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'An **image** is an immutable, layered filesystem plus metadata (entrypoint, env, exposed ports). A **container** is a runtime instance of an image with a thin writable layer on top (copy-on-write) and its own process namespace. Everything written at runtime goes to that layer and disappears with the container. Changes you want to keep belong in the Dockerfile (rebuild the image), and data you want to keep belongs in a volume or an external store. `docker commit` exists but produces unreproducible images; treat containers as disposable.',
+    hint:
+      'Separate the immutable image from the thin copy-on-write layer each container gets, and ask what happens to that layer on removal.',
   },
   {
     id: 'containers-dockerfile-layer-cache-order',
@@ -43,6 +45,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Each instruction produces a layer, and a layer is reused only if the instruction **and everything before it** is unchanged; for `COPY`, the cache key includes the checksums of the copied files. `COPY . .` changes on every edit, so every layer after it rebuilds. Copying only the manifests first means the expensive `npm ci` layer stays cached until dependencies change. General rule: order instructions from least to most frequently changing. `--no-cache` makes things slower, `npm install` in a build is less reproducible than `npm ci`, and BuildKit cache mounts (`RUN --mount=type=cache,target=/root/.npm npm ci`) are a further speed-up on top of the right order.',
+    hint:
+      'A layer is reused only if its instruction and everything before it are unchanged; ask which files the expensive step really depends on.',
   },
   {
     id: 'containers-multi-stage-build-benefits',
@@ -64,6 +68,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Only the **last** stage (or the one selected with `--target`) becomes the image; earlier stages exist only in the build cache. That shrinks the image and its attack surface: no compilers, no dev tooling, no source, no build-time secrets. `COPY --from=<stage>` pulls specific artifacts across. Reproducibility is separate: pin base images by digest (`node:22-slim@sha256:...`) and use a lockfile. Multi-stage also lets you run tests in a dedicated stage that CI targets without shipping test tooling.',
+    hint:
+      'Remember which stage actually becomes the image and what `COPY --from` brings across; judge any reproducibility claim on its own.',
   },
   {
     id: 'containers-dockerignore-purpose',
@@ -85,6 +91,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'The **build context** is the directory tree sent to the builder; `.dockerignore` filters it before any `COPY` or `ADD` can see it. That speeds up builds, keeps the cache stable (a changing `.git` would otherwise bust `COPY . .`), avoids shipping native modules compiled for macOS or Windows into a Linux image, and keeps secrets out of layers, where they stay recoverable even if a later layer deletes them. It only affects building: runtime bind mounts and volumes are unaffected. Pass real secrets at runtime, or at build time with BuildKit `--mount=type=secret`.',
+    hint:
+      '`.dockerignore` filters the build context; ask what that changes at build time and whether it has any effect once the container runs.',
   },
   {
     id: 'containers-pid1-sigterm-graceful-shutdown',
@@ -106,6 +114,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '`docker stop` (and Kubernetes or ECS) sends SIGTERM to PID 1, waits a grace period (10 s by default), then sends SIGKILL; exit code 137 is 128 + 9, the SIGKILL. With the shell form, PID 1 is typically `/bin/sh -c`, which does not forward signals to the Node child. But exec form alone is not enough: the kernel does not apply default signal actions to PID 1 of a PID namespace, so a PID 1 that has **no handler** simply ignores SIGTERM, and even outside PID 1 the default action kills Node instantly without draining. The complete fix is to make Node PID 1 (exec form) or put a tiny init in front that forwards signals and reaps zombies (`--init`, tini, dumb-init), and handle `process.on(\'SIGTERM\')` by calling `server.close()`, finishing in-flight work, closing DB pools, then exiting. Also avoid `npm start` as the entrypoint; run `node` directly.\n\n**Say this out loud:** "PID 1 ignores signals it has no handler for, so I run node in exec form or behind tini, and I handle SIGTERM by draining connections before the orchestrator\'s grace period sends SIGKILL."',
+    hint:
+      'Exit code 137 is 128 + 9; think about which process is PID 1 with the shell form, how the kernel treats signals sent to PID 1, and whether anything drains requests.',
   },
   {
     id: 'containers-shrinking-node-image',
@@ -129,5 +139,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Senior signal: measuring before changing, knowing the layer model well enough to explain why `RUN rm` in a separate step does nothing, and weighing base-image choices against native dependencies and debuggability.\n\n**Say this out loud:** "Layers are additive, so I shrink images with multi-stage builds, production-only dependencies and a slim base, and I measure with dive first; smaller images mean faster scale-out and fewer CVEs."',
+    hint:
+      'Measure layers before changing anything, then cover multi-stage builds, production-only dependencies, base image trade-offs and why deleting files in a later layer does not help.',
   },
 ];

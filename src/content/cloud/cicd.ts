@@ -22,6 +22,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'If you rebuild per environment, what you tested in staging is not what runs in production: dependency resolution, base image updates or build flags can differ. **Build once, deploy many**: produce an immutable, versioned artifact, store it in a registry, and promote it by reference (tag or digest) while environment-specific configuration and secrets come from the environment (parameter store, secrets manager, env vars). `latest` is mutable, so you cannot tell what is running or roll back reliably.',
+    hint:
+      'Ask whether what you tested in staging is byte for byte what reaches production, and where environment-specific config should come from.',
   },
   {
     id: 'cicd-blue-green-vs-canary',
@@ -43,6 +45,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '**Blue/green** runs the new version as a complete parallel environment, tests it, then flips the router or DNS in one step; rollback is instant (flip back), but it doubles capacity during the switch and every user hits v2 at once. **Canary** limits the blast radius by exposing a small percentage first and gating each step on metrics (automated canary analysis). **Rolling** replaces instances in batches without traffic-level control or a clean comparison. In AWS terms: CodeDeploy supports canary and linear shifting for Lambda and ECS, Lambda aliases support weighted traffic, and ALB weighted target groups do it for services. Watch the vocabulary: AWS calls its ECS deployment type "blue/green" even when it shifts traffic in canary or linear steps between the two task sets; what makes this scenario a canary is the small, metric-gated first slice compared against the live v1, not the number of environments. All of them require backward-compatible schema changes, because two versions run at the same time.',
+    hint:
+      'Focus on how much traffic sees the new version at each step, and whether continuing depends on comparing its metrics with the old version.',
   },
   {
     id: 'cicd-pipeline-quality-gates',
@@ -64,6 +68,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Good gates are **fast, deterministic and meaningful**: correctness (types, tests), buildability, security (SCA, SAST, secret scanning, image scanning), and for production promotion also a smoke test and health or canary metrics after deploy. Manual approvals everywhere slow delivery without adding signal; reserve them for production (or replace them with automated canary analysis). 100% coverage invites tests that assert nothing; use a sensible threshold or coverage on changed lines instead. Flaky tests must be fixed or quarantined, because a gate people learn to re-run is not a gate.',
+    hint:
+      'A good gate is fast, deterministic and adds real signal; ask of each check whether it catches problems or just slows delivery and invites gaming.',
   },
   {
     id: 'cicd-canary-gate-decision',
@@ -125,6 +131,8 @@ export function solution(baseline: Metrics, canary: Metrics): 'wait' | 'rollback
     source: 'topic-list',
     explanation:
       'The three rules mirror real canary analysis (Argo Rollouts, Flagger, Spinnaker Kayenta, CodeDeploy with CloudWatch alarms). Compare **rates**, not raw counts: the canary gets far less traffic than the baseline, so its absolute error count is always lower. The minimum-sample rule prevents promoting (or rolling back) on noise from a handful of requests. Compare against the **live baseline** over the same window rather than a fixed threshold, so a global incident or a traffic spike does not blame the canary. Production systems add statistical tests and require several consecutive healthy intervals before each step.',
+    hint:
+      'Check the sample size first, then compare error rates (not raw counts) and a latency ratio against the baseline; watch strict versus inclusive comparisons at the thresholds.',
   },
   {
     id: 'cicd-migrations-and-rollback',
@@ -148,5 +156,7 @@ export function solution(baseline: Metrics, canary: Metrics): 'wait' | 'rollback
     source: 'topic-list',
     explanation:
       'Senior signal: recognizing that the database is the part you cannot roll back instantly, so every schema change must be compatible with both the previous and the next version of the code.\n\n**Say this out loud:** "Build once, promote the same image, roll out progressively with automatic rollback, and make every migration expand-then-contract so old and new code can run against the same schema; code rolls back, schema rolls forward."',
+    hint:
+      'Remember that old and new code run against the same schema during a rollout; cover one promoted artifact, expand and contract, and why schema rolls forward.',
   },
 ];

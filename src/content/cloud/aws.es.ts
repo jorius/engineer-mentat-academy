@@ -13,6 +13,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un cold start es el tiempo que toma crear un entorno de ejecución: descargar y descomprimir el código (la función **más** las layers), arrancar el runtime y luego ejecutar tu código de init (imports de nivel superior, clientes del SDK). Las layers cambian *dónde* viven los bytes, no cuántos se cargan, así que el tiempo de init es prácticamente el mismo. Las layers sirven para **compartir** código o binarios entre funciones y mantener pequeño el artefacto de la función al desplegar; los límites son 5 layers por función y 250 MB descomprimidos para la función más las layers (las imágenes de contenedor llegan hasta 10 GB). Lo que de verdad acorta los cold starts: un bundle más pequeño (con tree-shaking, solo los clientes del SDK v3 que usas), imports diferidos en rutas poco frecuentes, más memoria (la CPU escala con ella) o provisioned concurrency. SnapStart no es una opción aquí: cubre los runtimes administrados de Java, Python y .NET, no una función zip de Node.js. Las layers no se recargan en cada invocación, así que la afirmación de que cada layer agrega un viaje de red en cada invocación también es incorrecta.',
+    hint:
+      'Piensa en qué se gasta realmente el tiempo de un cold start y si mover los bytes a una layer cambia cuánto se descomprime y se carga durante el init.',
   },
   'aws-lambda-concurrency-controls': {
     prompt:
@@ -25,6 +27,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'La concurrencia es el número de invocaciones en curso; la cuota regional por defecto es 1,000 (límite blando) compartida por todas las funciones. La **reserved concurrency** es gratis y es a la vez un piso (reservado para esta función) y un techo (no puede superarlo), lo que además protege a una base de datos aguas abajo de una estampida al escalar. Ponerla en 0 es la forma documentada de detener una función. La **provisioned concurrency** mantiene N entornos inicializados para eliminar los cold starts y se cobra por el tiempo que está configurada, se use o no. El throttling se comporta distinto según el tipo de invocación: los llamadores **síncronos** reciben `429 TooManyRequestsException` y deben reintentar por su cuenta; los eventos **asíncronos** (S3, SNS, EventBridge) esperan en la cola interna y se reintentan hasta por 6 horas antes de ir a una DLQ o a un destino on-failure.\n\n**Dilo en voz alta:** "La reserved concurrency es una garantía gratuita y un tope, la provisioned concurrency es precalentamiento pagado, y una llamada síncrona con throttling es problema del llamador, mientras que un evento asíncrono con throttling lo reintenta Lambda."',
+    hint:
+      'Separa lo que hace la reserved concurrency de lo que cuesta la provisioned concurrency, y recuerda quién reintenta una llamada con throttling en invocaciones síncronas frente a asíncronas.',
   },
   'aws-lambda-timeout-sqs-visibility': {
     prompt:
@@ -37,6 +41,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'El visibility timeout es el tiempo que un mensaje recibido permanece oculto. Si el procesamiento dura más, el mensaje reaparece y una invocación concurrente lo vuelve a recibir. Lambda verifica que el timeout de la función no supere el visibility timeout cuando creas o actualizas el event source mapping, pero no vigila la cola después, así que un cambio posterior en la cola reintroduce el problema en silencio. AWS recomienda un visibility timeout de la cola de **al menos 6 veces el timeout de la función** (más cualquier ventana de batching) para que los reintentos después de un throttling también quepan. Aun así, SQS estándar es at-least-once, así que el handler debe ser idempotente (por ejemplo, una escritura condicional sobre el id del pedido), y los fallos parciales del lote se deben reportar con `ReportBatchItemFailures` en lugar de fallar el lote completo. FIFO reduce los duplicados dentro de una ventana de deduplicación de 5 minutos, pero no corrige un visibility timeout más corto que el trabajo. Bajar el timeout de la función a 30 s solo mataría los lotes de 2 minutos. Recuerda los techos: el timeout máximo de Lambda es de 15 minutos, y las integraciones de API Gateway expiran mucho antes (29 s por defecto en REST, 30 s como máximo en HTTP APIs).\n\n**Dilo en voz alta:** "El visibility timeout debe superar con holgura el tiempo de procesamiento, AWS dice seis veces el timeout de la función, y el consumidor tiene que ser idempotente de todos modos porque SQS es at-least-once."',
+    hint:
+      'Compara cuánto tarda un lote con cuánto tiempo permanece oculto un mensaje recibido, y pregúntate qué pasa cuando el segundo número es menor.',
   },
   'aws-api-gateway-rest-vs-http-features': {
     prompt:
@@ -49,6 +55,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Las HTTP APIs son la opción más barata y de menor latencia (aproximadamente $1.00 frente a $3.50 por millón de solicitudes), con un **JWT authorizer nativo**, integraciones simples de proxy a Lambda y proxy HTTP, y despliegues automáticos. Las REST APIs conservan el conjunto de funciones más rico: API keys y usage plans, caché por stage, asociación directa con WAF, validación de solicitudes, mapping templates (VTL) para transformar solicitudes y respuestas, endpoints privados dentro de una VPC, endpoints edge-optimized e integraciones directas con muchos servicios de AWS. Regla práctica: empieza con HTTP API salvo que necesites una de esas funciones exclusivas de REST. Validar JWTs de cualquier emisor OIDC es lo que las HTTP APIs hacen de forma nativa; REST solo tiene un authorizer específico de Cognito, y fuera de eso escribes un Lambda authorizer.',
+    hint:
+      'Las HTTP APIs son la opción ligera y más barata; recuerda qué funciones del gateway dejaron fuera y qué tipo de authorizer agregaron de forma nativa.',
   },
   'aws-api-gateway-throttling-status': {
     prompt:
@@ -61,6 +69,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'API Gateway aplica throttling con un **token bucket**: el *rate* es la recarga constante en solicitudes por segundo y el *burst* es el tamaño del bucket. Los límites se aplican en varios niveles: la cuenta por región (10,000 rps constantes con un burst de 5,000 por defecto), la configuración del stage y del método, y los usage plans por cliente en las REST APIs. Las solicitudes excedentes se rechazan con `429` antes de llegar a Lambda, así que no cuestan nada aguas abajo. Los clientes deberían hacer backoff exponencial con jitter. `504` significa que la integración tardó más que el timeout de integración, que es otro problema.',
+    hint:
+      'Pregúntate qué código de estado indica que el problema es el ritmo de solicitudes del propio cliente y no una falla del backend, y cómo debería reintentar un cliente bien portado.',
   },
   'aws-api-gateway-authorizer-choice': {
     prompt:
@@ -76,6 +86,8 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'Señal de senior: separar la autenticación (validación de JWT barata y declarativa en el borde) de la autorización (personalizada y basada en datos), y saber que las respuestas del authorizer en caché son la fuente de 403 intermitentes y confusos.\n\n**Dilo en voz alta:** "Deja que el gateway valide el JWT gratis, usa un Lambda authorizer solo para reglas personalizadas, y recuerda que la política en caché se indexa por el token, así que una política limitada a un método va a rechazar la siguiente ruta."',
+    hint:
+      'Separa autenticación de autorización: qué puede validar el gateway de forma declarativa, qué necesita código propio y qué sale mal cuando los resultados del authorizer se guardan en caché por token.',
   },
   'aws-s3-strong-consistency': {
     prompt:
@@ -88,6 +100,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Desde diciembre de 2020, toda lectura en S3 después de una escritura exitosa devuelve los datos más recientes, para objetos nuevos, sobrescrituras, borrados y operaciones de listado, sin costo adicional. La respuesta de "sobrescrituras eventualmente consistentes" describe el modelo antiguo que muchos posts de blog todavía repiten. Consistencia fuerte no significa bloqueo: dos escritores concurrentes siguen produciendo last-writer-wins. Para concurrencia optimista usa **escrituras condicionales** (`If-None-Match: *` para crear solo si no existe, `If-Match` con un ETag para actualizar solo la versión que leíste).',
+    hint:
+      'Verifica si recuerdas el modelo de consistencia de S3 de antes o de después de su cambio de diciembre de 2020.',
   },
   'aws-s3-static-spa-hosting': {
     prompt:
@@ -100,6 +114,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'La configuración moderna es un bucket **privado**, CloudFront con OAC (el sucesor de Origin Access Identity) y una bucket policy que permite `s3:GetObject` solo al service principal `cloudfront.amazonaws.com` con `aws:SourceArn` igual a tu distribución. Así ya no necesitas el website endpoint. Las rutas del lado del cliente no existen como objetos, así que S3 devuelve 403/404; lo corriges con una custom error response de CloudFront (403 y 404 hacia `/index.html` con status 200) o con una reescritura en una CloudFront Function. El website hosting solo cambia cómo se sirve el bucket; los objetos se vuelven públicos solo si además desactivas Block Public Access y agregas una política de lectura pública. Los despliegues deberían subir los assets con hash con un `Cache-Control` largo e `index.html` con `no-cache`, y luego invalidar `/index.html`.',
+    hint:
+      'Separa el website endpoint del REST endpoint detrás de CloudFront, y recuerda que las rutas del lado del cliente no existen como objetos en el bucket.',
   },
   'aws-s3-presigned-url-behavior': {
     prompt:
@@ -112,12 +128,16 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Una presigned URL es un bearer token: cualquiera que la tenga puede ejecutar exactamente esa operación sobre exactamente esa key hasta que expire, con los permisos del firmante. La validez máxima con SigV4 es de **7 días**, y con credenciales temporales (roles de Lambda, STS) termina cuando terminan las credenciales, a menudo en cuestión de horas. Un PUT prefirmado no puede expresar un *rango* de tamaño; usa un **presigned POST** con una política que contenga `content-length-range` (y condiciones de prefijo de key y de `Content-Type`), o firma un `Content-Length` exacto. Mantén expiraciones cortas, genera la key en el servidor (nunca confíes en el nombre de archivo del cliente) y procesa la subida de forma asíncrona a partir de un evento de S3.\n\n**Dilo en voz alta:** "Una presigned URL es una credencial bearer de corta duración con los derechos del firmante; para subidas uso presigned POST para que la política pueda limitar el tamaño y el content type."',
+    hint:
+      'Una URL prefirmada toma prestada la identidad de quien la firmó en el momento de la solicitud; piensa en qué limita su vida útil y qué mecanismo de subida puede llevar una política con condiciones.',
   },
   'aws-s3-event-parse-records': {
     prompt:
       'Una Lambda recibe notificaciones de eventos de S3. Implementa `solution(event)` para que devuelva una entrada por cada registro cuyo `eventName` empiece con `ObjectCreated:`, en el orden de los registros, con esta forma:\n\n```ts\n[\n  { bucket: \'uploads\', key: \'invoices/March 2026.pdf\' },\n]\n```\n\nLas keys de los objetos llegan **codificadas como URL**, con los espacios codificados como `+`; tu decodificador también debe aceptar `%20`. Decodifícalas para obtener la key real. Ignora otros tipos de evento y devuelve `[]` cuando falte `Records`.',
     explanation:
       'S3 codifica las keys de los objetos en las notificaciones como un formulario HTML: los espacios se convierten en `+` y los caracteres reservados o no ASCII se codifican con porcentaje (letras, dígitos y `/` quedan igual), así que un `+` literal llega como `%2B`. El orden importa: reemplaza `+` por un espacio **primero** y luego aplica `decodeURIComponent`; si decodificas primero, `%2B` se convertiría en `+` y después, por error, en un espacio. Olvidar esto es un bug clásico de producción: `GetObject` con la key cruda devuelve `NoSuchKey` solo para los archivos cuyo nombre tiene espacios, acentos u otros caracteres codificados. Además, filtra por `eventName` (o configura la notificación solo para `s3:ObjectCreated:*`), y recuerda que una invocación puede traer varios registros.',
+    hint:
+      'Filtra por `eventName`, usa un arreglo vacío cuando falte `Records` y decide con cuidado si tratas el `+` antes o después de `decodeURIComponent`.',
   },
   'aws-s3-event-delivery-semantics': {
     prompt:
@@ -130,6 +150,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Las notificaciones de S3 son **at-least-once** y suelen llegar en segundos, pero pueden tardar más y pueden duplicarse. El orden no está garantizado: los registros de creación y borrado traen un `sequencer` hexadecimal; rellena con ceros a la izquierda el más corto y compáralos lexicográficamente para descartar eventos obsoletos de la misma key. Escribir la salida en el prefijo que dispara la función crea un bucle recursivo que escala y factura rápido (la detección de bucles recursivos de Lambda ya corta los bucles con S3 tras unas 16 invocaciones, pero no dependas de ella); escribe en otro prefijo o bucket y filtra por prefijo/sufijo. S3 rechaza filtros de prefijo/sufijo superpuestos para el mismo tipo de evento, así que para repartir a varios consumidores publica en un topic de SNS (y suscribe varias colas) o habilita **EventBridge** en el bucket y usa reglas, lo que además te da filtrado por contenido, archivo y replay.\n\n**Dilo en voz alta:** "Los eventos de S3 son at-least-once y sin orden, así que hago idempotentes a los consumidores, uso el sequencer para el orden, nunca escribo de vuelta en el prefijo que dispara, y uso SNS o EventBridge cuando más de un consumidor necesita el mismo evento."',
+    hint:
+      'Recuerda la garantía de entrega de las notificaciones de S3 y para qué existe el campo `sequencer`, y luego sigue dónde escribe la función su salida respecto al prefijo que la dispara.',
   },
   'aws-sns-fan-out-vs-sqs': {
     prompt:
@@ -142,6 +164,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '**SNS** es pub/sub basado en push: una publicación se copia a cada suscripción, pero SNS no guarda mensajes para leerlos después. **SQS** es una cola basada en pull con retención (hasta 14 días); los consumidores de una misma cola *compiten*, así que cada mensaje va solo a uno de ellos (la cola única compartida le da cada pedido a un servicio, no a los tres). El patrón fan-out los combina: SNS copia el evento, cada cola SQS lo guarda para su propio servicio, y cada servicio escala y falla de forma independiente. Las suscripciones HTTPS directas tienen reintentos limitados, así que un servicio caído durante una hora pierde eventos. Los topics no se pueden consultar en absoluto.',
+    hint:
+      'Separa el pub/sub push, que copia un mensaje a cada suscriptor, de una cola que guarda los mensajes y cuyos consumidores compiten por ellos.',
   },
   'aws-s3-to-sns-required-wiring': {
     prompt:
@@ -154,6 +178,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'S3 publica como un **service principal** gobernado por la resource policy del destino; no hay ningún rol que asumir y no interviene ninguna bucket policy (la bucket policy controla el acceso *al* bucket, y SNS nunca lee objetos). Cuando guardas la configuración, S3 envía un evento de prueba, y falla con ese error de validación si la política del topic no lo permite. El statement de la política del topic se ve así:\n\n```json\n{\n  "Effect": "Allow",\n  "Principal": { "Service": "s3.amazonaws.com" },\n  "Action": "SNS:Publish",\n  "Resource": "arn:aws:sns:us-east-1:111122223333:uploads",\n  "Condition": {\n    "ArnLike": { "aws:SourceArn": "arn:aws:s3:::my-uploads" },\n    "StringEquals": { "aws:SourceAccount": "111122223333" }\n  }\n}\n```\n\nLas condiciones evitan el problema del confused deputy (que el bucket de otra persona publique en tu topic). Un topic cifrado necesita una KMS key **customer managed**, porque la key policy de la key administrada por AWS `aws/sns` no se puede editar para admitir a S3. El topic debe ser un topic estándar (los topics FIFO no se soportan como destinos de S3) en la misma región que el bucket. Aguas abajo, cada cola SQS suscrita al topic necesita su propia queue policy que permita a `sns.amazonaws.com` con `aws:SourceArn` = el ARN del topic, y la **raw message delivery** les ahorra a los consumidores desenvolver el sobre de SNS alrededor del JSON del evento de S3.\n\n**Dilo en voz alta:** "S3 hacia SNS es una conexión por resource policies: la política del topic deja publicar al service principal de S3, limitado por SourceArn y SourceAccount, más una key policy de KMS customer managed si el topic está cifrado; sin bucket policy y sin rol."',
+    hint:
+      'Pregúntate qué política autoriza a un service principal a publicar, y qué necesita además un destino cifrado para que ese principal pueda usar la clave.',
   },
   'aws-ecs-task-role-vs-execution-role': {
     prompt:
@@ -166,6 +192,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'ECS tiene dos roles con consumidores distintos. El **task execution role** lo usa el agente de ECS / Fargate *antes y alrededor* de tu código: descargar de ECR, obtener los `secrets` de Secrets Manager o SSM para inyectarlos como variables de entorno y escribir logs. El **task role** lo asume tu aplicación; el SDK encuentra sus credenciales a través de `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI`. Mezclarlos o rompe el arranque (`CannotPullContainerError`, errores de secrets) o da privilegios de más. El instance profile solo funciona con el launch type EC2 y filtra el permiso a todas las tareas del host; las access keys de larga duración nunca son la respuesta. Repaso de vocabulario: una *task definition* es el plano versionado, una *task* es una instancia en ejecución de ella, un *service* mantiene N tareas corriendo detrás de un balanceador de carga, y un *cluster* es la agrupación lógica de capacidad.',
+    hint:
+      'Pregúntate quién hace la llamada: el agente de ECS que prepara la tarea, o el código de tu aplicación a través del SDK en tiempo de ejecución.',
   },
   'aws-fargate-vs-ec2-launch-type': {
     prompt:
@@ -181,6 +209,8 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'Señal de senior: plantearlo como "quién es dueño de los hosts" más un argumento de costo según la utilización, no como "Fargate es serverless, así que es mejor".\n\n**Dilo en voz alta:** "Fargate por defecto porque elimina la operación de hosts; EC2 solo cuando necesito GPUs o control a nivel de host, o cuando una utilización constante hace que la capacidad reservada con bin-packing sea claramente más barata."',
+    hint:
+      'Plantéalo como quién es dueño de los hosts, y luego cubre las necesidades que solo resuelven las instancias, el costo con utilización constante y palancas como Spot, Graviton y capacity providers.',
   },
   'aws-cognito-user-pool-vs-identity-pool': {
     prompt:
@@ -193,5 +223,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Los **user pools** son el directorio de usuarios y el proveedor de identidad OIDC: registro, inicio de sesión, MFA, federación con proveedores sociales o SAML, y emiten tokens de ID, de acceso y de refresco (JWT) para *tus* APIs. Los **identity pools** (identidades federadas) no guardan usuarios; toman un token de un user pool o de otro proveedor y llaman a STS para entregar **credenciales temporales de AWS** de un rol IAM, de modo que el cliente pueda llamar directamente a los servicios de AWS. Las variables de política como `${cognito-identity.amazonaws.com:sub}` en la política del rol restringen cada identidad a su propio prefijo. S3 y las demás APIs de servicios de AWS solo aceptan solicitudes firmadas con SigV4, así que un JWT de user pool nunca es una credencial para S3 (solo puertas de entrada como API Gateway y AppSync lo validan), y un authorizer de API Gateway solo protege las rutas de tu API. Ojo: `${cognito-identity.amazonaws.com:sub}` es el identity ID del identity pool (por ejemplo `us-east-1:1a2b...`), no el `sub` del user pool, así que la app debe armar el prefijo `users/<id>/` con el identity ID. A menudo la alternativa más simple es omitir los identity pools y hacer que tu API devuelva presigned URLs.',
+    hint:
+      'Distingue el servicio que guarda usuarios y emite JWT del que cambia un token por credenciales temporales de AWS, y recuerda qué acepta S3 como credencial.',
   },
 };

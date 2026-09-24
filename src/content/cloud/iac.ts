@@ -21,6 +21,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '**IaaS / PaaS / SaaS** describe *what* you buy from a provider and how much of the stack you manage. **IaC** describes *how* you manage infrastructure of any kind: declarative files in Git, reviewed in pull requests, applied by automation, so environments are reproducible and changes are auditable instead of hand-clicked in a console. You can use IaC to manage IaaS resources, PaaS services, DNS, SaaS configuration (GitHub, Datadog) and more.',
+    hint:
+      'One term describes what you buy from a provider, the other how you manage infrastructure; match each to its category.',
   },
   {
     id: 'iac-terraform-saved-plan-apply',
@@ -42,6 +44,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '`terraform plan` refreshes state, compares it with your configuration and proposes create, update, replace or destroy actions without changing anything. A bare `terraform apply` computes a **new** plan at apply time, which may differ from what was reviewed if code, state or real infrastructure changed in between. A saved plan pins the reviewed actions, and Terraform rejects it as stale if state moved on. Plan files can contain sensitive values in plain text, so treat them as secret build artifacts, not commits; render them for review with `terraform show`.',
+    hint:
+      'Think about what a saved plan file guarantees about the changes that get applied, and what should happen if the world moved between review and apply.',
   },
   {
     id: 'iac-terraform-remote-state-locking',
@@ -63,6 +67,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'State maps your resource addresses to real resource IDs and stores their attributes, so Terraform knows what it owns and what to change. It must be **shared** (everyone sees the latest), **locked** (one writer at a time) and **protected** (it contains secrets in plain text, such as generated passwords). A remote backend gives all three. For S3, Terraform 1.11+ supports native locking with a `.tflock` object in the bucket (experimental in 1.10); the older DynamoDB lock table is deprecated since 1.11. Enable bucket versioning to recover from a bad write. Workspaces with the same backend just create separate states for the same config; they do not solve concurrent applies to one environment.',
+    hint:
+      'The root problem is two writers on one shared file with no mutual exclusion; ask which change actually adds a lock and keeps state out of Git.',
   },
   {
     id: 'iac-terraform-module-practices',
@@ -83,6 +89,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'A module is a function: typed inputs, outputs, and no hidden global configuration. Version pinning keeps a module change from silently rolling into every environment. Provider configuration belongs in the **root** module and is passed down (implicitly, or with `providers = { aws = aws.us_east_1 }`); a child module with its own `provider` block cannot be used with `count`, `for_each` or `depends_on`, and removing it later orphans resources. One giant root means huge plans, slow applies, and a large blast radius; split state by lifecycle and ownership (network, data, services) and connect them through outputs or data sources.',
+    hint:
+      'Think about what makes a module safe to reuse across callers: versioning, a clear typed interface, and who should configure providers.',
   },
   {
     id: 'iac-terraform-plan-diff',
@@ -169,6 +177,8 @@ export function solution(desired: Record<string, Attrs>, current: Record<string,
     source: 'topic-list',
     explanation:
       'This is the core of every declarative IaC tool: diff desired configuration against refreshed reality. The interesting case is **replace**: some attributes cannot change in place (an EC2 `ami`, an RDS `engine`, a bucket name), so the provider marks them `ForceNew` and the plan shows `-/+ must be replaced`. In production that is where incidents come from, so reviewers look for replacements first. Mitigations are `lifecycle { create_before_destroy = true }` to avoid downtime, `prevent_destroy = true` on stateful resources, and `moved` blocks when you only renamed an address (otherwise a rename looks like destroy plus create).',
+    hint:
+      'Walk the keys of both maps; for shared addresses compare the union of attribute names, check whether any changed one is in `forceNew`, and sort each list at the end.',
   },
   {
     id: 'iac-terraform-drift-handling',
@@ -190,6 +200,8 @@ export function solution(desired: Record<string, Attrs>, current: Record<string,
     source: 'topic-list',
     explanation:
       'By default `plan` refreshes managed resources from the provider API, so out-of-band edits show up as changes that apply would **revert** to match the code. That is the point of IaC: code is the source of truth. The decision is organizational: keep the change by adding it to HCL (reviewed, then plan shows no diff) or let apply remove it. `plan -refresh-only` / `apply -refresh-only` shows or accepts drift into state without touching infrastructure. For attributes legitimately managed elsewhere (an autoscaler\'s desired count), use `lifecycle { ignore_changes = [...] }`. Caveats: plan sees this rule only because the rules are inline, so the whole rule set is an attribute Terraform manages. With separate `aws_vpc_security_group_ingress_rule` resources, the console rule would be a new object Terraform never created and plan would show nothing, because drift is only detected on what Terraform manages. Mixing inline rules with separate rule resources causes endless flapping. Scheduled drift-detection plans in CI catch this early.\n\n**Say this out loud:** "Plan refreshes, so console changes show up as drift that apply would revert; we either codify the change or let Terraform put it back, and we run scheduled drift detection so this is not a surprise."',
+    hint:
+      'Remember what `plan` does with real infrastructure by default before diffing, and that inline rules make the resource own the full rule set.',
   },
   {
     id: 'iac-cloudformation-stacks-change-sets',
@@ -210,6 +222,8 @@ export function solution(desired: Record<string, Attrs>, current: Record<string,
     source: 'topic-list',
     explanation:
       'A **stack** is the unit of deployment: CloudFormation tracks its resources server-side (the equivalent of Terraform state, managed for you) and applies updates transactionally, rolling back on failure. **Change sets** are CloudFormation\'s `plan`; the `Replacement` column is what you check before touching databases. Drift detection is **on demand** and only reports. Reverting is opt-in: a drift-aware change set (`--deployment-mode REVERT_DRIFT`, available since November 2025) compares the template with the actual resource state and puts drifted properties back, while a standard change set compares only the old and new templates and ignores drift. Protect stateful resources with `DeletionPolicy: Retain` or `Snapshot` and `UpdateReplacePolicy`, add stack policies to block updates to critical resources, and turn on termination protection for production stacks.\n\n**Say this out loud:** "I always deploy through a change set and read the Replacement column, and I put Retain or Snapshot deletion policies on anything stateful, because a rollback cannot bring back deleted data."',
+    hint:
+      'Recall what a change set previews, the default behavior on a failed update, and how CloudFormation tracks the resources a stack owns and detects drift.',
   },
   {
     id: 'iac-terraform-vs-cloudformation-choice',
@@ -233,5 +247,7 @@ export function solution(desired: Record<string, Attrs>, current: Record<string,
     source: 'topic-list',
     explanation:
       'Senior signal: no tool tribalism; the answer names who owns state, how failure and rollback behave, and what the organization already runs.\n\n**Say this out loud:** "AWS-only and want AWS to own state and rollback: CloudFormation or CDK. Multiple providers and one workflow for all of it: Terraform, accepting that we own the state backend."',
+    hint:
+      'Start from scope (AWS only or several providers), then weigh who manages state and rollback, the module ecosystem, CDK or HCL, and the team\'s skills.',
   },
 ];

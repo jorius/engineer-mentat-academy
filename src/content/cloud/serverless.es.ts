@@ -12,6 +12,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Siguen existiendo servidores; simplemente no los administras tú. Los rasgos que lo definen son **sin gestión de capacidad**, **escalado automático** (incluso a cero), **pago por solicitud o por unidad de trabajo** en lugar de por hora aprovisionada, y un uso intensivo de piezas administradas: Lambda, API Gateway, DynamoDB, SQS, SNS, EventBridge, Step Functions, S3. Los contenedores son un formato de empaquetado y pueden ser serverless (Fargate, Cloud Run) o no (un cluster de Kubernetes autoadministrado).',
+    hint:
+      'Sigue habiendo servidores en algún lado; fíjate en quién gestiona la capacidad, cómo escala y cómo te cobran.',
   },
   'serverless-cold-start-mitigation': {
     prompt:
@@ -24,12 +26,16 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un cold start ocurre cada vez que Lambda tiene que crear un nuevo entorno de ejecución: la primera solicitud, un scale-out más allá de los entornos calientes actuales, un despliegue nuevo, o después de que Lambda descarta un entorno inactivo. La **provisioned concurrency** mantiene N entornos inicializados (con costo). Los bundles más pequeños y un código de init liviano acortan cada cold start, y el trabajo de init hecho fuera del handler se reutiliza en las invocaciones en caliente. Más memoria también da proporcionalmente más CPU, lo que acelera el init. **SnapStart** toma un snapshot del entorno inicializado y lo restaura; cubre los runtimes administrados de Java, Python y .NET y, desde julio de 2026, las funciones empaquetadas como imagen de contenedor, así que revisa tu runtime y tu empaquetado. Un ping mantiene caliente aproximadamente **un** entorno; una ráfaga de 50 solicitudes concurrentes igual necesita 49 nuevos. El timeout no tiene ningún efecto sobre el arranque.',
+    hint:
+      'Para cada opción, pregúntate si acorta el init o mantiene suficientes entornos inicializados para una ráfaga concurrente.',
   },
   'serverless-stateless-warm-environment': {
     prompt:
       '`createExecutionEnvironment` simula un cold start de Lambda: su cuerpo es el scope del módulo (se ejecuta una vez por entorno) y devuelve el handler. Dos entornos atienden tres solicitudes. ¿Qué imprime esto, un valor por línea?',
     explanation:
       'El estado en el scope del módulo sobrevive entre invocaciones **en el mismo entorno** (un warm start), y por eso ahí inicializas los clientes. Pero es por entorno, no por función: `envB` tiene su propio contador y su propia caché, y el router decide qué entorno atiende cada solicitud. Así que los contadores en memoria son incorrectos, y las cachés en memoria pueden servir datos obsoletos (`envA` sigue diciendo `Ana` después del cambio de nombre). Trata el scope del módulo solo como una optimización: todo lo que tenga que ser correcto o compartido va a DynamoDB, ElastiCache o algo similar, con TTL en las cachés.',
+    hint:
+      'El module scope se ejecuta una vez por entorno; sigue por separado el contador y la caché de cada entorno, y fíjate en que una entrada de caché solo se escribe cuando falta.',
   },
   'serverless-cost-model-steady-load': {
     prompt:
@@ -42,6 +48,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'El precio de Lambda es una tarifa por solicitud más **duración x memoria** (GB-segundo), redondeada al milisegundo; desde agosto de 2025 también se cobra la fase de init. Eso es ideal cuando el tráfico llega en ráfagas o está inactivo gran parte del tiempo, porque la inactividad no cuesta nada. Con una carga alta y constante, en la práctica estás pagando un sobreprecio por capacidad que podrías correr con alta utilización en Fargate o EC2 con Savings Plans. Palancas antes de migrar: ajusta la memoria con Lambda Power Tuning (más memoria puede terminar más rápido y costar lo mismo o menos), usa Graviton (arm64) y procesa el trabajo en lotes. Aquí los cold starts son raros: 2,000 solicitudes por segundo a 150 ms mantienen unos 300 entornos ocupados todo el tiempo. De hecho, la provisioned concurrency es una palanca de costo con esta utilización: su precio por GB-segundo (reserva más duración) es menor que el on-demand por encima de aproximadamente un 60% de utilización, y los Compute Savings Plans también aplican a Lambda. Recuerda también los costos ocultos alrededor de la función: las solicitudes de API Gateway, los datos del NAT gateway y la ingesta de CloudWatch Logs.',
+    hint:
+      'Recuerda los dos componentes de la factura de Lambda y compáralos con capacidad que podrías correr cerca de su uso máximo cuando el tráfico nunca baja.',
   },
   'serverless-when-it-fits': {
     prompt:
@@ -57,6 +65,8 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       'Señal de senior: responder "depende" con las dimensiones concretas (forma del tráfico, duración, latencia, estado) y luego nombrar los patrones de diseño que hacen confiable a serverless.\n\n**Dilo en voz alta:** "Serverless gana en trabajo con picos y orientado a eventos, y en equipos pequeños; diseño cada función para que sea sin estado e idempotente, amortiguo con colas para que el scale-out no pueda saturar la base de datos, y orquesto con Step Functions en lugar de encadenar funciones."',
+    hint:
+      'Cubre la forma del tráfico, la duración de ejecución, los SLO de latencia y el estado, y luego los patrones que lo hacen confiable: idempotencia, colas para proteger lo que está aguas abajo y orquestación.',
   },
   'serverless-vendor-lock-in': {
     prompt:
@@ -69,5 +79,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'El código del handler es la parte barata de mover; las partes caras son las integraciones a su alrededor: las formas de los eventos y los disparadores, las políticas de IAM, los patrones de acceso de DynamoDB, las máquinas de estado de Step Functions, las reglas de EventBridge, además de los dashboards y los runbooks. Una estructura hexagonal mantiene las reglas de negocio en módulos sin framework y convierte al handler de Lambda en un adaptador delgado que parsea el evento y llama al dominio, lo que además facilita las pruebas unitarias y ejecutarlo en un contenedor si hace falta. La neutralidad total entre nubes suele costar más (servicios del mínimo común denominador, más cosas que operar) que el costo de cambio contra el que te asegura, así que decide de forma deliberada qué acoplamientos valen la pena.\n\n**Dilo en voz alta:** "El lock-in está en los servicios administrados y las integraciones, no en el handler, así que mantengo la lógica de dominio detrás de adaptadores delgados y acepto el acoplamiento a servicios administrados donde el ahorro operativo supera el costo de cambio."',
+    hint:
+      'Estima el costo de migrar cada capa de una app serverless, desde el código del handler hasta todo lo que está conectado a su alrededor, y qué acoplamientos vale la pena evitar.',
   },
 };
