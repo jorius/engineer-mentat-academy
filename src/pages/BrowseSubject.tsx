@@ -64,7 +64,7 @@ export function BrowseSubject(): JSX.Element {
         <h1 className="text-2xl font-semibold">{subjectName(subject, locale)}</h1>
         <Link to={drillLink()} className="ml-auto rounded-md bg-accent-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-600">{t('browse.drillThese', { count: questions.length })}</Link>
       </div>
-      <div className="flex flex-wrap gap-x-6 gap-y-3">
+      <div className="flex flex-col gap-3">
         <ChipGroup
           label={t('filters.level')}
           options={groups.levels.map((facet) => ({ value: facet.value, count: facet.count, ...levelLabel(facet.value, t) }))}

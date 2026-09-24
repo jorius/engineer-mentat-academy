@@ -29,7 +29,7 @@ export function ChipGroup<T extends string>({ label, options, selected, onChange
         <Chip key={option.value} pressed={selected.includes(option.value)} title={option.hint} onClick={(): void => toggle(option.value)}>
           {option.glyph}
           {option.label}
-          {option.count !== undefined ? <span className="text-zinc-400">{option.count}</span> : null}
+          {option.count !== undefined ? <span className="min-w-[2ch] text-right tabular-nums text-zinc-400">{option.count}</span> : null}
         </Chip>
       ))}
       <button type="button" onClick={(): void => onChange(options.map((option) => option.value))} className="text-xs text-zinc-500 underline hover:text-zinc-900 dark:hover:text-zinc-100">
