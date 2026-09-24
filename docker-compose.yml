@@ -1,0 +1,10 @@
+services:
+  academy:
+    build:
+      context: .
+      args:
+        BASE_PATH: /
+    image: engineer-mentat-academy:local
+    ports:
+      - "8080:80"
+    restart: unless-stopped

@@ -3,8 +3,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+// GitHub Pages serves the app under the repository name; a self-hosted build passes BASE_PATH=/ instead.
+const base = process.env.BASE_PATH ?? '/engineer-mentat-academy/';
+
 export default defineConfig({
-  base: '/engineer-mentat-academy/',
+  base,
   plugins: [react()],
   optimizeDeps: {
     exclude: ['sql.js'],
