@@ -52,3 +52,21 @@ Store: create/get/rename/restart/remove/reset/persist/validate-on-load. `drillSt
 ## 7. Out of scope
 
 Sharing drills between browsers, editing a drill's filter after creation, Mock or Review changes.
+
+## 8. Skip (added 2026-09-23, Jose's request)
+
+Every mode lets the learner move on without answering. `QuestionView` gains `onSkip?: () => void`; when
+present and the question is not yet resolved, the action bar shows a ghost **Skip** button
+(`question.skip` = "Skip" / "Saltar", tooltip `question.skipHint` = "Move on without answering; nothing is
+recorded." / "Pasa a la siguiente sin responder; no se registra nada.") at the left of Reset. Skipping
+records nothing in progress. Keyboard: none (Next stays `N`).
+
+- **Saved drill:** `DrillsStore.skip(id, questionId)` moves that question id to the end of
+  `questionIds` (persisted), so `nextIndex` advances to the next unanswered question and the skipped one
+  returns after the others. Skipping the last remaining question keeps it current (nothing to rotate
+  past); the button is hidden when only one unanswered question remains. Position stays
+  `{ index: done, total }`.
+- **Mock:** Skip calls the queue's `next`; the results page already lists unanswered questions as
+  skipped and scores them 0. The old "Show answer is the skip" behaviour is no longer needed but stays.
+- **Review:** Skip calls the queue's `next`; the question stays in Review since nothing was recorded.
+- **Permalink page:** no `onSkip` (nothing to move on to).

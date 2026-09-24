@@ -23,11 +23,19 @@ TypeScript strict, explicit return types, labeled import groups, no barrel files
 - [ ] Settings danger actions reset drills too.
 - [ ] Commit: `Add a saved drills store with derived progress`.
 
+### Task 6: Skip button in every mode (runs right after Task 1, before Task 2)
+
+**Files:** `src/components/question/ActionBar.tsx`, `QuestionView.tsx` (+ test), `src/pages/Mock.tsx` (+ test), `src/pages/Review.tsx` (+ test), `src/engine/drills.ts` (+ test: `skip(id, questionId)` rotates the id to the end and persists; no-op for unknown ids), locales.
+
+- [ ] Implement spec §8 for the component, Mock and Review, plus the store method. The saved-drill page wiring (`onSkip` → `store.skip`, hide when one unanswered remains) is done in Task 2, which must read §8.
+- [ ] Tests: Skip visible only before resolution and only with `onSkip`; clicking records nothing and calls `onSkip`; Mock skip advances and the result lists it as skipped; Review skip advances; store rotation.
+- [ ] Commit: `Add a skip button to drills, mocks and review`.
+
 ### Task 2: Creator redirect, `/drill/:drillId` route and resume
 
 **Files:** `src/App.tsx` (route), `src/pages/Drill.tsx` (+ `Drill.test.tsx`), `src/hooks/useDrillQueue.ts` (delete if unused), locales.
 
-- [ ] Implement spec §3: `DrillCreator` for `/drill?…` (compute matched + shuffled list as today, `store.create`, `navigate(…, { replace: true })`; zero matches → existing no-match screen), `SavedDrillPage` for `/drill/:drillId` (derive `nextIndex` from `drillStatus`, position `{ index: done, total }`, unknown id message `drill.missing`, skip ids not in the bank), completion screen with Restart (`drill.restart`) and "My drills" link (`drill.myDrills`).
+- [ ] Implement spec §3 and the saved-drill part of §8 (Skip wired to `store.skip`, hidden when a single unanswered question remains): `DrillCreator` for `/drill?…` (compute matched + shuffled list as today, `store.create`, `navigate(…, { replace: true })`; zero matches → existing no-match screen), `SavedDrillPage` for `/drill/:drillId` (derive `nextIndex` from `drillStatus`, position `{ index: done, total }`, unknown id message `drill.missing`, skip ids not in the bank), completion screen with Restart (`drill.restart`) and "My drills" link (`drill.myDrills`).
 - [ ] Keys: `drill.missing` ("This drill no longer exists." / "Esta práctica ya no existe."), `drill.restart` ("Restart" / "Reiniciar"), `drill.myDrills` ("My drills" / "Mis prácticas").
 - [ ] Tests per spec §6 (creator creates exactly one drill and redirects; reload after one answer resumes at 2 / N; finished → completion + Restart resets `startedAt`).
 - [ ] Commit: `Resume drills from a saved id`.
