@@ -12,13 +12,13 @@ import { ThemeProvider } from '../contexts/ThemeContext';
 import { GraderProvider } from '../contexts/GraderContext';
 
 // engine
+import { createDrillsStore } from '../engine/drills';
+import { createProgressStore } from '../engine/progress';
+import type { ProgressStore } from '../engine/progress';
 import { filterQuestions, loadQuestions } from '../engine/registry';
 
 // i18n
 import i18n from '../i18n';
-import { createDrillsStore } from '../engine/drills';
-import { createProgressStore } from '../engine/progress';
-import type { ProgressStore } from '../engine/progress';
 
 // hooks
 import { PreferencesProvider } from '../hooks/usePreferences';

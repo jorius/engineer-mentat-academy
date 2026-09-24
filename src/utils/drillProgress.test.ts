@@ -73,6 +73,8 @@ describe('describeDrill', () => {
 
   it('describes an empty query and the Home unseen link', () => {
     expect(describeDrill('', en, 'en')).toBe('All subjects · all levels · all kinds');
+    expect(describeDrill('level=junior,mid,senior', en, 'en')).toBe('All subjects · all levels · all kinds');
+    expect(describeDrill('kind=single,multi,predict,code,fix,sql,open&level=mid', en, 'en')).toBe('All subjects · Mid · all kinds');
     expect(describeDrill('unseen=1', en, 'en')).toBe('All subjects · all levels · all kinds · Unseen');
     expect(describeDrill('only=marked', en, 'en')).toBe('All subjects · all levels · all kinds · Marked for review');
     expect(describeDrill('only=missed', en, 'en')).toBe('All subjects · all levels · all kinds · Missed');

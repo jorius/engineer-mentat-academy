@@ -6,6 +6,7 @@ import { kindLabel, levelLabel } from '../engine/labels';
 import type { Translate } from '../engine/labels';
 import type { SavedDrill } from '../engine/drills';
 import type { ProgressMap } from '../engine/progress';
+import { KINDS, LEVELS } from '../engine/question';
 
 // utils
 import { parseDrillFilter } from './drillFilter';
@@ -47,8 +48,11 @@ export function describeDrill(query: string, t: Translate, locale: string): stri
   if (topic !== undefined) {
     parts.push(topicName(topic, locale));
   }
-  parts.push(filter.levels === undefined ? t('drill.allLevels') : filter.levels.map((level) => levelLabel(level, t).label).join(', '));
-  parts.push(filter.kinds === undefined ? t('drill.allKinds') : filter.kinds.map((kind) => kindLabel(kind, t).label).join(', '));
+  // A query that spells out every level (the setup card does that for "everything") reads as "all levels".
+  const everyLevel = filter.levels === undefined || LEVELS.every((level) => filter.levels?.includes(level));
+  const everyKind = filter.kinds === undefined || KINDS.every((kind) => filter.kinds?.includes(kind));
+  parts.push(everyLevel ? t('drill.allLevels') : (filter.levels ?? []).map((level) => levelLabel(level, t).label).join(', '));
+  parts.push(everyKind ? t('drill.allKinds') : (filter.kinds ?? []).map((kind) => kindLabel(kind, t).label).join(', '));
   if (filter.unseen) {
     parts.push(t('filters.unseen'));
   } else if (filter.only !== undefined) {
