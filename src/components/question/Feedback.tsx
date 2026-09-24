@@ -29,9 +29,6 @@ export function Feedback({ result, retry = false }: { result: GradeResult; retry
           ))}
         </ul>
       )}
-      {result.run !== undefined && result.run.logs.length > 0 && (
-        <pre className="mt-2 overflow-x-auto rounded bg-zinc-900 p-2 font-mono text-xs text-zinc-100">{result.run.logs.join('\n')}</pre>
-      )}
       {result.sql !== undefined && result.sql.status === 'ok' && result.sql.rows.length > 0 && (
         <table className="mt-2 text-xs">
           <thead>

@@ -30,6 +30,7 @@ import { CodeExercise } from './CodeExercise';
 import { ConsolePanel } from './ConsolePanel';
 import { Feedback } from './Feedback';
 import { HeaderStrip } from './HeaderStrip';
+import { HintPanel } from './HintPanel';
 import { MultiChoice } from './MultiChoice';
 import { NotesDrawer } from './NotesDrawer';
 import { OpenAnswer } from './OpenAnswer';
@@ -244,6 +245,8 @@ export function QuestionView({ question: given, onNext, onSkip, position }: Prop
   const [lastRun, setLastRun] = useState<RunResult | null>(null);
   const [running, setRunning] = useState(false);
   const [consoleOpen, setConsoleOpen] = useState(false);
+  // A revealed hint is per question and never reaches the attempt reducer or progress.
+  const [hintShown, setHintShown] = useState(false);
   const hasSavedNotes = (id: string): boolean => (progress[id]?.notes ?? '').trim().length > 0;
   // Saved notes open with their question so they are seen on a revisit.
   const [notesOpen, setNotesOpen] = useState(() => hasSavedNotes(question.id));
@@ -266,6 +269,7 @@ export function QuestionView({ question: given, onNext, onSkip, position }: Prop
     setLastRun(null);
     setRunning(false);
     setConsoleOpen(false);
+    setHintShown(false);
     setNotesOpen(hasSavedNotes(question.id));
     dispatch({ type: 'NEW_QUESTION' });
   }
@@ -306,6 +310,7 @@ export function QuestionView({ question: given, onNext, onSkip, position }: Prop
   const displayedAnswers = referenceShown ? shownAnswers(canonical, answers) : answers;
   const codeKind = isCodeKind(question);
   const runDisabled = running || displayedAnswers.source.trim().length === 0;
+  const hintAvailable = question.hint !== undefined && !hintShown;
 
   const update = (patch: Partial<Answers>): void => setAnswers((current) => ({ ...current, ...patch }));
 
@@ -427,6 +432,8 @@ export function QuestionView({ question: given, onNext, onSkip, position }: Prop
       }
     } else if (event.key.toLowerCase() === 'm') {
       toggleMark();
+    } else if (event.key.toLowerCase() === 'h') {
+      setHintShown(true);
     }
   });
 
@@ -461,6 +468,7 @@ export function QuestionView({ question: given, onNext, onSkip, position }: Prop
             <CodeEditor value={question.code} onChange={(): void => undefined} language={question.language} readOnly ariaLabel={t('question.program')} />
           )}
           {question.kind === 'sql' && <SchemaDrawer schema={question.schema} />}
+          {hintShown && question.hint !== undefined && <HintPanel hint={question.hint} />}
           <p className="text-xs text-zinc-400">{kind.hint}</p>
           <NotesDrawer key={question.id} ref={notesRef} id={notesId} open={notesOpen} notes={entry?.notes ?? ''} onSave={(notes): void => store.setNotes(question.id, notes)} />
         </div>
@@ -511,6 +519,7 @@ export function QuestionView({ question: given, onNext, onSkip, position }: Prop
         pill={<AttemptsPill kind={question.kind} state={attempt} maxAttempts={maxAttempts} />}
         resolved={resolved}
         busy={grading}
+        onHint={hintAvailable ? (): void => setHintShown(true) : undefined}
         onRun={codeKind ? (): void => void run() : undefined}
         runDisabled={runDisabled}
         running={running}

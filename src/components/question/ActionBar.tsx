@@ -9,6 +9,8 @@ type Props = {
   pill: ReactNode;
   resolved: boolean;
   busy: boolean;
+  // Hint appears only with `onHint` (the question has a hint not yet revealed); it never spends an attempt.
+  onHint?: () => void;
   // Run appears only with `onRun` (code and fix); it never spends an attempt.
   onRun?: () => void;
   runDisabled?: boolean;
@@ -26,12 +28,12 @@ type Props = {
 };
 
 /**
- * The workbench's single row of actions, pinned to the bottom of the card. Order: Run (only with
- * `onRun`, also once resolved), Skip (only with
+ * The workbench's single row of actions, pinned to the bottom of the card. Order: Hint (only with
+ * `onHint`), Run (only with `onRun`, also once resolved), Skip (only with
  * `onSkip`, until resolved), Reset (only when the caller passes `onReset`), Show answer (only with
  * `onShowAnswer`), Submit (primary until resolved), Next (primary once resolved; hidden without `onNext`).
  */
-export function ActionBar({ pill, resolved, busy, onRun, runDisabled = false, running = false, onSkip, onReset, onShowAnswer, showAnswerDisabled, submitLabel, onSubmit, submitDisabled, onNext, nextRef }: Props): JSX.Element {
+export function ActionBar({ pill, resolved, busy, onHint, onRun, runDisabled = false, running = false, onSkip, onReset, onShowAnswer, showAnswerDisabled, submitLabel, onSubmit, submitDisabled, onNext, nextRef }: Props): JSX.Element {
   const { t } = useTranslation();
   return (
     <div
@@ -41,6 +43,11 @@ export function ActionBar({ pill, resolved, busy, onRun, runDisabled = false, ru
     >
       <div className="empty:hidden">{pill}</div>
       <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+        {onHint !== undefined && (
+          <Button variant="ghost" onClick={onHint} title={t('question.hintHint')}>
+            {t('question.hint')}
+          </Button>
+        )}
         {onRun !== undefined && (
           <Button variant="ghost" className="disabled:opacity-40" onClick={onRun} disabled={runDisabled || running} title={t('question.runHint')}>
             {running ? t('question.running') : t('question.run')}

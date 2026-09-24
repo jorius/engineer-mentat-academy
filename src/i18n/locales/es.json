@@ -245,7 +245,10 @@
     "actions": "Acciones de respuesta",
     "run": "Ejecutar",
     "runHint": "Ejecuta las pruebas ocultas sin gastar un intento",
-    "running": "Ejecutando…"
+    "running": "Ejecutando…",
+    "hint": "Pista",
+    "hintHint": "Muestra una pista; no gasta intentos",
+    "hintLabel": "Pista"
   },
   "console": {
     "title": "Consola",

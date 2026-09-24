@@ -245,7 +245,10 @@
     "actions": "Answer actions",
     "run": "Run",
     "runHint": "Run the hidden tests without using an attempt",
-    "running": "Running…"
+    "running": "Running…",
+    "hint": "Hint",
+    "hintHint": "Show a nudge; it does not cost an attempt",
+    "hintLabel": "Hint"
   },
   "console": {
     "title": "Console",

@@ -25,7 +25,7 @@ import { createStaticGrader } from '../../engine/staticGrader';
 import { executeSource } from '../../engine/runner/execute';
 import type { Question, SingleQuestion } from '../../engine/question';
 import type { Grader } from '../../engine/grader';
-import { indexById, loadQuestions } from '../../engine/registry';
+import { indexById, loadQuestions, loadTranslations, localizeQuestion } from '../../engine/registry';
 
 // utils
 import { orderOptions } from '../../utils/optionOrder';
@@ -89,6 +89,8 @@ const logging: Question = {
 const throwing: Question = { ...code, id: 'javascript-test-code-throwing', kind: 'fix', starter: "throw new Error('boom');" };
 
 const open: Question = { ...single, id: 'javascript-test-open', kind: 'open', modelAnswer: 'Model.', rubric: ['one', 'two'] };
+
+const hinted: Question = { ...single, id: 'javascript-test-hinted', hint: 'Think about **order**.' };
 
 type SetupOptions = { maxAttempts?: MaxAttempts; onNext?: (() => void) | null; onSkip?: () => void; grader?: Grader; store?: ProgressStore };
 
@@ -631,7 +633,8 @@ describe('QuestionView', () => {
     const user = userEvent.setup();
     setup(logging);
     await user.click(button(/submit/i));
-    await screen.findByText('Not yet. Try again, or show the answer.');
+    const feedback = (await screen.findByText('Not yet. Try again, or show the answer.')).closest('[role="status"]');
+    expect(feedback?.textContent).not.toContain('hi 2');
     expect(consoleToggle()).toHaveAttribute('aria-expanded', 'false');
     await user.click(consoleToggle());
     expect(consoleLines()).toEqual(['hi 2', 'hi 2', '✗ failed: one — expected 1, got 0', '✓ passed: zero']);
@@ -691,5 +694,72 @@ describe('QuestionView', () => {
     await user.click(screen.getByRole('radio', { name: '1' }));
     await user.click(within(screen.getByRole('group', { name: /acciones de respuesta/i })).getByRole('button', { name: /enviar/i }));
     expect(grade).toHaveBeenCalledWith(canonical, { kind: 'single', optionId: 'a' });
+  });
+
+  it('offers no Hint button for a question without a hint', () => {
+    setup(code, { onNext: null });
+    expect(within(actionBar()).queryByRole('button', { name: /^hint$/i })).not.toBeInTheDocument();
+  });
+
+  it('offers Hint at the left of Run when the question has a hint, with a tooltip', () => {
+    setup({ ...code, hint: 'Return a number.' }, { onNext: null });
+    expect(within(actionBar()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Hint', 'Run', 'Reset', 'Show answer', 'Submit']);
+    expect(button(/^hint$/i)).toHaveAttribute('title', 'Show a nudge; it does not cost an attempt');
+  });
+
+  it('reveals the hint in a panel, hides the button and spends nothing', async () => {
+    const user = userEvent.setup();
+    const { store } = setup(hinted);
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+    await user.click(button(/^hint$/i));
+    const note = screen.getByRole('note');
+    expect(within(note).getByText('Hint')).toBeInTheDocument();
+    expect(within(note).getByText('order').tagName).toBe('STRONG');
+    expect(within(actionBar()).queryByRole('button', { name: /^hint$/i })).not.toBeInTheDocument();
+    expect(within(actionBar()).getByText('3 attempts left')).toBeInTheDocument();
+    expect(store.get(hinted.id)).toBeUndefined();
+  });
+
+  it('H reveals the hint, but not while typing an answer', async () => {
+    const user = userEvent.setup();
+    setup({ ...predict, hint: 'Count the calls.' });
+    await user.type(screen.getByLabelText(/expected output/i), 'h');
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+    await user.click(screen.getByText('What prints?'));
+    await user.keyboard('{Control>}h{/Control}');
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+    await user.keyboard('h');
+    expect(within(screen.getByRole('note')).getByText('Count the calls.')).toBeInTheDocument();
+  });
+
+  it('hides a revealed hint again when the question changes', async () => {
+    const user = userEvent.setup();
+    const store = createProgressStore(null);
+    const { rerender } = render(tree(hinted, {}, store, undefined));
+    await user.click(button(/^hint$/i));
+    expect(screen.getByRole('note')).toBeInTheDocument();
+    rerender(tree({ ...hinted, id: 'javascript-test-hinted-2', hint: 'Another nudge.' }, {}, store, undefined));
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+    expect(button(/^hint$/i)).toBeInTheDocument();
+  });
+
+  it('shows the Spanish hint in Spanish', async () => {
+    const user = userEvent.setup();
+    const translations = loadTranslations();
+    // Any question whose Spanish hint differs from the English one and is plain text (no Markdown).
+    const canonical = loadQuestions().find((q) => {
+      const hint = localizeQuestion(q, 'es', translations).hint;
+      return q.hint !== undefined && hint !== undefined && hint !== q.hint && /^[^*`_[\]<>\n]+$/.test(hint);
+    });
+    if (canonical === undefined) {
+      throw new Error('no question with a Spanish hint');
+    }
+    const spanish = localizeQuestion(canonical, 'es', translations).hint ?? '';
+    await i18n.changeLanguage('es');
+    setup(canonical);
+    await user.click(within(screen.getByRole('group', { name: /acciones de respuesta/i })).getByRole('button', { name: /^pista$/i }));
+    const note = screen.getByRole('note');
+    expect(within(note).getByText('Pista')).toBeInTheDocument();
+    expect(within(note).getByText(spanish)).toBeInTheDocument();
   });
 });
