@@ -23,6 +23,8 @@ const OPTION_LETTER_REFERENCES: readonly RegExp[] = [
   /`[a-f]`\s+(is|es|está|are|son)\s+(wrong|correct|right|incorrecta?|correcta?|falsa?|verdadera?)/,
   /\b(answer|respuesta)\s+`?[a-f]`?\b/i,
   /(^|[\s,(])[a-f]\s+(is|es|está|are|son)\s+(wrong|correct|right|false|true|incorrecta?|correcta?|falsa?|verdadera?)\b/,
+  // A bold letter such as **d** or **`a`** is the Markdown form of the same reference.
+  /\*\*`?[a-fA-F]`?\*\*/,
 ];
 
 // A parenthesised label such as "(b)" or "(a, c)" only points at an option in single and multi
