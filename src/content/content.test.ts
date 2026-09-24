@@ -201,6 +201,14 @@ function hintLeaks(question: Question, hint: string): string[] {
 }
 
 describe('hints', () => {
+  it('every question has a hint in English and in Spanish', () => {
+    const missingEnglish = bank.filter((q) => q.hint === undefined).map((q) => q.id);
+    const spanish = new Map(translationFiles.flatMap(([, module]) => Object.entries(module.translations ?? {})));
+    const missingSpanish = bank.filter((q) => spanish.get(q.id)?.hint === undefined).map((q) => q.id);
+    expect(missingEnglish).toEqual([]);
+    expect(missingSpanish).toEqual([]);
+  });
+
   it('every hint nudges without answering', () => {
     const leaks = bank.filter((q) => q.hint !== undefined).flatMap((q) => hintLeaks(q, q.hint ?? '').map((leak) => `${q.id}: ${leak}`));
     expect(leaks).toEqual([]);
