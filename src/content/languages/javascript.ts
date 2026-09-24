@@ -59,7 +59,7 @@ export function solution() {
     source: 'notion',
     explanation:
       '`this` is bound by the call site, not by where the function was defined. `secondSubject.greet()` or `firstSubject.greet.call(secondSubject)` both work; `bind` returns a new function. Arrow functions would ignore all of these because they capture `this` lexically.\n\n**Say this out loud:** "`this` is decided by the call site, not by where the function was defined, so a spread copy shares the function but I still have to call it through the right receiver, with a method call or `call`."',
-    hint: '`this` comes from how the function is called, not where it was defined; think about calling it as a method of the right object or passing the receiver explicitly with `call`.',
+    hint: '`this` comes from how a regular function is called, not where it was defined; recall the ways JavaScript lets you choose the receiver of a call.',
   },
   {
     id: 'javascript-closure-counter-independence',
@@ -99,7 +99,7 @@ export function solution() {
     tags: ['structuredClone', 'deep-copy'],
     source: 'topic-list',
     explanation: 'Spread and `Object.assign` copy one level. `JSON` round-trips turn a `Date` into a string and drop functions and `undefined`. `structuredClone` handles nested objects, Dates, Maps and Sets, but it throws a `DataCloneError` on functions and drops class prototypes (instances come back as plain objects).',
-    hint: 'Check how many levels each technique copies and what a JSON round trip does to a `Date`.',
+    hint: 'Recall how many levels each copying technique goes, and which value types each one can reproduce faithfully.',
   },
   {
     id: 'javascript-array-methods-some-every',
@@ -191,7 +191,7 @@ console.log(NaN === NaN);`,
     tags: ['hoisting', 'tdz', 'core-25'],
     source: 'core-list',
     explanation: '`let` is hoisted but uninitialized until its declaration runs, so reading it throws. `var` would print `undefined`; the function declaration is fully hoisted, but the `typeof f` line never runs because the first line already threw.',
-    hint: 'Both declarations are hoisted, but ask whether a `let` binding is initialized before its line runs, and whether later lines run at all if an early one fails.',
+    hint: 'Recall how hoisting differs for a `let` binding and a function declaration, and what reading a binding before its declaration line does.',
   },
   {
     id: 'javascript-null-vs-undefined-core',
@@ -362,7 +362,7 @@ export function solution(steps) {
     source: 'core-list',
     explanation:
       'A closure is a function bundled with the **variables** (bindings) of the scope it was created in, so `increment` keeps updating the same `count` long after `createCounter` returned. But `{ count }` is shorthand for `{ count: count }`: it **copies the current primitive value (0) into a property** at creation time. From then on the property and the closed-over variable are unrelated.\n\nA getter (or a `getCount()` function) reads the live binding on every access and keeps the variable private, since nothing outside can assign it.\n\nA related bug shows up in React as a *stale closure*: a callback created during an old render keeps reading that render\'s bindings. Closures also keep every variable they capture alive, which is how closures holding large objects or DOM nodes cause leaks.\n\n**Say this out loud:** "A closure captures variables, not values, but the moment you copy a primitive into an object property you have taken a snapshot; expose a getter if you want the live value."',
-    hint: 'Shorthand `{ count }` copies the current primitive once; think about exposing the value through a getter so every read goes back to the closed-over variable.',
+    hint: 'Shorthand `{ count }` copies the current primitive once; ask how an object property can compute its value each time it is read instead of storing it.',
   },
   {
     id: 'javascript-var-let-const-loop-core',
@@ -528,7 +528,7 @@ console.log(bound.call({ owner: 'di' }));`,
     source: 'core-list',
     explanation:
       'JavaScript has no separate method type: a method is a function-valued property (`typeof` is `"function"`) that usually reads `this`. The binding to the object happens only in the call expression `cart.count()`. Passing `cart.count` hands over the bare function; the timer then calls it with a receiver of its own, not `cart` (`window` in browsers, a `Timeout` object in Node), so `this.items` is `undefined` and reading `.length` throws a `TypeError` inside the timer callback.\n\nFixes: `setTimeout(() => cart.count(), 0)` or `setTimeout(cart.count.bind(cart), 0)`. An arrow function as a method does *not* help: arrows take `this` from the surrounding scope, not from the object literal. Shorthand methods do differ in two small ways: they cannot be used with `new`, and they can use `super`.',
-    hint: 'Ask what `typeof` reports for a method and what receiver a function gets when a timer calls it without the object in front.',
+    hint: 'Recall what decides `this` in a regular function, and whether defining the function inside an object literal changes that.',
   },
   {
     id: 'javascript-promise-chain-recovery-core',
@@ -615,7 +615,7 @@ export async function solution(ids) {
     source: 'core-list',
     explanation:
       '`forEach` ignores the promises its callback returns, so `solution` returns before any price arrives. Two more problems hide here:\n- **Lost updates:** `total += await x` reads `total` *before* the await. With concurrent callbacks every one reads `0`, so even if you waited, the last writer wins.\n- **Unhandled rejections:** a failing callback rejects a promise nobody observes.\n\nJavaScript handles async work with callbacks, promises and `async`/`await` (sugar over promises). Pick the shape deliberately: `for...of` with `await` for **sequential** work (ordering, rate limits), `Promise.all(items.map(...))` for **concurrent** fail-fast work, `Promise.allSettled` when partial failure is acceptable, and a concurrency limiter (p-limit style) when the list is large.\n\n**Say this out loud:** "`forEach` is not promise-aware; I map to promises and await `Promise.all` for concurrency, or use `for...of` with `await` when order or rate limits matter, and I never accumulate shared state across concurrent awaits."',
-    hint: '`forEach` ignores the promises its callback returns; map the ids to promises, wait for them together with `Promise.all`, then sum the results.',
+    hint: 'Ask what `forEach` does with the promises its callback returns, and which `Promise` helper waits for many concurrent operations.',
   },
   {
     id: 'javascript-promisify-callback-core',
@@ -689,7 +689,7 @@ export async function solution(a, b) {
     source: 'core-list',
     explanation:
       'This is the whole history of async JavaScript in one function: **callbacks** (error-first by Node convention), wrapped into a **Promise**, consumed with **async/await**.\n\n- The Promise constructor is the bridge: call the old API inside the executor, and route `error` to `reject` and the value to `resolve`.\n- Rest/spread (`...args`) keeps the wrapper generic for any arity.\n- `await` turns the rejection into an exception, so `try/catch` works like synchronous code.\n\nCallbacks compose badly (nesting, no single error channel, easy to call twice); promises settle once and chain. Node ships `util.promisify` and most core modules have promise variants (`fs/promises`); if `fn` relies on `this`, the wrapper must be a regular `function` (an arrow has no own `this`) and forward it with `fn.call(this, ...args, callback)`.',
-    hint: 'Return a function that builds a `new Promise`, calls the original with the arguments plus an error-first callback, and routes the error and the result to the right settle function.',
+    hint: 'The `Promise` constructor is the bridge between the two styles; ask what "error-first" tells you about which callback argument decides how the promise settles.',
   },
   {
     id: 'javascript-map-parseint-core',
@@ -767,7 +767,7 @@ export function solution(input) {
     source: 'core-list',
     explanation:
       'Functional programming builds programs from **pure functions** (same input, same output, no side effects) combined by **higher-order functions**, avoiding shared mutable state. JavaScript supports it because functions are first-class values: you can pass them, return them and store them.\n\n`pipe` is `reduce` over functions: the accumulator is the value flowing through. `compose` is the same thing right to left (`reduceRight`). Each step here is pure and trivially unit-testable; the pipeline is just data.\n\nIn day-to-day JavaScript this shows up as `map`/`filter`/`reduce` instead of loops with mutation, immutable state updates in Redux reducers, and small composable utilities. The pragmatic stance: keep the core pure and push side effects (I/O, logging, time) to the edges.',
-    hint: 'Think of `pipe` as a fold: `Array.prototype.reduce` over the functions, with the input as the initial value.',
+    hint: 'Think of `pipe` as a fold over the list of functions: ask what the accumulator is and what it should start as.',
   },
   {
     id: 'javascript-memoize-cache-key-core',
@@ -823,7 +823,7 @@ export function solution(calls) {
     source: 'core-list',
     explanation:
       'Memoization caches a function\'s result per input, trading memory for time. The cache lives in a **closure**, private to the returned function.\n\nThe hard part is the **key**:\n- `args.join(\',\')` or `String(args)` collide (`[1, 2]` and `[\'1,2\']` both become `"1,2"`). `JSON.stringify(args)` keeps types and boundaries for serializable input.\n- Object arguments compared by identity belong in a `WeakMap` (entries are collected with the key); structural keys need a stable serializer.\n- Use `cache.has`, not a truthiness check, or cached `0`, `""` and `undefined` results are recomputed.\n\nOnly memoize **pure** functions: a cached impure call returns stale data. An unbounded `Map` is a memory leak in a long-running process, so production caches need an LRU bound or a TTL. For async functions, cache the **promise** so concurrent callers share one in-flight request, and evict it on rejection.\n\n**Say this out loud:** "Memoization is only correct for pure functions, the cache key is the real design decision, and in a server every cache needs an eviction policy or it is a leak."',
-    hint: 'Keep a `Map` in a closure, and choose a cache key that preserves argument types and boundaries, such as `JSON.stringify` of the whole arguments array.',
+    hint: 'Keep the cache in a closure, and ask what key makes `(1, 2)` and `("1,2")` differ while two identical calls still match.',
   },
   {
     id: 'javascript-immutability-freeze-core',

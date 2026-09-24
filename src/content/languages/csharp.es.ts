@@ -39,7 +39,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "Los tipos de referencia anulables son una característica de **análisis de flujo en tiempo de compilación**, no un mecanismo de verificación nula en tiempo de ejecución: por defecto los diagnósticos son advertencias, no errores, así que la opción de \"el build falla con el error CS8602\" es incorrecta — el proyecto compila. Marcar el parámetro como `User?` le dice al compilador que el argumento puede ser `null`, y acceder a `.Name` sin acotarlo (un `if (user is null) return ...;`, un operador condicional nulo `user?.Name`, o un operador de indulgencia nula `user!.Name` cuando estás seguro de que no es null) dispara CS8602. Nada en la anotación cambia lo que pasa en tiempo de ejecución: pasar `null` sigue lanzando una `NullReferenceException` normal al desreferenciar, exactamente igual que en código antiguo sin soporte para anulables, así que la opción de `ArgumentNullException` es incorrecta — no se inserta ninguna verificación. Las advertencias son diagnósticos reales del compilador, visibles en la salida del build y en CI, no solo pistas del editor, así que la opción de \"solo afectan los tooltips del editor\" también es incorrecta.",
-    hint: "Recuerda si los tipos de referencia anulables actúan en compilación o en ejecución, y qué severidad tienen sus diagnósticos por defecto.",
+    hint: "Separa lo que revisa el compilador de lo que pasa cuando el código se ejecuta, y evalúa por separado cada mitad de cada opción.",
   },
   'csharp-task-whenall-exceptions': {
     prompt:

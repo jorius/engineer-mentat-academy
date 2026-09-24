@@ -21,7 +21,7 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       'TypeScript infers from the initializer, then **widens** literals wherever the value could change. A `let` can be reassigned, so `a` widens to `string`; a `const` primitive cannot, so `b` keeps the literal `"open"`. Object properties are mutable even inside a `const` object, so `task.status` widens to `string`, which is why passing `task` to a function expecting `{ status: \'open\' | \'closed\' }` fails.\n\nKeep the literal with `as const`, `satisfies`, or an explicit annotation. Practical rule: let inference type locals, and annotate function parameters, exported APIs and return types of public functions so the contract is stated, not accidental.',
-    hint: 'Ask which of the three values could be changed later; TypeScript widens a literal only where reassignment or mutation is possible.',
+    hint: 'Recall when TypeScript keeps a literal type and when it widens it, and apply that to a `let`, a `const` and an object property.',
   },
   {
     id: 'typescript-basics-unknown-any-never',
@@ -42,7 +42,7 @@ export const questions: Question[] = [
     source: 'notion',
     explanation:
       '- `any` opts out of type checking in both directions: it is assignable to everything and everything is callable on it, so one `any` leaks through return values and quietly disables safety downstream.\n- `unknown` is the safe **top type**: anything can go in, but nothing comes out until you narrow (`typeof`, `instanceof`, `in`, a type guard or a schema). It is the right type for `JSON.parse`, `catch` variables, API responses and LLM/tool output.\n- `never` is the **bottom type**: no value has it. It types functions that always throw and powers exhaustiveness checks (`assertNever(x: never)`).\n\n`null` and `undefined` are their own types under `strictNullChecks`, not `never`.',
-    hint: 'Think of `unknown` as the safe top type, `never` as the bottom type, and `any` as an opt-out of checking in both directions.',
+    hint: 'Recall where each of these types sits in the type hierarchy, and what the compiler lets you do with a value of each.',
   },
   {
     id: 'typescript-basics-types-erased',
@@ -114,7 +114,7 @@ export function solution(items: Product[], key: keyof Product) {
     source: 'notion',
     explanation:
       'Generics are type parameters: the caller\'s types flow through the function instead of being erased to `any`. `K extends keyof T` **constrains** the key to real property names of `T`, and the indexed access type `T[K]` gives the exact value type for that key. The implementation is plain `map`; the value of the exercise is the signature, which makes the call site precise without overloads.',
-    hint: 'The types are already done by `K extends keyof T`; the body is a plain `Array.prototype.map` reading `item[key]`.',
+    hint: 'The signature already does the typing; the body only has to read one key from each item and keep the order.',
   },
   {
     id: 'typescript-generics-group-by',
@@ -162,7 +162,7 @@ export function solution(tickets: Ticket[]) {
     source: 'topic-list',
     explanation:
       'Two type parameters, both **inferred** at the call site: `T` from the array, `K` from the callback\'s return type. With the `Ticket` data, `K` is `\'open\' | \'closed\'`, so the result is `Partial<Record<\'open\' | \'closed\', Ticket[]>>`.\n\n- `K extends PropertyKey` (`string | number | symbol`) is the constraint that makes `K` legal as an object key.\n- `Partial` is honest: not every possible key has a group, so reading `groups.open` forces an `undefined` check.\n- `??=` creates the bucket on first use.\n\nES2024 ships `Object.groupBy` with the same shape (returning a null-prototype object); writing it yourself is a standard generics exercise.',
-    hint: 'Loop once over the items, compute each key, create the bucket array the first time you see a key, and push in order.',
+    hint: 'Ask what the result needs the first time a key appears versus every later time, and how to keep each group in the original order.',
   },
   {
     id: 'typescript-generics-constraint',
@@ -184,7 +184,7 @@ export function solution(tickets: Ticket[]) {
     source: 'notion',
     explanation:
       'An unconstrained `T` could be anything, so the compiler only allows what is valid for *every* type. `extends { length: number }` is a **constraint**: callers can pass any type that has a numeric `length`, and `T` still carries their exact type out.\n\n- The non-generic `{ length: number }` signature compiles but erases the type: the caller gets back `{ length: number }` and loses string or array methods.\n- The `as any` cast compiles by switching checking off, so `longest(1, 2)` would compile and return garbage.\n- `<T = string>` sets a **default**, not a constraint; it does not tell the compiler anything about `length`.',
-    hint: 'Look for the option that tells the compiler `T` has a numeric `length` while still returning the caller\'s own type.',
+    hint: 'Recall the ways to tell the compiler what a generic value supports, then check what type each option hands back to the caller.',
   },
   {
     id: 'typescript-interface-vs-type-open',
@@ -311,7 +311,7 @@ console.log(Object.isFrozen(ROLES));`,
     source: 'notion',
     explanation:
       'Enums are one of the few non-erasable TypeScript features. That shows up as friction: values arriving as JSON strings must be cast to the enum; `const enum` is inlined across files, which Babel, esbuild and `isolatedModules` cannot do; and Node\'s built-in type stripping (and `--erasableSyntaxOnly`) rejects enums altogether.\n\nA union of literals has none of that, and pairing it with an `as const` array gives you the runtime list back. The claim that only a union can be iterated with `Object.values` is backwards: an enum *is* a runtime object you can iterate (reverse mappings included), while a union type does not exist at runtime at all.',
-    hint: 'Compare what each form leaves in the emitted JavaScript, how each accepts plain strings from JSON, and which tools can compile it file by file.',
+    hint: 'Think about what each form becomes after compilation and how the compiler treats values of each, then test every claim against that.',
   },
   {
     id: 'typescript-discriminated-union-render',
@@ -424,7 +424,7 @@ export function solution(thrown: unknown): string {
     source: 'notion',
     explanation:
       'Under `strict` (`useUnknownInCatchVariables`) catch variables are `unknown`, because JavaScript lets you throw anything. Each check narrows the type for the code that follows:\n\n- `instanceof` narrows to the class.\n- `typeof error === \'string\'` narrows to `string`.\n- `typeof error === \'object\'` still includes `null` (the old `typeof null` bug), so the null check is required.\n- Since TypeScript 4.9, `\'message\' in error` narrows to `object & Record<\'message\', unknown>`, and the final `typeof` check makes it a string.\n\nWriting `(error as Error).message` compiles but crashes or lies on exactly the inputs this handler exists for.',
-    hint: 'Chain narrowing checks: `instanceof Error`, `typeof` for strings, then a non-null object check with the `in` operator and a `typeof` check on the property.',
+    hint: 'Recall the narrowing checks TypeScript understands (`instanceof`, `typeof`, `in`), and rule out `null` before reading a property of an object.',
   },
   {
     id: 'typescript-optional-zero-fix',
@@ -462,7 +462,7 @@ export function solution(line: StockLine): string {
     source: 'topic-list',
     explanation:
       'Truthiness narrowing removes `undefined` and `null` from the type, so the buggy check looks fine to the compiler, but at runtime it also rejects the falsy numbers `0` and `NaN`. For an optional number, check for nullish explicitly (`=== undefined || === null`, or the idiomatic `line.quantity == null`), or use `??` when you want a fallback value (`line.quantity ?? \'n/a\'`) instead of `||`.',
-    hint: 'Truthiness also rejects `0`; compare against nullish values explicitly (a loose `== null` check covers both).',
+    hint: 'Truthiness also rejects `0`; ask which comparison matches only the nullish values.',
   },
   {
     id: 'typescript-optional-vs-undefined',
@@ -483,7 +483,7 @@ export function solution(line: StockLine): string {
     source: 'topic-list',
     explanation:
       '`?` means **the key may be absent**; `| undefined` means **the value may be undefined**. Reading either gives `string | undefined`, but only the optional one can be left out of an object literal. Neither accepts `null`; you have to add `| null` explicitly.\n\nThe difference matters whenever presence is meaningful: `\'nickname\' in obj`, `Object.keys`, object spread and PATCH semantics ("absent means unchanged, `null` means clear"; an explicit `undefined` disappears in `JSON.stringify`, so it cannot carry meaning over the wire). By default TypeScript lets `nickname?: string` receive an explicit `undefined`; `exactOptionalPropertyTypes` tightens that so the type describes what the runtime actually sees.',
-    hint: 'Separate whether the key may be absent from whether the value may be `undefined`, and recall what `exactOptionalPropertyTypes` tightens.',
+    hint: 'Write an object literal for each type, with and without the key, and recall what `exactOptionalPropertyTypes` tightens.',
   },
   {
     id: 'typescript-partial-spread-undefined',
@@ -575,7 +575,7 @@ export function solution(user: User) {
     source: 'notion',
     explanation:
       '`Pick<T, K>` is the mapped type `{ [P in K]: T[P] }`; `Omit<T, K>` is `Pick<T, Exclude<keyof T, K>>`. The starter shows why types alone are not enough: returning `source` **type-checks** (a `User` is structurally assignable to both), yet the `passwordHash` still goes over the wire. Structural typing allows extra properties, so a DTO type never strips data; only runtime code does.\n\nThe implementations need one internal cast because `Object.fromEntries` loses key information; keeping that cast inside a small, tested helper is what gives callers exact types. This pairing (derive the DTO type with `Pick`/`Omit`, build it with a real copy) is the standard way to shape API responses.',
-    hint: 'Build a new object: for `pick` copy only the listed keys, for `omit` copy every own key not in the list (for example with `Object.entries` and a `Set`).',
+    hint: 'Build a new object instead of mutating; ask which keys each function copies and how to test membership in the key list.',
   },
   {
     id: 'typescript-utility-types-equivalence',
@@ -597,7 +597,7 @@ export function solution(user: User) {
     source: 'notion',
     explanation:
       '- `Partial<Omit<User, \'id\'>>`: remove `id`, then make the rest optional.\n- `Omit<Partial<User>, \'id\'>`: make everything optional, then remove `id`. `Omit` is built on `Pick`, and `Pick` is a *homomorphic* mapped type (it iterates over `keyof T`), so it **preserves** the `?` and `readonly` modifiers it finds.\n- `Pick<Partial<User>, \'name\' | \'email\'>`: the same modifier preservation, with the keys listed explicitly.\n- `Exclude<Partial<User>, \'id\'>` is the classic confusion: `Exclude<U, E>` filters members out of a **union**. `Partial<User>` is a single object type, not a union containing `\'id\'`, so nothing is excluded and `id?` stays.\n\n**Say this out loud:** "`Omit` and `Pick` work on keys of an object type, `Exclude` and `Extract` work on members of a union, and homomorphic mapped types like `Pick` and `Partial` preserve optional and readonly modifiers, so the order of composition often does not matter."',
-    hint: 'Remember `Omit` and `Pick` keep the `?` modifier, and ask which of these utilities works on object keys versus on members of a union.',
+    hint: 'Expand each option one utility at a time, from the inside out, and write down the object type that results.',
   },
   {
     id: 'typescript-deep-readonly-freeze',
@@ -663,7 +663,7 @@ export function solution(config: Config) {
     source: 'topic-list',
     explanation:
       'The type combines a **conditional type** (functions pass through untouched, objects recurse, primitives stay as they are) with a **mapped type** that adds `readonly` to every key. It distributes over unions and works for arrays too, because a homomorphic mapped type over an array type produces a readonly array.\n\nBut `readonly` is erased: a cast or a plain JavaScript caller can still mutate. `Object.freeze` is the runtime half, and it is **shallow**, so the implementation must recurse (`Reflect.ownKeys` also covers symbol keys; the `isFrozen` check stops cycles and repeated work, but it also skips the children of an object that was already frozen shallowly, so a production helper tracks visited objects in a `WeakSet` instead). The final `as` is unavoidable: the compiler cannot prove that a runtime loop satisfies a recursive type.\n\n**Say this out loud:** "Utility and mapped types describe shapes at compile time only; when the guarantee has to hold at runtime I pair the type with code that enforces it, and I keep the one unavoidable cast inside that helper."',
-    hint: 'Recurse: `Object.freeze` the value, then walk its own values and deep-freeze every nested object or array (`typeof` object and not `null`).',
+    hint: '`Object.freeze` is shallow; ask what has to happen to every nested value and how to recognize one that needs the same treatment.',
   },
   {
     id: 'typescript-boundary-validation-open',
@@ -748,6 +748,6 @@ export function solution(json: string): Ticket[] {
     source: 'notion',
     explanation:
       '`JSON.parse` returns `any`; assigning it to `unknown` first forces every use through a check. A **user-defined type guard** (`value is Ticket`) connects a runtime check to compile-time narrowing, and passing it to `filter` gives a `Ticket[]` with no cast at the call site.\n\nThe guard is only as honest as its body, which is exactly why production code generates it from a schema (zod\'s `Ticket.safeParse`) instead of writing it by hand. Decide the policy explicitly, too: here invalid items are dropped; an API that must reject the whole payload would return an error instead, and either way you should log what was rejected.\n\n**Say this out loud:** "`as` tells the compiler to trust me; a type guard or schema makes the runtime prove it, and I only trust data after it has been proven."',
-    hint: 'Wrap `JSON.parse` in `try`/`catch`, check `Array.isArray`, then `filter` with a `value is Ticket` guard that checks each field with `typeof`, a set of allowed statuses and `Number.isFinite`.',
+    hint: 'Start from `unknown`, handle the ways the whole payload can be unusable before looking at items, and let a `value is Ticket` guard narrow each item field by field.',
   },
 ];

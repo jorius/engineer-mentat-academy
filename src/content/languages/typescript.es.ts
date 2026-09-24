@@ -7,13 +7,13 @@ export const translations: Record<string, QuestionTranslation> = {
       '```ts\nlet a = \'open\';\nconst b = \'open\';\nconst task = { status: \'open\' };\n```\n¿Qué tipos infiere TypeScript para `a`, `b` y `task.status`?',
     explanation:
       'TypeScript infiere a partir del inicializador y luego **ensancha** (widening) los literales donde el valor podría cambiar. Un `let` se puede reasignar, así que `a` se ensancha a `string`; un primitivo `const` no, así que `b` conserva el literal `"open"`. Las propiedades de un objeto son mutables incluso dentro de un objeto `const`, así que `task.status` se ensancha a `string`, y por eso pasar `task` a una función que espera `{ status: \'open\' | \'closed\' }` falla.\n\nConserva el literal con `as const`, `satisfies` o una anotación explícita. Regla práctica: deja que la inferencia tipe las variables locales, y anota los parámetros de funciones, las APIs exportadas y los tipos de retorno de las funciones públicas para que el contrato quede declarado y no sea accidental.',
-    hint: 'Pregúntate cuál de los tres valores podría cambiar después; TypeScript ensancha un literal solo donde es posible reasignar o mutar.',
+    hint: 'Recuerda cuándo TypeScript conserva un tipo literal y cuándo lo ensancha, y aplícalo a un `let`, a un `const` y a una propiedad de objeto.',
   },
   'typescript-basics-unknown-any-never': {
     prompt: '¿Qué afirmación sobre `any`, `unknown` y `never` es correcta?',
     explanation:
       '- `any` desactiva la comprobación de tipos en ambas direcciones: se puede asignar a todo y todo se puede invocar sobre él, así que un solo `any` se filtra por los valores de retorno y desactiva en silencio la seguridad más adelante.\n- `unknown` es el **top type** seguro: cualquier cosa puede entrar, pero nada sale hasta que haces narrowing (`typeof`, `instanceof`, `in`, un type guard o un schema). Es el tipo correcto para `JSON.parse`, las variables de `catch`, las respuestas de APIs y la salida de LLMs/herramientas.\n- `never` es el **bottom type**: ningún valor lo tiene. Tipa las funciones que siempre lanzan un error y hace posibles las comprobaciones de exhaustividad (`assertNever(x: never)`).\n\n`null` y `undefined` son sus propios tipos con `strictNullChecks`, no `never`.',
-    hint: 'Piensa en `unknown` como el top type seguro, en `never` como el bottom type y en `any` como una forma de desactivar la comprobación en ambas direcciones.',
+    hint: 'Recuerda dónde está cada uno de estos tipos en la jerarquía de tipos y qué te deja hacer el compilador con un valor de cada uno.',
     options: {
       a:
         '`unknown` acepta cualquier valor, pero hay que hacer narrowing antes de leer propiedades o invocarlo; `any` desactiva la comprobación y se propaga en silencio; `never` no tiene valores y es lo que queda en el `default` de un `switch` exhaustivo.',
@@ -34,21 +34,21 @@ export const translations: Record<string, QuestionTranslation> = {
       'Implementa el genérico `pluck(items, key)` para que devuelva el valor de `key` de cada elemento, en orden. La firma ya está dada: `K extends keyof T` significa que `pluck(products, \'price\')` tiene tipo `number[]` y que un error de tipeo en la clave es un error de compilación.',
     explanation:
       'Los genéricos son parámetros de tipo: los tipos de quien llama fluyen a través de la función en lugar de borrarse a `any`. `K extends keyof T` **restringe** la clave a nombres de propiedad reales de `T`, y el indexed access type `T[K]` da el tipo exacto del valor para esa clave. La implementación es un simple `map`; el valor del ejercicio está en la firma, que hace preciso el punto de llamada sin overloads.',
-    hint: 'Los tipos ya los resuelve `K extends keyof T`; el cuerpo es un simple `Array.prototype.map` que lee `item[key]`.',
+    hint: 'La firma ya resuelve los tipos; el cuerpo solo tiene que leer una clave de cada elemento y conservar el orden.',
   },
   'typescript-generics-group-by': {
     prompt:
       'Implementa `groupBy(items, keyOf)`: devuelve un objeto que mapea cada clave producida por `keyOf` a los elementos con esa clave, en su orden original. Solo deben estar presentes las claves que aparecen.',
     explanation:
       'Dos parámetros de tipo, ambos **inferidos** en el punto de llamada: `T` a partir del array y `K` a partir del tipo de retorno del callback. Con los datos de `Ticket`, `K` es `\'open\' | \'closed\'`, así que el resultado es `Partial<Record<\'open\' | \'closed\', Ticket[]>>`.\n\n- `K extends PropertyKey` (`string | number | symbol`) es la restricción que hace que `K` sea válido como clave de objeto.\n- `Partial` es honesto: no toda clave posible tiene un grupo, así que leer `groups.open` obliga a comprobar `undefined`.\n- `??=` crea el grupo la primera vez que se usa.\n\nES2024 incluye `Object.groupBy` con la misma forma (devuelve un objeto con prototipo null); escribirlo tú mismo es un ejercicio estándar de genéricos.',
-    hint: 'Recorre los elementos una vez, calcula cada clave, crea el array del grupo la primera vez que ves una clave y agrega en orden.',
+    hint: 'Pregúntate qué necesita el resultado la primera vez que aparece una clave frente a las siguientes, y cómo mantener cada grupo en el orden original.',
   },
   'typescript-generics-constraint': {
     prompt:
       '```ts\nfunction longest<T>(a: T, b: T): T {\n  return a.length >= b.length ? a : b;\n}\n```\nEsto falla con `Property \'length\' does not exist on type \'T\'`. ¿Qué corrección conserva el tipo de quien llama, de modo que `longest(\'ab\', \'c\')` siga siendo un tipo string (TypeScript infiere `\'ab\' | \'c\'`) y `longest([1], [2, 3])` sea un `number[]`?',
     explanation:
       'Un `T` sin restricción podría ser cualquier cosa, así que el compilador solo permite lo que es válido para *todos* los tipos. `extends { length: number }` es una **restricción**: quien llama puede pasar cualquier tipo que tenga un `length` numérico, y `T` sigue devolviendo su tipo exacto.\n\n- La firma no genérica con `{ length: number }` compila pero borra el tipo: quien llama recibe `{ length: number }` y pierde los métodos de string o de array.\n- El cast con `as any` compila desactivando la comprobación, así que `longest(1, 2)` compilaría y devolvería basura.\n- `<T = string>` define un **valor por defecto**, no una restricción; no le dice nada al compilador sobre `length`.',
-    hint: 'Busca la opción que le dice al compilador que `T` tiene un `length` numérico y aun así devuelve el tipo propio de quien llama.',
+    hint: 'Recuerda las formas de decirle al compilador qué soporta un valor genérico, y luego revisa qué tipo le devuelve cada opción a quien llama.',
     options: {
       c: 'Mantener `<T>` y escribir `(a as any).length >= (b as any).length`',
     },
@@ -101,7 +101,7 @@ export const translations: Record<string, QuestionTranslation> = {
       'Muchos equipos prefieren `type Status = \'open\' | \'closed\'` (a menudo derivado de un array `as const`) sobre `enum Status`. ¿Cuál es la mejor razón?',
     explanation:
       'Los enums son una de las pocas características de TypeScript que no se pueden borrar. Eso se nota como fricción: los valores que llegan como strings en JSON deben convertirse al enum con un cast; `const enum` se inserta en línea entre archivos, algo que Babel, esbuild e `isolatedModules` no pueden hacer; y el type stripping integrado de Node (y `--erasableSyntaxOnly`) rechaza los enums por completo.\n\nUna unión de literales no tiene nada de eso, y combinarla con un array `as const` te devuelve la lista en tiempo de ejecución. La afirmación de que solo una unión se puede recorrer con `Object.values` está al revés: un enum *es* un objeto en tiempo de ejecución que puedes recorrer (con mapeos inversos incluidos), mientras que un tipo unión no existe en absoluto en tiempo de ejecución.',
-    hint: 'Compara qué deja cada forma en el JavaScript emitido, cómo acepta cada una strings planos que vienen de JSON y qué herramientas pueden compilarla archivo por archivo.',
+    hint: 'Piensa en qué se convierte cada forma después de compilar y cómo trata el compilador los valores de cada una, y luego contrasta cada afirmación con eso.',
     options: {
       a:
         'Una unión de literales se borra, coincide con strings simples de JSON sin conversión y no necesita soporte especial del compilador; un enum emite un objeto en tiempo de ejecución, es nominal (un `\'open\'` simple no se le puede asignar) y `const enum` se rompe con transpiladores de un solo archivo.',
@@ -123,21 +123,21 @@ export const translations: Record<string, QuestionTranslation> = {
       'En un bloque `catch` el error es `unknown`: se puede lanzar cualquier cosa. Implementa `toMessage(error)`: para un `Error`, devuelve su `message`; para un string, devuelve el string; para cualquier otro objeto con una propiedad `message` de tipo **string**, devuelve esa propiedad; en cualquier otro caso devuelve `Unknown error`. Usa narrowing, no `as`.',
     explanation:
       'Con `strict` (`useUnknownInCatchVariables`) las variables de catch son `unknown`, porque JavaScript te deja lanzar cualquier cosa. Cada comprobación estrecha el tipo para el código que sigue:\n\n- `instanceof` estrecha a la clase.\n- `typeof error === \'string\'` estrecha a `string`.\n- `typeof error === \'object\'` todavía incluye `null` (el viejo bug de `typeof null`), así que la comprobación de null es obligatoria.\n- Desde TypeScript 4.9, `\'message\' in error` estrecha a `object & Record<\'message\', unknown>`, y la comprobación `typeof` final lo convierte en string.\n\nEscribir `(error as Error).message` compila, pero falla o miente justo con las entradas para las que existe este handler.',
-    hint: 'Encadena comprobaciones de narrowing: `instanceof Error`, `typeof` para strings y luego una comprobación de objeto no nulo con el operador `in` y un `typeof` sobre la propiedad.',
+    hint: 'Recuerda las comprobaciones de narrowing que entiende TypeScript (`instanceof`, `typeof`, `in`) y descarta `null` antes de leer una propiedad de un objeto.',
   },
   'typescript-optional-zero-fix': {
     prompt:
       'Un reporte de inventario dice `bolts: not tracked` aunque el almacén tiene cero pernos registrados. Corrige la comprobación para que solo una cantidad **ausente** o `null` cuente como no rastreada.',
     explanation:
       'El narrowing por truthiness quita `undefined` y `null` del tipo, así que al compilador la comprobación con el bug le parece correcta, pero en tiempo de ejecución también rechaza los números falsy `0` y `NaN`. Para un número opcional, comprueba nullish de forma explícita (`=== undefined || === null`, o el idiomático `line.quantity == null`), o usa `??` cuando quieras un valor alternativo (`line.quantity ?? \'n/a\'`) en lugar de `||`.',
-    hint: 'La veracidad también rechaza `0`; compara explícitamente contra los valores nullish (una comprobación laxa `== null` cubre ambos).',
+    hint: 'La veracidad también rechaza `0`; pregúntate qué comparación coincide solo con los valores nullish.',
   },
   'typescript-optional-vs-undefined': {
     prompt:
       '```ts\ntype First = { nickname?: string };\ntype Second = { nickname: string | undefined };\n```\nCon `strict` activado (y `exactOptionalPropertyTypes` desactivado), ¿cuál es la diferencia entre estos dos tipos?',
     explanation:
       '`?` significa **la clave puede estar ausente**; `| undefined` significa **el valor puede ser undefined**. Leer cualquiera de los dos da `string | undefined`, pero solo el opcional se puede omitir en un literal de objeto. Ninguno acepta `null`; tienes que agregar `| null` explícitamente.\n\nLa diferencia importa siempre que la presencia tenga significado: `\'nickname\' in obj`, `Object.keys`, el spread de objetos y la semántica de PATCH ("ausente significa sin cambios, `null` significa borrar"; un `undefined` explícito desaparece en `JSON.stringify`, así que no puede viajar por la red). Por defecto TypeScript deja que `nickname?: string` reciba un `undefined` explícito; `exactOptionalPropertyTypes` lo endurece para que el tipo describa lo que realmente ve el runtime.',
-    hint: 'Separa si la clave puede faltar de si el valor puede ser `undefined`, y recuerda qué endurece `exactOptionalPropertyTypes`.',
+    hint: 'Escribe un objeto literal para cada tipo, con y sin la clave, y recuerda qué endurece `exactOptionalPropertyTypes`.',
     options: {
       a:
         'El primero permite a quien llama omitir la clave; el segundo exige que la clave esté presente, aunque su valor puede ser `undefined`. Activar `exactOptionalPropertyTypes` además impide que el primero acepte un `nickname: undefined` explícito.',
@@ -158,21 +158,21 @@ export const translations: Record<string, QuestionTranslation> = {
       'Los tipos integrados `Pick<T, K>` y `Omit<T, K>` solo existen en tiempo de compilación. Implementa `pick` y `omit` en tiempo de ejecución cuyos tipos de retorno sean esos utility types, para que `solution` devuelva una tarjeta con solo `id` y `name`, y un usuario público **sin** `passwordHash`.',
     explanation:
       '`Pick<T, K>` es el mapped type `{ [P in K]: T[P] }`; `Omit<T, K>` es `Pick<T, Exclude<keyof T, K>>`. El starter muestra por qué los tipos solos no alcanzan: devolver `source` **pasa la comprobación de tipos** (un `User` es asignable estructuralmente a ambos), y aun así el `passwordHash` viaja por la red. El tipado estructural permite propiedades extra, así que un tipo DTO nunca elimina datos; solo lo hace el código en tiempo de ejecución.\n\nLas implementaciones necesitan un cast interno porque `Object.fromEntries` pierde la información de las claves; mantener ese cast dentro de un helper pequeño y probado es lo que les da tipos exactos a quienes lo llaman. Esta combinación (derivar el tipo DTO con `Pick`/`Omit` y construirlo con una copia real) es la forma estándar de dar forma a las respuestas de una API.',
-    hint: 'Construye un objeto nuevo: en `pick` copia solo las claves de la lista, en `omit` copia toda clave propia que no esté en ella (por ejemplo con `Object.entries` y un `Set`).',
+    hint: 'Construye un objeto nuevo en vez de mutar; pregúntate qué claves copia cada función y cómo comprobar si una clave está en la lista.',
   },
   'typescript-utility-types-equivalence': {
     prompt:
       '```ts\ninterface User {\n  id: number;\n  name: string;\n  email: string;\n}\n```\nNecesitas este tipo para el payload de PATCH:\n```ts\ntype UserPatch = {\n  name?: string;\n  email?: string;\n};\n```\n¿Cuáles de estos producen exactamente ese tipo? Selecciona todos los que correspondan.',
     explanation:
       '- `Partial<Omit<User, \'id\'>>`: quita `id` y luego hace opcional el resto.\n- `Omit<Partial<User>, \'id\'>`: hace todo opcional y luego quita `id`. `Omit` está construido sobre `Pick`, y `Pick` es un mapped type *homomórfico* (itera sobre `keyof T`), así que **conserva** los modificadores `?` y `readonly` que encuentra.\n- `Pick<Partial<User>, \'name\' | \'email\'>`: la misma conservación de modificadores, con las claves listadas explícitamente.\n- `Exclude<Partial<User>, \'id\'>` es la confusión clásica: `Exclude<U, E>` filtra miembros de una **unión**. `Partial<User>` es un solo tipo de objeto, no una unión que contenga `\'id\'`, así que no se excluye nada y `id?` se queda.\n\n**Dilo en voz alta:** "`Omit` y `Pick` trabajan sobre las claves de un tipo de objeto, `Exclude` y `Extract` trabajan sobre los miembros de una unión, y los mapped types homomórficos como `Pick` y `Partial` conservan los modificadores opcional y readonly, así que el orden de composición a menudo no importa."',
-    hint: 'Recuerda que `Omit` y `Pick` conservan el modificador `?`, y pregúntate cuáles de estas utilidades trabajan sobre claves de objeto y cuáles sobre miembros de una unión.',
+    hint: 'Expande cada opción una utilidad a la vez, de adentro hacia afuera, y escribe el tipo de objeto que resulta.',
   },
   'typescript-deep-readonly-freeze': {
     prompt:
       '`DeepReadonly<T>` es un mapped type recursivo que hace `readonly` cada propiedad anidada en tiempo de compilación. Implementa `deepFreeze` para que el runtime cumpla la misma promesa: el objeto y cada objeto o array anidado deben quedar congelados. `solution` reporta `Object.isFrozen` para la raíz, un objeto anidado y un array anidado.',
     explanation:
       'El tipo combina un **conditional type** (las funciones pasan sin cambios, los objetos se recorren de forma recursiva, los primitivos se quedan como están) con un **mapped type** que agrega `readonly` a cada clave. Se distribuye sobre las uniones y también funciona con arrays, porque un mapped type homomórfico sobre un tipo array produce un array readonly.\n\nPero `readonly` se borra: un cast o quien llame desde JavaScript simple todavía puede mutar. `Object.freeze` es la mitad de runtime, y es **superficial**, así que la implementación debe ser recursiva (`Reflect.ownKeys` también cubre las claves symbol; la comprobación `isFrozen` detiene los ciclos y el trabajo repetido, pero también se salta los hijos de un objeto que ya estaba congelado de forma superficial, así que un helper de producción registra los objetos visitados en un `WeakSet`). El `as` final es inevitable: el compilador no puede demostrar que un loop en tiempo de ejecución satisface un tipo recursivo.\n\n**Dilo en voz alta:** "Los utility types y los mapped types describen formas solo en tiempo de compilación; cuando la garantía tiene que cumplirse en tiempo de ejecución, acompaño el tipo con código que la imponga, y mantengo el único cast inevitable dentro de ese helper."',
-    hint: 'Usa recursión: aplica `Object.freeze` al valor y luego recorre sus valores propios y congela en profundidad cada objeto o array anidado (`typeof` object y distinto de `null`).',
+    hint: '`Object.freeze` es superficial; pregúntate qué tiene que pasarle a cada valor anidado y cómo reconocer uno que necesita el mismo tratamiento.',
   },
   'typescript-boundary-validation-open': {
     prompt:
@@ -195,6 +195,6 @@ export const translations: Record<string, QuestionTranslation> = {
       'Reemplaza el cast mentiroso por una validación real. `solution(json)` debe devolver solo los tickets válidos de un string JSON: `id` es un string no vacío, `status` es `open`, `pending` o `closed`, y `priority` está ausente o es un número finito. Un JSON inválido o un payload que no sea un array devuelve `[]`. Escribe una guarda `value is Ticket` que parta de `unknown`.',
     explanation:
       '`JSON.parse` devuelve `any`; asignarlo primero a `unknown` obliga a que cada uso pase por una comprobación. Un **type guard definido por el usuario** (`value is Ticket`) conecta una comprobación en tiempo de ejecución con el narrowing en tiempo de compilación, y pasarlo a `filter` da un `Ticket[]` sin ningún cast en el punto de llamada.\n\nLa guarda es tan honesta como su cuerpo, y justamente por eso el código de producción la genera a partir de un schema (el `Ticket.safeParse` de zod) en lugar de escribirla a mano. Decide también la política de forma explícita: aquí los elementos inválidos se descartan; una API que deba rechazar todo el payload devolvería un error en su lugar y, en cualquier caso, deberías registrar en el log lo que se rechazó.\n\n**Dilo en voz alta:** "`as` le dice al compilador que confíe en mí; un type guard o un schema hace que el runtime lo demuestre, y solo confío en los datos después de que se hayan demostrado."',
-    hint: 'Envuelve `JSON.parse` en `try`/`catch`, comprueba `Array.isArray` y luego usa `filter` con un guard `value is Ticket` que revise cada campo con `typeof`, un conjunto de estados permitidos y `Number.isFinite`.',
+    hint: 'Parte de `unknown`, maneja las formas en que todo el payload puede ser inválido antes de revisar los elementos, y deja que un guard `value is Ticket` acote cada elemento campo por campo.',
   },
 };

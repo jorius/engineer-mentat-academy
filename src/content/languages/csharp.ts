@@ -66,7 +66,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "Nullable reference types are a **compile-time, flow-analysis feature**, not a runtime null-check mechanism: by default the diagnostics are warnings, not errors, so the \"build fails with error CS8602\" option is wrong — the project builds. Marking the parameter `User?` tells the compiler the argument may be `null`, and accessing `.Name` without narrowing (an `if (user is null) return ...;`, a null-conditional `user?.Name`, or a null-forgiving `user!.Name` when you're certain) triggers CS8602. Nothing about the annotation changes what happens at runtime: passing `null` still throws a plain `NullReferenceException` on the dereference, exactly as it would in old, non-nullable-aware code, so the `ArgumentNullException` option is wrong — there is no inserted guard. The warnings are real compiler diagnostics visible in the build output and CI, not just editor tooltips, so the \"only affect editor tooltips\" option is wrong too.",
-    hint: "Remember whether nullable reference types act at compile time or at runtime, and how severe their diagnostics are by default.",
+    hint: "Separate what the compiler checks from what happens when the code runs, and judge each half of every option on its own.",
   },
   {
     id: 'csharp-task-whenall-exceptions',

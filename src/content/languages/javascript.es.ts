@@ -13,7 +13,7 @@ export const translations: Record<string, QuestionTranslation> = {
       'Una copia con spread comparte la función `greet`, pero `this` se sigue resolviendo en el momento de la llamada. Cambia **solo el cuerpo de `solution`** para que devuelva el saludo del objeto copiado con `name: "Daniel"` usando el `greet` original, sin editar `greet`.',
     explanation:
       '`this` lo decide el punto de llamada, no el lugar donde se definió la función. Funcionan tanto `secondSubject.greet()` como `firstSubject.greet.call(secondSubject)`; `bind` devuelve una función nueva. Una función flecha ignoraría todo esto porque captura `this` de forma léxica.\n\n**Dilo en voz alta:** "`this` lo decide el punto de llamada, no el lugar donde se definió la función; una copia con spread comparte la función, pero igual tengo que invocarla con el receptor correcto, con una llamada de método o con `call`."',
-    hint: '`this` depende de cómo se llama la función, no de dónde se definió; piensa en llamarla como método del objeto correcto o en pasar el receptor explícitamente con `call`.',
+    hint: '`this` depende de cómo se llama una función normal, no de dónde se definió; recuerda las formas que te da JavaScript para elegir el receptor de una llamada.',
   },
   'javascript-closure-counter-independence': {
     prompt:
@@ -27,7 +27,7 @@ export const translations: Record<string, QuestionTranslation> = {
       '```js\nconst obj = {\n  a: { b: [1, 2] },\n  d: new Date(),\n};\n```\n¿Cuáles de estas opciones producen una copia **profunda** de `obj` que conserve el `Date`? Selecciona todas las que correspondan.',
     explanation:
       'Spread y `Object.assign` copian un solo nivel. Pasar por `JSON` convierte un `Date` en string y descarta funciones y `undefined`. `structuredClone` maneja objetos anidados, Dates, Maps y Sets, pero lanza un `DataCloneError` con funciones y pierde los prototipos de clase (las instancias vuelven como objetos planos).',
-    hint: 'Revisa cuántos niveles copia cada técnica y qué le hace a un `Date` pasar por JSON de ida y vuelta.',
+    hint: 'Recuerda cuántos niveles copia cada técnica y qué tipos de valores puede reproducir fielmente cada una.',
   },
   'javascript-array-methods-some-every': {
     prompt:
@@ -62,7 +62,7 @@ export const translations: Record<string, QuestionTranslation> = {
       '```js\nconsole.log(a);\nconsole.log(typeof f);\nlet a = 1;\nfunction f() {}\n```\n¿Qué pasa al ejecutar esto?',
     explanation:
       '`let` tiene hoisting, pero queda sin inicializar hasta que se ejecuta su declaración, así que leerla lanza un error. Con `var` se imprimiría `undefined`; la declaración de función tiene hoisting completo, pero la línea `typeof f` nunca se ejecuta porque la primera ya lanzó el error.',
-    hint: 'Ambas declaraciones tienen hoisting, pero pregúntate si una variable `let` está inicializada antes de que se ejecute su línea, y si las líneas siguientes llegan a ejecutarse si una anterior falla.',
+    hint: 'Recuerda en qué se diferencia el hoisting de una variable `let` y de una declaración de función, y qué pasa al leer una variable antes de la línea donde se declara.',
     options: {
       a: 'Imprime `undefined` y luego `function`',
       b: 'Lanza `ReferenceError` porque `a` está en la zona muerta temporal',
@@ -103,7 +103,7 @@ export const translations: Record<string, QuestionTranslation> = {
       '`createCounter` debe mantener `count` privado (un closure) y a la vez exponer su valor vivo como `counter.count`, pero `counter.count` siempre es `0`. Corrige **`createCounter`** (deja `solution` como está) para que el valor expuesto refleje cada incremento. No muevas `count` al objeto como un campo escribible.',
     explanation:
       'Un closure es una función empaquetada junto con las **variables** (bindings) del scope donde se creó, así que `increment` sigue actualizando el mismo `count` mucho después de que `createCounter` haya retornado. Pero `{ count }` es la forma abreviada de `{ count: count }`: **copia el valor primitivo actual (0) en una propiedad** en el momento de la creación. A partir de ahí, la propiedad y la variable encerrada no tienen relación.\n\nUn getter (o una función `getCount()`) lee el binding vivo en cada acceso y mantiene la variable privada, ya que nada externo puede asignarla.\n\nUn bug relacionado aparece en React como *stale closure*: un callback creado durante un render antiguo sigue leyendo los bindings de ese render. Los closures además mantienen vivas todas las variables que capturan, y así es como los closures que retienen objetos grandes o nodos del DOM causan fugas de memoria.\n\n**Dilo en voz alta:** "Un closure captura variables, no valores, pero en el momento en que copias un primitivo a una propiedad de un objeto tomaste una instantánea; expón un getter si quieres el valor vivo."',
-    hint: 'La forma abreviada `{ count }` copia el primitivo actual una sola vez; piensa en exponer el valor con un getter para que cada lectura vuelva a la variable encerrada.',
+    hint: 'La forma abreviada `{ count }` copia el primitivo actual una sola vez; pregúntate cómo puede una propiedad calcular su valor cada vez que se lee en vez de guardarlo.',
   },
   'javascript-var-let-const-loop-core': {
     prompt:
@@ -138,7 +138,7 @@ export const translations: Record<string, QuestionTranslation> = {
       'En las entrevistas preguntan la diferencia entre un método y una función.\n```js\nconst cart = {\n  items: [\'a\', \'b\'],\n  count() {\n    return this.items.length;\n  },\n};\nsetTimeout(cart.count, 0);\n```\n¿Qué afirmación es correcta?',
     explanation:
       'JavaScript no tiene un tipo separado para los métodos: un método es una propiedad cuyo valor es una función (`typeof` es `"function"`) y que normalmente lee `this`. El enlace con el objeto ocurre solo en la expresión de llamada `cart.count()`. Pasar `cart.count` entrega la función sola; luego el temporizador la llama con un receptor propio que no es `cart` (`window` en el navegador, un objeto `Timeout` en Node), así que `this.items` es `undefined` y leer `.length` lanza un `TypeError` dentro del callback del temporizador.\n\nSoluciones: `setTimeout(() => cart.count(), 0)` o `setTimeout(cart.count.bind(cart), 0)`. Una función flecha como método *no* ayuda: las funciones flecha toman `this` del scope que las rodea, no del literal de objeto. Los métodos abreviados sí difieren en dos detalles: no se pueden usar con `new` y pueden usar `super`.',
-    hint: 'Pregúntate qué reporta `typeof` para un método y qué receptor recibe una función cuando un temporizador la llama sin el objeto delante.',
+    hint: 'Recuerda qué decide `this` en una función normal, y si definirla dentro de un objeto literal cambia eso.',
     options: {
       a:
         'Un método es solo una función guardada como propiedad de un objeto; `this` viene de la llamada, así que pasar `cart.count` como callback pierde `cart` y la llamada lanza un error.',
@@ -160,14 +160,14 @@ export const translations: Record<string, QuestionTranslation> = {
       'Este bug, favorito de los revisores, devuelve `0` sin importar la entrada. Corrige `solution` para que devuelva la suma de los precios de `ids`, obteniéndolos de forma **concurrente**. No modifiques `fetchPrice`.',
     explanation:
       '`forEach` ignora las promesas que devuelve su callback, así que `solution` retorna antes de que llegue cualquier precio. Aquí se esconden dos problemas más:\n- **Actualizaciones perdidas:** `total += await x` lee `total` *antes* del await. Con callbacks concurrentes, cada uno lee `0`, así que aunque esperaras, gana el último que escribe.\n- **Rechazos no manejados:** un callback que falla rechaza una promesa que nadie observa.\n\nJavaScript maneja el trabajo asíncrono con callbacks, promesas y `async`/`await` (azúcar sobre las promesas). Elige la forma a propósito: `for...of` con `await` para trabajo **secuencial** (orden, límites de tasa), `Promise.all(items.map(...))` para trabajo **concurrente** que falla rápido, `Promise.allSettled` cuando un fallo parcial es aceptable, y un limitador de concurrencia (estilo p-limit) cuando la lista es grande.\n\n**Dilo en voz alta:** "`forEach` no entiende de promesas; mapeo a promesas y hago await de `Promise.all` para tener concurrencia, o uso `for...of` con `await` cuando importan el orden o los límites de tasa, y nunca acumulo estado compartido entre awaits concurrentes."',
-    hint: '`forEach` ignora las promesas que devuelve su callback; mapea los ids a promesas, espéralas juntas con `Promise.all` y luego suma los resultados.',
+    hint: 'Pregúntate qué hace `forEach` con las promesas que devuelve su callback, y qué helper de `Promise` espera muchas operaciones concurrentes.',
   },
   'javascript-promisify-callback-core': {
     prompt:
       'Una librería legacy usa callbacks estilo Node con el error primero. Implementa `promisify(fn)` para que devuelva una función que reciba los mismos argumentos (sin el callback) y devuelva una Promise que se **rechace** con el error del callback o se **resuelva** con el resultado. `solution` muestra el uso con async/await que debes soportar.',
     explanation:
       'Esta es toda la historia del JavaScript asíncrono en una sola función: **callbacks** (con el error primero, por convención de Node), envueltos en una **Promise**, consumida con **async/await**.\n\n- El constructor de Promise es el puente: llama a la API antigua dentro del executor y dirige `error` a `reject` y el valor a `resolve`.\n- Rest/spread (`...args`) mantiene el wrapper genérico para cualquier aridad.\n- `await` convierte el rechazo en una excepción, así que `try/catch` funciona como en código síncrono.\n\nLos callbacks se componen mal (anidamiento, sin un canal único de errores, fáciles de llamar dos veces); las promesas se resuelven una sola vez y se encadenan. Node incluye `util.promisify` y la mayoría de los módulos core tienen variantes con promesas (`fs/promises`); si `fn` depende de `this`, el wrapper debe ser una `function` regular (una función flecha no tiene `this` propio) y reenviarlo con `fn.call(this, ...args, callback)`.',
-    hint: 'Devuelve una función que construya un `new Promise`, llame a la original con los argumentos más un callback error-first y envíe el error y el resultado a la función de resolución correcta.',
+    hint: 'El constructor de `Promise` es el puente entre los dos estilos; pregúntate qué te dice "error-first" sobre cuál argumento del callback decide cómo se resuelve la promesa.',
   },
   'javascript-map-parseint-core': {
     prompt:
@@ -181,14 +181,14 @@ export const translations: Record<string, QuestionTranslation> = {
       'En las entrevistas preguntan cómo se aplica la programación funcional en JavaScript. Implementa la función de orden superior `pipe(...fns)`: devuelve una función que pasa su entrada por `fns` **de izquierda a derecha**, y cada salida alimenta a la siguiente. Sin funciones, devuelve la entrada sin cambios.',
     explanation:
       'La programación funcional construye programas a partir de **funciones puras** (misma entrada, misma salida, sin efectos secundarios) combinadas mediante **funciones de orden superior**, evitando el estado mutable compartido. JavaScript lo permite porque las funciones son valores de primera clase: puedes pasarlas, devolverlas y guardarlas.\n\n`pipe` es un `reduce` sobre funciones: el acumulador es el valor que fluye. `compose` es lo mismo de derecha a izquierda (`reduceRight`). Cada paso aquí es puro y trivial de probar con tests unitarios; el pipeline es solo datos.\n\nEn el JavaScript del día a día esto aparece como `map`/`filter`/`reduce` en lugar de loops con mutación, actualizaciones de estado inmutables en los reducers de Redux y pequeñas utilidades componibles. La postura pragmática: mantén el núcleo puro y empuja los efectos secundarios (I/O, logging, tiempo) hacia los bordes.',
-    hint: 'Piensa en `pipe` como un fold: `Array.prototype.reduce` sobre las funciones, con la entrada como valor inicial.',
+    hint: 'Piensa en `pipe` como un fold sobre la lista de funciones: pregúntate qué es el acumulador y con qué valor debe empezar.',
   },
   'javascript-memoize-cache-key-core': {
     prompt:
       'En las entrevistas te piden explicar la memoización. Implementa `memoize(fn)` para que las llamadas repetidas con los **mismos argumentos** devuelvan el resultado en caché sin volver a llamar a `fn`. Los argumentos son serializables a JSON, y listas de argumentos distintas nunca deben compartir una entrada de caché (`(1, 2)` y `("1,2")` son llamadas diferentes).',
     explanation:
       'La memoización guarda en caché el resultado de una función por cada entrada, cambiando memoria por tiempo. La caché vive en un **closure**, privada para la función devuelta.\n\nLo difícil es la **clave**:\n- `args.join(\',\')` o `String(args)` colisionan (`[1, 2]` y `[\'1,2\']` se convierten ambos en `"1,2"`). `JSON.stringify(args)` conserva tipos y límites para entradas serializables.\n- Los argumentos de tipo objeto comparados por identidad van en un `WeakMap` (las entradas se recolectan junto con la clave); las claves estructurales necesitan un serializador estable.\n- Usa `cache.has`, no una comprobación de truthiness, o los resultados `0`, `""` y `undefined` en caché se vuelven a calcular.\n\nSolo memoiza funciones **puras**: una llamada impura en caché devuelve datos obsoletos. Un `Map` sin límite es una fuga de memoria en un proceso de larga duración, así que las cachés de producción necesitan un límite LRU o un TTL. Para funciones asíncronas, guarda en caché la **promesa** para que los llamadores concurrentes compartan una sola petición en curso, y elimínala si se rechaza.\n\n**Dilo en voz alta:** "La memoización solo es correcta para funciones puras, la clave de caché es la verdadera decisión de diseño, y en un servidor toda caché necesita una política de expulsión o es una fuga."',
-    hint: 'Guarda un `Map` en un closure y elige una clave de caché que conserve los tipos y los límites de los argumentos, como `JSON.stringify` del array completo de argumentos.',
+    hint: 'Guarda el caché en un closure y pregúntate qué clave hace que `(1, 2)` y `("1,2")` sean distintas mientras dos llamadas idénticas siguen coincidiendo.',
   },
   'javascript-immutability-freeze-core': {
     prompt:

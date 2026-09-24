@@ -96,7 +96,7 @@ console.log('after call');`,
     source: 'notion',
     explanation:
       'One loop iteration runs these phases in order:\n\n1. **timers**: expired `setTimeout` / `setInterval` callbacks\n2. **pending callbacks**: some system I/O callbacks deferred from the previous iteration\n3. **idle, prepare**: internal\n4. **poll**: wait for and run I/O callbacks (most of your code runs here)\n5. **check**: `setImmediate` callbacks\n6. **close callbacks**: e.g. `socket.on(\'close\')`\n\n`setImmediate` exists precisely to say "run this right after the current poll phase". Between every callback, Node drains the `process.nextTick` queue and then the promise microtask queue.',
-    hint: 'Recall the order of the event loop phases and which one exists so callbacks can run right after I/O polling.',
+    hint: 'Walk through the event loop phases in order and what kind of callback each one runs.',
   },
   {
     id: 'nodejs-immediate-vs-timeout-in-io',
@@ -155,7 +155,7 @@ console.log('sync');
     source: 'notion',
     explanation:
       'After the main script finishes, Node drains the **`process.nextTick` queue first, then the promise microtask queue**, and it does this again after every callback in every phase. So `nextTick` beats `promise`, and both beat any timer or immediate.\n\nThen the loop starts: the **timers** phase runs `timeout` only if its 1 ms has already elapsed, otherwise the **check** phase runs `immediate` first and `timeout` waits for the next iteration. From the main module that race is not deterministic (inside an I/O callback, `immediate` always wins).\n\nESM trap: in an `.mjs` file the module body itself runs inside a promise job, so the microtask queue is drained before Node gets back to the nextTick queue and `promise` prints **before** `nextTick`. A recursive `nextTick` can also starve the loop entirely, which is why the Node docs recommend `queueMicrotask` or `setImmediate` for most deferral.\n\n**Say this out loud:** "nextTick queue, then microtasks, after every single callback; timers versus check from the main module is a race, but inside an I/O callback setImmediate always runs first because check follows poll."',
-    hint: 'Recall which queue Node drains first after the main script, and whether the timers-versus-check order is fixed outside an I/O callback.',
+    hint: 'Recall which queue Node drains first after the main script, and what decides whether a 0 ms timer is already due when the loop first reaches the timers phase.',
   },
   {
     id: 'nodejs-microtask-queue-interleaving',
@@ -239,7 +239,7 @@ console.log('sync end');`,
     source: 'notion',
     explanation:
       'Node has four stream types: **Readable** (source, e.g. `fs.createReadStream`), **Writable** (sink, e.g. `fs.createWriteStream`), **Duplex** (both sides, independent, e.g. a TCP socket where what you read has nothing to do with what you wrote) and **Transform**, a Duplex whose output is computed from its input (gzip, encryption, CSV parsing).\n\nStreaming processes the file chunk by chunk (64 KiB by default for file streams), so memory stays flat no matter the file size, whereas `fs.readFile` would try to hold all 20 GB in a Buffer and fail.',
-    hint: 'Ask whether the bytes that come out are computed from the bytes that go in, and which stream type models that relationship.',
+    hint: 'Recall Node\'s four stream types and what separates the two that are both readable and writable.',
   },
   {
     id: 'nodejs-pipeline-over-pipe',
@@ -261,7 +261,7 @@ console.log('sync end');`,
     source: 'notion',
     explanation:
       '`.pipe()` **does** implement backpressure: it pauses the source when `dest.write()` returns `false` and resumes on `drain`. What it does not do is error handling. Errors are not forwarded along a `.pipe()` chain, so an unhandled `error` event on a middle stream crashes the process, and when the destination fails the source is left open (a leaked fd or a hung upstream socket).\n\n`pipeline()` wires up errors and teardown for every stage, calls back once, and the promise version composes with `await` and `AbortSignal`. It also accepts async iterables and async generator stages, which is often the clearest way to write a transform.',
-    hint: 'Check what `.pipe()` already does when `write()` returns false, then compare how each approach handles errors and early closes.',
+    hint: 'Compare what each approach does when a middle stage emits `error` or the destination closes early, and what kinds of stages `pipeline` accepts; judge the backpressure claim separately.',
   },
   {
     id: 'nodejs-backpressure-write-bursts',
@@ -408,7 +408,7 @@ Example: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` returns \`[[4, 4, 4
     source: 'notion',
     explanation:
       'Module scope runs once per **execution environment** (on the cold start), and the environment is reused for later invocations, so a client created there survives warm starts. But each environment handles **one invocation at a time**, and concurrency scales by adding environments, so 500 concurrent invocations means 500 environments. A pool of 20 each would be 10,000 connections and exhaust Postgres. Hence one connection per environment and a pooler in front.\n\nCreating it in the handler pays the TCP and TLS handshake on every call. A `setInterval` does not help: the environment is **frozen** between invocations, so the timer does not fire while the environment sits idle, and the database or a NAT can still drop the idle connection; reconnect on error instead.',
-    hint: 'Think about how long an execution environment lives, how many invocations it handles at once, and what hundreds of concurrent environments do to Postgres.',
+    hint: 'Recall the lifecycle of a Lambda execution environment, and count the database connections your choice opens at peak concurrency.',
   },
   {
     id: 'nodejs-execution-model-choice',
@@ -498,7 +498,7 @@ Example: \`solution([[1, 2], [2, 3], [4]], 2)\` returns \`[[1, 2], [3, 4]]\`.`,
     source: 'topic-list',
     explanation:
       'A `Set` keeps insertion order, so `[...new Set(ids.flat())]` dedupes while preserving first-seen order; then slice into fixed-size chunks.\n\nIn the real batcher the collection window is **one tick**: the first `load(id)` schedules a flush with `queueMicrotask` / `process.nextTick` (DataLoader) or a short `setTimeout` for a wider window, every `load` in between adds its id and gets a promise, and the flush fans the bulk response back out by id. That turns an N+1 pattern (one query per GraphQL field or per item) into `ceil(unique / batchSize)` calls. The trade-off is a small added latency, and one failed batch fails every caller in it.',
-    hint: 'Reach for a `Set` to dedupe while keeping insertion order, then slice the result into fixed-size chunks.',
+    hint: 'Two steps: drop repeated ids without losing first-seen order, then split what is left into groups no larger than `batchSize`.',
   },
   {
     id: 'nodejs-retry-backoff-schedule',
@@ -537,7 +537,7 @@ Example: \`solution(3, 100, 1000, [0.5, 0.5, 0.5])\` returns \`[50, 100, 200]\`.
     source: 'notion',
     explanation:
       'Exponential growth gives a struggling dependency room to recover; the **cap** stops the delay from growing without limit; **jitter** spreads out clients that failed at the same moment so they do not all retry together (a thundering herd). Full jitter (random between 0 and the ceiling) spreads load best at the cost of some very short waits.\n\nRetry only **idempotent** operations (or send an idempotency key), respect `Retry-After` when the server sends it, set a timeout on every attempt (`AbortSignal.timeout`), and put a circuit breaker in front so a dead dependency fails fast instead of retrying forever.',
-    hint: 'Compute each ceiling with a power of two, clamp it with `Math.min`, then scale it by the injected random value and round down with `Math.floor`.',
+    hint: 'Loop over the retry index and watch two details: exponentiation in JavaScript (`**`), and using the random value with the same index as the retry.',
   },
   {
     id: 'nodejs-inflight-dedupe-cache-fix',

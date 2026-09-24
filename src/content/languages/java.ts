@@ -25,7 +25,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "`int` and `Integer` are different things: `int` is a primitive that always holds a value and has no concept of `null`, while `Integer` is an object reference whose default (uninitialized instance field) value is `null`, not `0` — so the \"prints `0`\" answer is wrong. `getCount()` compiles fine, so the compile-failure answer is wrong too: the compiler is happy to auto-unbox an `Integer` into an `int` return value by inserting an implicit `count.intValue()` call. The problem is only at runtime: `count` is `null`, and calling `.intValue()` on `null` throws `NullPointerException` before anything can be printed, so the \"prints `null`\" answer (which assumes the primitive return type could somehow hold and print `null`) is also wrong. This is the classic unboxing-NPE trap: any place an `Integer`, `Long`, `Boolean`, etc. is used where a primitive is expected — an arithmetic expression, a primitive method parameter, a primitive return — implicitly unboxes it, and a `null` wrapper turns that implicit call into a runtime exception.",
-    hint: "Consider the default value of an object-typed field, and what auto-unboxing does when a method declared to return a primitive returns it.",
+    hint: "Recall the default value Java gives a field of each type, and trace the conversion the `return` statement has to perform.",
   },
   {
     id: 'java-synchronized-keyword-basics',
@@ -78,7 +78,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "`==` on wrapper types always compares **references**, never values — Java has no operator overloading, so the \"`true` then `true`\" answer is wrong on principle. But `Integer.valueOf` (which literal autoboxing calls) is required by the JLS to cache and reuse instances for values `-128` to `127`, so boxing `100` twice yields the same cached object and `a == b` is `true`; `200` falls outside that guaranteed range, so `c` and `d` are typically two distinct objects and `c == d` is `false` — this makes the \"`false` then `false`\" answer wrong, since it ignores the cache entirely. Nothing about the JIT or build mode changes this: caching happens in `Integer.valueOf` itself, at every run, not as a debug-only artifact, so the debugger-versus-JIT answer is wrong. The takeaway for real code: never compare wrapper types with `==` — use `.equals()` (or unbox to `int` first) so correctness doesn't depend on an internal caching range that most developers don't even know exists.",
-    hint: "Remember what `==` compares on wrapper objects, and what `Integer.valueOf` does for small values.",
+    hint: "Recall what `==` compares on wrapper objects, and how autoboxing obtains the `Integer` for a literal.",
   },
   {
     id: 'java-list-of-immutability',
@@ -134,7 +134,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "The single-argument `groupingBy(classifier)` collects each group into a `List`; in OpenJDK today that means a `HashMap<K, ArrayList<V>>` (so the statement about OpenJDK's default is true, as a description of current behavior), but the `Collectors.groupingBy` Javadoc promises none of it — not the concrete map type, not the values' `List` implementation or mutability, not iteration order, only that elements are grouped by key. The two-argument overload, `groupingBy(classifier, downstream)`, applies the given downstream `Collector` to each group instead of defaulting to `toList()`; `averagingDouble(Employee::salary)` reduces each group to the mean of its `salary` values, so `\"eng\"` (90 000 and 110 000) averages to `100000.0`, so the `averagingDouble` statement is true. `groupingBy`'s contract makes no ordering promise at all — OpenJDK's current default happens to be an unordered `HashMap`, not a `LinkedHashMap`, so the `LinkedHashMap` claim is false and department order is not something you can rely on. Streams are non-mutating by design: collecting never writes back into the source list or its elements, it only builds a new result, so the claim that `averagingDouble` mutates the list is false — nothing about `employees` changes. To control the resulting `Map` implementation (for stable iteration, sorting, concurrency, etc.) you need the three-argument overload `groupingBy(classifier, mapFactory, downstream)`, supplying something like `TreeMap::new` as the `mapFactory`, so the three-argument overload statement is true.",
-    hint: "Check what the `groupingBy` Javadoc actually guarantees about the returned map, what a downstream collector does per group, and which overload takes a map factory.",
+    hint: "Check each claim against the `Collectors` Javadoc, separating what it guarantees from what one JDK happens to do.",
   },
   {
     id: 'java-generics-wildcard-pecs',

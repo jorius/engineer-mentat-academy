@@ -37,7 +37,7 @@ export const translations: Record<string, QuestionTranslation> = {
     prompt: '¿En qué fase del event loop de Node.js se ejecutan los callbacks de `setImmediate()`?',
     explanation:
       'Una iteración del loop ejecuta estas fases en orden:\n\n1. **timers**: callbacks vencidos de `setTimeout` / `setInterval`\n2. **pending callbacks**: algunos callbacks de I/O del sistema diferidos desde la iteración anterior\n3. **idle, prepare**: internas\n4. **poll**: espera y ejecuta callbacks de I/O (aquí corre la mayor parte de tu código)\n5. **check**: callbacks de `setImmediate`\n6. **close callbacks**: p. ej. `socket.on(\'close\')`\n\n`setImmediate` existe precisamente para decir "ejecuta esto justo después de la fase poll actual". Entre cada callback, Node vacía la cola de `process.nextTick` y luego la cola de microtareas de promesas.',
-    hint: 'Repasa el orden de las fases del event loop y cuál existe para que ciertos callbacks corran justo después del sondeo de I/O.',
+    hint: 'Repasa las fases del event loop en orden y qué tipo de callback ejecuta cada una.',
   },
   'nodejs-immediate-vs-timeout-in-io': {
     prompt: `¿En qué orden imprime la salida este programa CommonJS?
@@ -77,7 +77,7 @@ console.log('sync');
     },
     explanation:
       'Cuando termina el script principal, Node vacía **primero la cola de `process.nextTick` y luego la cola de microtareas de promesas**, y lo vuelve a hacer después de cada callback en cada fase. Así que `nextTick` le gana a `promise`, y ambos le ganan a cualquier timer o immediate.\n\nLuego arranca el loop: la fase **timers** ejecuta `timeout` solo si su 1 ms ya transcurrió; si no, la fase **check** ejecuta `immediate` primero y `timeout` espera a la siguiente iteración. Desde el módulo principal esa carrera no es determinista (dentro de un callback de I/O, `immediate` siempre gana).\n\nTrampa de ESM: en un archivo `.mjs` el propio cuerpo del módulo se ejecuta dentro de un job de promesa, así que la cola de microtareas se vacía antes de que Node vuelva a la cola de nextTick, y `promise` se imprime **antes** que `nextTick`. Un `nextTick` recursivo también puede dejar sin turno al loop por completo, y por eso la documentación de Node recomienda `queueMicrotask` o `setImmediate` para la mayoría de los diferimientos.\n\n**Dilo en voz alta:** "Cola de nextTick y luego microtareas, después de cada callback; timers contra check desde el módulo principal es una carrera, pero dentro de un callback de I/O setImmediate siempre se ejecuta primero porque check viene después de poll."',
-    hint: 'Recuerda qué cola vacía Node primero al terminar el script principal, y si el orden entre timers y check es fijo fuera de un callback de I/O.',
+    hint: 'Recuerda qué cola vacía Node primero al terminar el script principal, y qué decide si un timer de 0 ms ya venció cuando el loop llega por primera vez a la fase de timers.',
   },
   'nodejs-microtask-queue-interleaving': {
     prompt: '¿Qué imprime esto, un valor por línea?',
@@ -101,7 +101,7 @@ console.log('sync');
     },
     explanation:
       'Node tiene cuatro tipos de stream: **Readable** (origen, p. ej. `fs.createReadStream`), **Writable** (destino, p. ej. `fs.createWriteStream`), **Duplex** (ambos lados, independientes, p. ej. un socket TCP donde lo que lees no tiene nada que ver con lo que escribiste) y **Transform**, un Duplex cuya salida se calcula a partir de su entrada (gzip, cifrado, parseo de CSV).\n\nCon streaming, el archivo se procesa chunk por chunk (64 KiB por defecto en los streams de archivos), así que la memoria se mantiene estable sin importar el tamaño del archivo, mientras que `fs.readFile` intentaría guardar los 20 GB en un Buffer y fallaría.',
-    hint: 'Pregúntate si los bytes que salen se calculan a partir de los bytes que entran, y qué tipo de stream modela esa relación.',
+    hint: 'Recuerda los cuatro tipos de stream de Node y qué distingue a los dos que son a la vez legibles y escribibles.',
   },
   'nodejs-pipeline-over-pipe': {
     prompt:
@@ -114,7 +114,7 @@ console.log('sync');
     },
     explanation:
       '`.pipe()` **sí** implementa backpressure: pausa el origen cuando `dest.write()` devuelve `false` y lo reanuda con `drain`. Lo que no hace es manejar errores. Los errores no se propagan a lo largo de una cadena de `.pipe()`, así que un evento `error` sin manejar en un stream intermedio hace caer el proceso, y cuando el destino falla, el origen queda abierto (un fd filtrado o un socket upstream colgado).\n\n`pipeline()` conecta los errores y el cierre de cada etapa, invoca el callback una sola vez, y la versión con promesas se combina con `await` y `AbortSignal`. También acepta iterables asíncronos y etapas con generadores asíncronos, que muchas veces son la forma más clara de escribir un transform.',
-    hint: 'Revisa qué hace ya `.pipe()` cuando `write()` devuelve false, y luego compara cómo maneja cada enfoque los errores y los cierres anticipados.',
+    hint: 'Compara qué hace cada enfoque cuando una etapa intermedia emite `error` o el destino se cierra antes de tiempo, y qué tipos de etapas acepta `pipeline`; evalúa por separado lo que se dice de la backpressure.',
   },
   'nodejs-backpressure-write-bursts': {
     prompt: `Simula un productor que respeta el backpressure de un stream Writable.
@@ -188,7 +188,7 @@ Ejemplo: \`sizes = [4, 4, 4, 4, 4]\`, \`highWaterMark = 10\` devuelve \`[[4, 4, 
     },
     explanation:
       'El scope del módulo se ejecuta una vez por **entorno de ejecución** (en el cold start), y el entorno se reutiliza en las invocaciones siguientes, así que un cliente creado ahí sobrevive a los warm starts. Pero cada entorno atiende **una invocación a la vez**, y la concurrencia escala agregando entornos, así que 500 invocaciones concurrentes significan 500 entornos. Un pool de 20 en cada uno serían 10,000 conexiones y agotaría Postgres. Por eso, una conexión por entorno y un pooler delante.\n\nCrearlo en el handler paga el handshake de TCP y TLS en cada llamada. Un `setInterval` no ayuda: el entorno queda **congelado** entre invocaciones, así que el timer no se dispara mientras el entorno está inactivo, y la base de datos o un NAT igual pueden cortar la conexión inactiva; mejor reconecta ante un error.',
-    hint: 'Piensa en cuánto vive un entorno de ejecución, cuántas invocaciones atiende a la vez y qué le hacen cientos de entornos concurrentes a Postgres.',
+    hint: 'Recuerda el ciclo de vida de un entorno de ejecución de Lambda, y cuenta las conexiones a la base de datos que abre tu elección con la concurrencia máxima.',
   },
   'nodejs-execution-model-choice': {
     prompt:
@@ -235,7 +235,7 @@ Implementa \`solution(ids, batchSize)\`, donde \`ids[i]\` es la lista de ids que
 Ejemplo: \`solution([[1, 2], [2, 3], [4]], 2)\` devuelve \`[[1, 2], [3, 4]]\`.`,
     explanation:
       'Un `Set` conserva el orden de inserción, así que `[...new Set(ids.flat())]` elimina duplicados y mantiene el orden de primera aparición; después se divide en chunks de tamaño fijo.\n\nEn el batcher real, la ventana de recolección es **un tick**: el primer `load(id)` programa un flush con `queueMicrotask` / `process.nextTick` (DataLoader) o con un `setTimeout` corto para una ventana más amplia, cada `load` intermedio agrega su id y recibe una promesa, y el flush reparte la respuesta masiva por id. Eso convierte un patrón N+1 (una consulta por campo de GraphQL o por elemento) en `ceil(unique / batchSize)` llamadas. El trade-off es una pequeña latencia adicional, y un lote fallido hace fallar a todos los que llamaron dentro de él.',
-    hint: 'Usa un `Set` para quitar duplicados conservando el orden de inserción, y luego corta el resultado en bloques de tamaño fijo.',
+    hint: 'Dos pasos: quita los ids repetidos sin perder el orden en que aparecieron y luego divide lo que queda en grupos de como máximo `batchSize`.',
   },
   'nodejs-retry-backoff-schedule': {
     prompt: `Un endpoint masivo downstream a veces responde \`429\` o \`503\`. Calcula los tiempos de espera de los reintentos usando **backoff exponencial con tope y full jitter**.
@@ -247,7 +247,7 @@ Ejemplo: \`solution([[1, 2], [2, 3], [4]], 2)\` devuelve \`[[1, 2], [3, 4]]\`.`,
 Ejemplo: \`solution(3, 100, 1000, [0.5, 0.5, 0.5])\` devuelve \`[50, 100, 200]\`.`,
     explanation:
       'El crecimiento exponencial le da margen a una dependencia con problemas para recuperarse; el **tope** evita que la espera crezca sin límite; el **jitter** dispersa a los clientes que fallaron en el mismo momento para que no reintenten todos juntos (una estampida, o thundering herd). El full jitter (un valor aleatorio entre 0 y el techo) es el que mejor reparte la carga, a costa de algunas esperas muy cortas.\n\nReintenta solo operaciones **idempotentes** (o envía una clave de idempotencia), respeta `Retry-After` cuando el servidor lo envía, pon un timeout en cada intento (`AbortSignal.timeout`) y coloca un circuit breaker delante para que una dependencia caída falle rápido en lugar de reintentar para siempre.',
-    hint: 'Calcula cada techo con una potencia de dos, acótalo con `Math.min`, luego escálalo con el valor aleatorio inyectado y redondea hacia abajo con `Math.floor`.',
+    hint: 'Recorre el índice de reintento y cuida dos detalles: la potencia en JavaScript (`**`) y usar el valor aleatorio del mismo índice que el reintento.',
   },
   'nodejs-inflight-dedupe-cache-fix': {
     prompt: `\`createCachedLoader\` debería **unificar** (coalesce) las peticiones concurrentes: todo el que pida el mismo id mientras hay un fetch en curso debe compartir ese único fetch, y quienes llamen después obtienen el resultado en caché. En producción, una ráfaga de peticiones concurrentes para el mismo usuario igual llega al upstream una vez por petición.
