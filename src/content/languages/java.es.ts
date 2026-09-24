@@ -13,6 +13,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "`int` e `Integer` son cosas distintas: `int` es un primitivo que siempre tiene un valor y no tiene concepto de `null`, mientras que `Integer` es una referencia a un objeto cuyo valor por defecto (campo de instancia no inicializado) es `null`, no `0` — así que la respuesta \"imprime `0`\" es incorrecta. `getCount()` compila sin problema, así que la respuesta del error de compilación también es incorrecta: el compilador hace auto-unboxing de un `Integer` a `int` como valor de retorno insertando una llamada implícita a `count.intValue()`. El problema aparece solo en tiempo de ejecución: `count` es `null`, y llamar a `.intValue()` sobre `null` lanza `NullPointerException` antes de que se imprima nada, así que la respuesta \"imprime `null`\" (que asume que el tipo de retorno primitivo podría de alguna forma contener e imprimir `null`) también es incorrecta. Esta es la trampa clásica del unboxing con NPE: cualquier lugar donde se use un `Integer`, `Long`, `Boolean`, etc. donde se espera un primitivo —una expresión aritmética, un parámetro de método primitivo, un valor de retorno primitivo— hace unboxing implícito, y un wrapper `null` convierte esa llamada implícita en una excepción en tiempo de ejecución.",
+    hint: "Considera el valor por defecto de un campo de tipo objeto, y qué hace el auto-unboxing cuando un método que devuelve un primitivo lo retorna.",
   },
   'java-synchronized-keyword-basics': {
     prompt:
@@ -25,6 +26,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "Un método de instancia `synchronized` adquiere el lock intrínseco (el monitor) sobre `this` antes de que se ejecute su cuerpo y lo libera al retornar (de forma normal o por excepción), así que solo un hilo puede estar dentro de `increment()` para una instancia de `Counter` dada en cualquier momento — esa exclusión mutua es exactamente lo que evita la clásica condición de carrera de lectura-modificación-escritura en `count++`, y por eso la afirmación de un solo hilo a la vez es correcta. `synchronized` no es algo a nivel de clase: solo excluye a otro código que se sincronice sobre el **mismo objeto de lock**; `getCount()` aquí no es `synchronized` en absoluto, así que puede ejecutarse en paralelo con `increment()` y, sin una relación happens-before, no está garantizado que vea el valor más reciente, así que la afirmación de que `getCount()` se vuelve thread-safe es incorrecta. `count++` en realidad son tres pasos separados —leer, sumar uno, escribir de vuelta—, así que dos hilos pueden intercalarse y perder una actualización; precisamente por eso el método necesita `synchronized`, y la afirmación de la \"única instrucción atómica de CPU\" es incorrecta. Y `synchronized` lo hace cumplir la JVM, no es una convención a nivel de comentario: un segundo hilo que llame a `increment()` mientras el lock está tomado realmente se bloquea hasta que se libera, así que la afirmación de que \"solo documenta la intención\" es incorrecta.",
+    hint: "Pregúntate qué lock adquiere un método de instancia `synchronized`, y qué otro código excluye realmente ese lock.",
   },
   'java-integer-cache-equality': {
     prompt:
@@ -37,6 +39,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "`==` sobre tipos wrapper siempre compara **referencias**, nunca valores — Java no tiene sobrecarga de operadores, así que la respuesta \"`true` y luego `true`\" es incorrecta por principio. Pero `Integer.valueOf` (al que llama el autoboxing de un literal) está obligado por el JLS a cachear y reutilizar instancias para valores entre `-128` y `127` (el rango por defecto), así que aplicar autoboxing a `100` dos veces produce el mismo objeto en caché y `a == b` es `true`; `200` queda fuera de ese rango garantizado, así que `c` y `d` normalmente son dos objetos distintos y `c == d` es `false` — esto hace que la respuesta \"`false` y luego `false`\" sea incorrecta, ya que ignora la caché por completo. Nada relacionado con el JIT o el modo de build cambia esto: el cacheo ocurre dentro de `Integer.valueOf` mismo, en cada ejecución, no como un artefacto exclusivo de depuración, así que la respuesta del depurador frente al JIT es incorrecta. La lección para código real: nunca compares tipos wrapper con `==` — usa `.equals()` (o desempaqueta a `int` primero) para que la corrección no dependa de un rango de caché interno que la mayoría ni siquiera sabe que existe.",
+    hint: "Recuerda qué compara `==` sobre objetos wrapper, y qué hace `Integer.valueOf` con los valores pequeños.",
   },
   'java-list-of-immutability': {
     prompt: "```java\nList<String> names = List.of(\"Ana\", \"Bo\");\nnames.add(\"Cy\");\n```\n¿Qué pasa cuando esto se ejecuta?",
@@ -48,6 +51,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "`List.of(...)` (Java 9+) devuelve una de las implementaciones inmutables de `List` del JDK: rechaza elementos `null` de entrada y lanza `UnsupportedOperationException` desde todo método que modificaría su estructura (`add`, `remove`, `addAll`, `clear`) o reemplazaría un elemento (`set`) — ese es justamente el propósito de la fábrica. No es un `ArrayList` redimensionable, así que la opción de \"lo agrega en silencio\" es incorrecta, y además es más estricta que `Arrays.asList(...)`, que es de tamaño fijo pero aún permite `set` sobre índices existentes; `List.of` prohíbe también eso. El fallo es una `UnsupportedOperationException` en tiempo de ejecución, no una excepción de indexado, así que la opción de `ArrayIndexOutOfBoundsException` es incorrecta — nada aquí siquiera intenta indexar más allá del final. Y `add` compila sin problema: `List` declara `add` como parte de su interfaz (cualquier implementación mutable la soporta), simplemente no está soportada por esta implementación inmutable en particular, así que el fallo solo aparece en tiempo de ejecución y la opción del error de compilación es incorrecta.",
+    hint: "Recuerda qué tipo de lista devuelve la fábrica `List.of` de Java 9 y cómo se comportan sus métodos mutadores en tiempo de ejecución.",
   },
   'java-collectors-groupingby-downstream': {
     prompt:
@@ -61,6 +65,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "La sobrecarga de un solo argumento `groupingBy(classifier)` recolecta cada grupo en una `List`; en OpenJDK eso hoy significa un `HashMap<K, ArrayList<V>>` (así que la afirmación sobre el valor por defecto de OpenJDK es verdadera, como descripción del comportamiento actual), pero el Javadoc de `Collectors.groupingBy` no promete nada de eso — ni el tipo concreto de mapa, ni la implementación o mutabilidad de la `List` de valores, ni el orden de iteración; solo garantiza que se agrupa por clave. La sobrecarga de dos argumentos, `groupingBy(classifier, downstream)`, aplica el collector downstream dado a cada grupo en lugar de usar `toList()` por defecto; `averagingDouble(Employee::salary)` reduce cada grupo al promedio de sus valores de `salary`, así que `\"eng\"` (90 000 y 110 000) promedia a `100000.0`, así que la afirmación sobre `averagingDouble` es verdadera. El contrato de `groupingBy` no promete ningún orden — el valor por defecto actual de OpenJDK resulta ser un `HashMap` sin orden, no un `LinkedHashMap`, así que la afirmación del `LinkedHashMap` es falsa y no se puede confiar en el orden de los departamentos. Los streams no mutan por diseño: recolectar nunca escribe de vuelta en la lista fuente ni en sus elementos, solo construye un resultado nuevo, así que la afirmación de que `averagingDouble` muta la lista es falsa — nada cambia en `employees`. Para controlar la implementación del `Map` resultante (para iteración estable, orden, concurrencia, etc.) se necesita la sobrecarga de tres argumentos `groupingBy(classifier, mapFactory, downstream)`, pasando algo como `TreeMap::new` como `mapFactory`, así que la afirmación sobre la sobrecarga de tres argumentos es verdadera.",
+    hint: "Revisa qué garantiza realmente el Javadoc de `groupingBy` sobre el mapa devuelto, qué hace un collector downstream por grupo, y qué sobrecarga recibe una fábrica de mapas.",
   },
   'java-generics-wildcard-pecs': {
     prompt:
@@ -76,6 +81,7 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       "Esto separa a quienes memorizaron \"PECS\" como un eslogan de quienes entienden *por qué* el compilador permite o prohíbe llamadas específicas sobre cada wildcard, y si saben que esto es enteramente una ficción de tiempo de compilación borrada en runtime — ambas cosas aparecen constantemente en el diseño de APIs de métodos utilitarios genéricos (`Collections.copy`, `Comparator.comparing`, interfaces de repositorio/mapper, etc.).\n\n**Dilo en voz alta:** \"`src` solo produce valores que leo, así que es `? extends Number`; `dest` solo consume valores que escribo, así que es `? super Number` — eso es PECS. Un simple `List<Number>` no aceptaría el `List<Integer>` o `List<Object>` de quien llama porque los genéricos son invariantes, y todo esto se borra a `List` raw en tiempo de ejecución de todas formas.\"",
+    hint: "Cubre Producer Extends, Consumer Super, qué permite cada wildcard al leer y escribir, la invarianza de los genéricos y el borrado de tipos.",
   },
   'java-hashmap-equals-hashcode-contract': {
     prompt:
@@ -91,6 +97,7 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       "Esta pregunta verifica si \"siempre sobrescribe `hashCode` cuando sobrescribes `equals`\" se entiende mecánicamente —como consecuencia de cómo realmente buscan las tablas hash— en lugar de como una regla memorizada de una advertencia del linter. También saca a la luz si el candidato conoce el modo de fallo más agudo y difícil de depurar: una clave mutable que era correcta al insertarse y luego se vuelve inencontrable para siempre.\n\n**Dilo en voz alta:** \"`HashMap` encuentra un bucket con `hashCode()` y solo entonces compara con `equals()`, así que sobrescribir uno sin el otro hace que objetos iguales caigan en buckets distintos y las búsquedas fallen en silencio — e incluso con ambos sobrescritos correctamente, mutar los campos relevantes para el hash de una clave después de insertarla la deja varada para siempre en el bucket equivocado.\"",
+    hint: "Recorre cómo `HashMap.get` usa `hashCode` antes de `equals`, en qué se basa el `hashCode` por defecto de `Object`, y qué pasa al mutar una clave.",
   },
   'java-completablefuture-composition': {
     prompt:
@@ -106,5 +113,6 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       "Esto evalúa si la composición de `CompletableFuture` se entiende como la construcción de un pipeline de callbacks sin bloqueo —no solo como una envoltura ligeramente más agradable sobre `Future.get()`— y si el candidato conoce el error de producción muy común de dejar que trabajo bloqueante corra por omisión en el pool común compartido.\n\n**Dilo en voz alta:** \"`thenCombine` espera a ambos futures sin bloquear; `exceptionally` solo atrapa fallos mientras que `handle` ve ambos resultados; y nunca dejo I/O bloqueante en el pool común por defecto.\"",
+    hint: "Cubre qué hace cada combinador en éxito frente a fallo, qué cambia cuando la función devuelve un future, y qué pool usa `supplyAsync` sin un executor.",
   },
 };

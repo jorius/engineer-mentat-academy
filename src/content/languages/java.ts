@@ -25,6 +25,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "`int` and `Integer` are different things: `int` is a primitive that always holds a value and has no concept of `null`, while `Integer` is an object reference whose default (uninitialized instance field) value is `null`, not `0` — so the \"prints `0`\" answer is wrong. `getCount()` compiles fine, so the compile-failure answer is wrong too: the compiler is happy to auto-unbox an `Integer` into an `int` return value by inserting an implicit `count.intValue()` call. The problem is only at runtime: `count` is `null`, and calling `.intValue()` on `null` throws `NullPointerException` before anything can be printed, so the \"prints `null`\" answer (which assumes the primitive return type could somehow hold and print `null`) is also wrong. This is the classic unboxing-NPE trap: any place an `Integer`, `Long`, `Boolean`, etc. is used where a primitive is expected — an arithmetic expression, a primitive method parameter, a primitive return — implicitly unboxes it, and a `null` wrapper turns that implicit call into a runtime exception.",
+    hint: "Consider the default value of an object-typed field, and what auto-unboxing does when a method declared to return a primitive returns it.",
   },
   {
     id: 'java-synchronized-keyword-basics',
@@ -52,6 +53,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "A `synchronized` instance method acquires the intrinsic (monitor) lock on `this` before its body runs and releases it on return (normally or via exception), so only one thread can be inside `increment()` on a given `Counter` instance at any moment — that mutual exclusion is exactly what prevents the classic read-modify-write race on `count++`, which is why the one-thread-at-a-time statement is correct. `synchronized` is not class-wide: it only excludes other code that synchronizes on the **same lock object**; `getCount()` here is not `synchronized` at all, so it can run concurrently with `increment()` and, without a happens-before edge, is not guaranteed to see the latest value, so the claim that `getCount()` becomes thread-safe is wrong. `count++` is actually three separate steps — read, add one, write back — so two threads can interleave and lose an update; that is precisely why the method needs `synchronized`, and the \"single atomic CPU instruction\" claim is wrong. And `synchronized` is enforced by the JVM, not a comment-level convention: a second thread calling `increment()` while the lock is held genuinely blocks until it's released, so the \"only documents intent\" claim is wrong.",
+    hint: "Ask which lock a `synchronized` instance method acquires, and which other code that lock actually excludes.",
   },
   {
     id: 'java-integer-cache-equality',
@@ -76,6 +78,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "`==` on wrapper types always compares **references**, never values — Java has no operator overloading, so the \"`true` then `true`\" answer is wrong on principle. But `Integer.valueOf` (which literal autoboxing calls) is required by the JLS to cache and reuse instances for values `-128` to `127`, so boxing `100` twice yields the same cached object and `a == b` is `true`; `200` falls outside that guaranteed range, so `c` and `d` are typically two distinct objects and `c == d` is `false` — this makes the \"`false` then `false`\" answer wrong, since it ignores the cache entirely. Nothing about the JIT or build mode changes this: caching happens in `Integer.valueOf` itself, at every run, not as a debug-only artifact, so the debugger-versus-JIT answer is wrong. The takeaway for real code: never compare wrapper types with `==` — use `.equals()` (or unbox to `int` first) so correctness doesn't depend on an internal caching range that most developers don't even know exists.",
+    hint: "Remember what `==` compares on wrapper objects, and what `Integer.valueOf` does for small values.",
   },
   {
     id: 'java-list-of-immutability',
@@ -99,6 +102,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "`List.of(...)` (Java 9+) returns one of the JDK's immutable `List` implementations: it rejects `null` elements up front and throws `UnsupportedOperationException` from every method that would structurally modify it (`add`, `remove`, `addAll`, `clear`) or replace an element (`set`) — that's the whole point of the factory. It is not a resizable `ArrayList`, so the \"silently adds\" option is wrong, and it's also stricter than `Arrays.asList(...)`, which is fixed-size but still lets you call `set` on existing indices; `List.of` forbids that too. The failure is a runtime `UnsupportedOperationException`, not an indexing exception, so the `ArrayIndexOutOfBoundsException` option is wrong — nothing here even attempts to index past the end. And `add` compiles fine: `List` declares `add` as part of its interface (any mutable implementation supports it), it just isn't supported by this particular immutable implementation, so the failure only shows up at runtime and the compile-failure option is wrong.",
+    hint: "Recall what kind of list the Java 9 `List.of` factory returns and how its mutator methods behave at runtime.",
   },
   {
     id: 'java-collectors-groupingby-downstream',
@@ -130,6 +134,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "The single-argument `groupingBy(classifier)` collects each group into a `List`; in OpenJDK today that means a `HashMap<K, ArrayList<V>>` (so the statement about OpenJDK's default is true, as a description of current behavior), but the `Collectors.groupingBy` Javadoc promises none of it — not the concrete map type, not the values' `List` implementation or mutability, not iteration order, only that elements are grouped by key. The two-argument overload, `groupingBy(classifier, downstream)`, applies the given downstream `Collector` to each group instead of defaulting to `toList()`; `averagingDouble(Employee::salary)` reduces each group to the mean of its `salary` values, so `\"eng\"` (90 000 and 110 000) averages to `100000.0`, so the `averagingDouble` statement is true. `groupingBy`'s contract makes no ordering promise at all — OpenJDK's current default happens to be an unordered `HashMap`, not a `LinkedHashMap`, so the `LinkedHashMap` claim is false and department order is not something you can rely on. Streams are non-mutating by design: collecting never writes back into the source list or its elements, it only builds a new result, so the claim that `averagingDouble` mutates the list is false — nothing about `employees` changes. To control the resulting `Map` implementation (for stable iteration, sorting, concurrency, etc.) you need the three-argument overload `groupingBy(classifier, mapFactory, downstream)`, supplying something like `TreeMap::new` as the `mapFactory`, so the three-argument overload statement is true.",
+    hint: "Check what the `groupingBy` Javadoc actually guarantees about the returned map, what a downstream collector does per group, and which overload takes a map factory.",
   },
   {
     id: 'java-generics-wildcard-pecs',
@@ -153,6 +158,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "This separates candidates who've memorized \"PECS\" as a slogan from ones who understand *why* the compiler allows or forbids specific calls on each wildcard, and whether they know this is entirely a compile-time fiction erased by runtime — both of which show up constantly in API design for generic utility methods (`Collections.copy`, `Comparator.comparing`, repository/mapper interfaces, and so on).\n\n**Say this out loud:** \"`src` only produces values I read, so it's `? extends Number`; `dest` only consumes values I write, so it's `? super Number` — that's PECS. Plain `List<Number>` wouldn't accept a caller's `List<Integer>` or `List<Object>` because generics are invariant, and all of this is erased to raw `List` at runtime anyway.\"",
+    hint: "Cover Producer Extends, Consumer Super, what each wildcard allows for reads and writes, generic invariance, and type erasure.",
   },
   {
     id: 'java-hashmap-equals-hashcode-contract',
@@ -176,6 +182,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "This question checks whether \"always override `hashCode` when you override `equals`\" is understood mechanically — as a consequence of how hash tables actually look things up — rather than as a rule memorized from a linter warning. It also surfaces whether the candidate knows the sharper, harder-to-debug failure mode: a mutable key that was correct on insertion becoming permanently unfindable later.\n\n**Say this out loud:** \"`HashMap` finds a bucket with `hashCode()` and only then compares with `equals()`, so overriding one without the other makes equal objects land in different buckets and lookups silently miss — and even with both overridden correctly, mutating a key's hash-relevant fields after insertion strands the entry in the wrong bucket forever.\"",
+    hint: "Walk through how `HashMap.get` uses `hashCode` before `equals`, what `Object`'s default `hashCode` is based on, and what mutating a key does.",
   },
   {
     id: 'java-completablefuture-composition',
@@ -199,5 +206,6 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "This tests whether `CompletableFuture` composition is understood as building a non-blocking pipeline of callbacks — not just a marginally nicer wrapper around `Future.get()` — and whether the candidate knows the very common production mistake of running blocking work on the shared common pool by omission.\n\n**Say this out loud:** \"`thenCombine` waits on both futures without blocking; `exceptionally` only catches failures while `handle` sees both outcomes; and I never leave blocking I/O on the default common pool.\"",
+    hint: "Cover what each combinator does on success versus failure, what changes when the mapping function returns a future, and which pool `supplyAsync` uses without an executor.",
   },
 ];

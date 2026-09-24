@@ -13,6 +13,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '`Point` es un `struct`, un **tipo por valor**. `var p2 = p1;` copia todos los campos de `p1` en una instancia nueva e independiente, así que modificar `p2.X` no afecta a `p1`. `p1.X` sigue valiendo `1`. `99` solo sería correcto si `Point` fuera una `class`: entonces `p1` y `p2` serían dos referencias al **mismo** objeto en el heap, y `p2.X = 99` también se vería a través de `p1`. La asignación compila sin problema, así que la respuesta del error de compilación es incorrecta, y `p1.X` se estableció explícitamente en `1` en el inicializador, no quedó en el valor por defecto `0`, así que la respuesta `0` también es incorrecta.',
+    hint: "Pregúntate si un `struct` es un tipo por valor o por referencia, y qué hace la asignación con cada tipo.",
   },
   'csharp-async-task-vs-async-void': {
     prompt:
@@ -25,6 +26,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "Un método `async Task` devuelve un `Task` al que quien llama puede hacerle `await`; cualquier excepción lanzada dentro se captura en ese `Task` y se vuelve a lanzar en el `await`, así que un `try`/`catch` normal alrededor de la llamada la detecta. `async void` es del tipo \"dispara y olvida\": no hay ningún `Task` al que hacerle `await`, y una excepción lanzada dentro se dispara sobre el `SynchronizationContext` actual en lugar de poder ser capturada por quien llama, lo que típicamente termina tumbando el proceso. Existe principalmente para manejadores de eventos de UI, que no pueden devolver un valor. Un método `void` normal no es `async` en absoluto, así que no puede hacer `await`; bloquear con `.GetAwaiter().GetResult()` dentro de él solo vuelve síncrona la llamada y no le da a quien llama nada a lo que hacerle `await` — y si esto se ejecuta en un hilo con un `SynchronizationContext` de un solo hilo capturado (un hilo de UI, o el ASP.NET clásico), bloquear así arriesga un deadlock, porque la continuación necesita ese mismo hilo para reanudarse. `Task<void>` no es válido en C#: `void` no puede usarse como argumento de tipo, así que la firma con `Task<void>` no compila; usa `Task` para \"sin valor de retorno\" y `Task<T>` cuando necesites uno.",
+    hint: "Piensa en qué necesita recibir quien llama para poder hacer `await`, y adónde va una excepción cuando no hay nada que esperar.",
   },
   'csharp-nullable-reference-warning': {
     prompt:
@@ -37,6 +39,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "Los tipos de referencia anulables son una característica de **análisis de flujo en tiempo de compilación**, no un mecanismo de verificación nula en tiempo de ejecución: por defecto los diagnósticos son advertencias, no errores, así que la opción de \"el build falla con el error CS8602\" es incorrecta — el proyecto compila. Marcar el parámetro como `User?` le dice al compilador que el argumento puede ser `null`, y acceder a `.Name` sin acotarlo (un `if (user is null) return ...;`, un operador condicional nulo `user?.Name`, o un operador de indulgencia nula `user!.Name` cuando estás seguro de que no es null) dispara CS8602. Nada en la anotación cambia lo que pasa en tiempo de ejecución: pasar `null` sigue lanzando una `NullReferenceException` normal al desreferenciar, exactamente igual que en código antiguo sin soporte para anulables, así que la opción de `ArgumentNullException` es incorrecta — no se inserta ninguna verificación. Las advertencias son diagnósticos reales del compilador, visibles en la salida del build y en CI, no solo pistas del editor, así que la opción de \"solo afectan los tooltips del editor\" también es incorrecta.",
+    hint: "Recuerda si los tipos de referencia anulables actúan en compilación o en ejecución, y qué severidad tienen sus diagnósticos por defecto.",
   },
   'csharp-task-whenall-exceptions': {
     prompt:
@@ -49,6 +52,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "`Task.WhenAll` termina en estado Faulted con una `AggregateException` cuyo `InnerExceptions` contiene la excepción de cada tarea que falló, en el orden en que las tareas se pasaron a `WhenAll`, no en el orden en que completaron. Cuando haces `await` sobre una tarea fallida (incluida la que devuelve `WhenAll`), el awaiter desenvuelve y vuelve a lanzar solo la **primera** excepción interna, por eso el `catch` aquí ve `InvalidOperationException` (la respuesta de `AggregateException` es incorrecta: .NET no envuelve las dos excepciones en ningún otro tipo personalizado — el `.Exception` de la tarea fallida de `WhenAll` sí es realmente una `AggregateException`, pero el `await` nunca deja que esa `AggregateException` salga tal cual en el punto de la llamada; siempre la desenvuelve hasta dejar solo la primera excepción interna). La respuesta de `ArgumentException` invierte el orden, y la de la cancelación es incorrecta porque `WhenAll` nunca cancela tareas hermanas solo porque una falle — ambas tareas terminan de ejecutarse de forma independiente, así que `task2.Exception` también queda poblada. Revisar `.Exception.InnerExceptions` sobre una referencia guardada a la tarea de `WhenAll` (o el `.Exception` de cada tarea) después del `await` es la forma estándar de ver todos los fallos en vez de solo el primero — no vuelvas a llamar a `Task.WhenAll` para intentar obtenerlos.",
+    hint: "Recuerda cómo `await` desenvuelve la `AggregateException` de una tarea fallida, y en qué orden `WhenAll` registra las excepciones internas.",
   },
   'csharp-linq-first-vs-firstordefault': {
     prompt:
@@ -61,6 +65,7 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "`First()` está pensado para secuencias que se esperan no vacías: lanza `InvalidOperationException` cuando no hay nada que devolver, así que la opción de \"devuelve `0` en silencio\" es incorrecta — eso describe el comportamiento de `FirstOrDefault()`, no el de `First()`. `ArgumentOutOfRangeException` pertenece al acceso por índice o a arrays, no al caso de secuencia vacía de LINQ. El código compila sin problema como `int`, así que la opción del error de compilación es incorrecta — simplemente lanza en tiempo de ejecución. La trampa real que hay que mencionar en una entrevista: `FirstOrDefault()` sobre una `List<int>` vacía devuelve `0`, indistinguible de un `0` real que ya estuviera en la lista, así que cuando `0` es un valor válido verifica `Any()` (o `Count == 0`) antes de llamar a `FirstOrDefault()`, o proyecta primero a un tipo anulable — `numbers.Select(n => (int?)n).FirstOrDefault()` devuelve `null` en lugar de un `0` ambiguo para una secuencia vacía. LINQ no tiene ningún método \"first\" al estilo `TryGetValue` que reporte el éxito por separado del valor.",
+    hint: "Compara el contrato de `First` con el de su variante `OrDefault` cuando la secuencia no tiene nada, y cuál es el valor por defecto de `int`.",
   },
   'csharp-record-equality-with-collections': {
     prompt:
@@ -75,6 +80,7 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       "Esto se pregunta para ver si \"los records tienen igualdad de valor\" se entiende al nivel de lo que el compilador realmente genera, y no como eslogan de marketing. Es una fuente común de bugs sutiles: pruebas unitarias que comparan DTOs llenos de listas, o records usados como claves de diccionario o en `HashSet<T>`, se comportan de repente como tipos por referencia en cuanto interviene un miembro de tipo colección.\n\n**Dilo en voz alta:** \"La igualdad de records es miembro a miembro sobre los campos del record usando el comparador por defecto, y `List<T>` no tiene igualdad de valor, así que dos records construidos con instancias de lista distintas pero contenido idéntico no van a dar `==`. Si necesito eso, agrego mi propio `Equals(Order? other)` y `GetHashCode()` usando `SequenceEqual` en lugar de confiar en los sintetizados.\"",
+    hint: "Piensa en qué comparador usa el `Equals` sintetizado para cada campo, si `List<T>` sobrescribe la igualdad, y qué verifica `EqualityContract`.",
   },
   'csharp-configureawait-and-valuetask': {
     prompt:
@@ -90,6 +96,7 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       "Esto evalúa si el candidato trata `ConfigureAwait(false)` y `ValueTask<T>` como algo para poner en todas partes por reflejo o como herramientas puntuales para modos de fallo y caminos calientes específicos — usar cualquiera de los dos sin entender el compromiso causa bugs reales (deadlocks por un lado, comportamiento indefinido por mal uso de `ValueTask` por el otro).\n\n**Dilo en voz alta:** \"`ConfigureAwait(false)` protege al código de librería de un deadlock causado por el `SynchronizationContext` de quien llama; `ValueTask<T>` ahorra una asignación en caminos calientes que suelen completar de forma síncrona, pero es de un solo uso, así que lo mantengo local y por defecto uso `Task<T>` en todo lo demás.\"",
+    hint: "Cubre qué implica capturar el `SynchronizationContext` para quien bloquea (WPF frente a ASP.NET Core), y el contrato de consumo único de `ValueTask<T>`.",
   },
   'csharp-linq-deferred-execution-multiple-enumeration': {
     prompt:
@@ -103,5 +110,6 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "`Select` (como `Where`, `OrderBy` y la mayoría de los operadores de LINQ-to-Objects) es **diferido**: no toca `source` cuando se llama, solo construye un iterador. `Console.WriteLine(\"Building query\")` se ejecuta de inmediato porque es una instrucción normal dentro de `Squares`, ejecutada una vez cuando se invoca el método mismo — antes de que exista siquiera el iterador diferido de `Select`, así que la afirmación de \"se imprime exactamente una vez\" es verdadera. Cada `foreach` sobre `query` llama a `GetEnumerator()` sobre ese mismo pipeline sin materializar, que recorre `source` y vuelve a invocar el selector desde cero, así que \"Evaluating\" se imprime para los tres elementos en el primer bucle y otra vez para los tres en el segundo — seis impresiones en total. Así que la afirmación de \"se imprime dos veces\" es verdadera, y las dos que hablan de caché son falsas — nada en `Select`, ni el hecho de que la fuente sea un array, provoca un cacheo automático. Esta es la trampa de la **enumeración múltiple**: duplica el trabajo en silencio, y es peor que un problema de rendimiento cuando la fuente tiene efectos secundarios o no se puede re-enumerar de forma segura — una consulta construida sobre `IQueryable`/EF Core vuelve a ejecutar la consulta a la base de datos, un iterador con `yield return` que depende de estado externo puede comportarse distinto la segunda vez, y una fuente de un solo sentido como un `DbDataReader` o un iterador respaldado por un `Stream` ya consumido puede lanzar una excepción o no devolver nada. Llamar a `.ToList()` (o `.ToArray()`) convierte el pipeline diferido en uno evaluado de forma anticipada: si `Squares` hiciera eso internamente justo después de `.Select(...)`, las tres impresiones de `Evaluating` ocurrirían de inmediato durante la llamada a `Squares(...)` — antes de que se imprima siquiera `\"Before first enumeration\"` — y ninguno de los dos `foreach` imprimiría `Evaluating`, porque ambos solo leerían la `List<int>` ya construida, así que la afirmación sobre `.ToList()` es verdadera. Sigue siendo la solución estándar siempre que una consulta LINQ se vaya a enumerar más de una vez — solo hay que poner el `.ToList()` donde realmente se quiere que ocurra la evaluación anticipada, sin asumir que ocurre de forma perezosa en cada enumeración.\n\n**Dilo en voz alta:** \"Los operadores de LINQ como `Select` son diferidos, así que cada enumeración vuelve a ejecutar todo el pipeline a menos que lo materialice. Si voy a enumerar una consulta más de una vez, o tiene efectos secundarios, llamo a `ToList()` una vez y reutilizo eso.\"",
+    hint: "Separa lo que se ejecuta al llamar a `Squares` de lo que se ejecuta cada vez que se enumera el resultado; piensa en ejecución diferida y materialización.",
   },
 };
