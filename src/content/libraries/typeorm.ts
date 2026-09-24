@@ -27,7 +27,7 @@ How many SQL queries does this send?`,
     source: 'topic-list',
     explanation:
       'One query for the list plus one per row: the N+1 problem. Each `await` in the loop is also a sequential network round trip, so latency grows linearly with N. Fixes: load the relation with the parent (`find({ relations: { posts: true } })`, a single `LEFT JOIN`), or batch the children with one `WHERE "authorId" IN (...)` query (`In(ids)`) and group them in memory. In GraphQL resolvers, where the loop is hidden across resolver calls, a DataLoader does that batching per request.',
-    hint: 'Count the queries the first line sends, then ask what each loop iteration sends.',
+    hint: 'Recall what each `await`ed repository call does at the SQL level, and whether TypeORM ever combines separate calls.',
   },
   {
     id: 'typeorm-batch-posts-by-author',
@@ -114,7 +114,7 @@ export function solution(table: Post[], authorIds: number[]) {
     source: 'topic-list',
     explanation:
       'The pattern is always: collect keys, de-duplicate, run **one** `IN` query, group by the foreign key in a `Map` (O(n), not a nested `filter` per key), and map back to the original key order, with `[]` for keys that have no rows. DataLoader requires the result array to line up with the keys, because it resolves each caller\'s promise by position. Skipping the query for an empty key list saves a round trip. In a real resolver you create the DataLoader **per request**, so its cache never leaks data between users.',
-    hint: 'Run one `In(ids)` query over the de-duplicated keys, group the rows in a `Map` by `authorId`, and map back in key order.',
+    hint: 'Think about which TypeORM operator fetches rows for many keys in one query, and how to line the rows back up with the DataLoader contract.',
   },
   {
     id: 'typeorm-lazy-relation-n-plus-one',
@@ -145,7 +145,7 @@ What does TypeORM do here?`,
     source: 'topic-list',
     explanation:
       'A lazy relation is a promise-returning getter: every first access runs its own `SELECT`. TypeORM does not batch them, so this is N+1 hidden behind a property access. `Promise.all` only makes it concurrent, which can also exhaust the connection pool under load. Use `relations: { author: true }` (or `leftJoinAndSelect`) for this query, or collect the `authorId`s and load users with one `In(ids)` query. `eager: true` is the opposite trade-off: it always joins, even when you do not need the data, and it only applies to `find*` methods, not to QueryBuilder.\n\n**Say this out loud:** "Lazy relations turn N+1 into a property access, so I avoid them on hot paths and load relations explicitly with a join or one batched `IN` query."',
-    hint: 'Ask what a lazy relation does on its first access, and whether `Promise.all` changes the number of queries or only their timing.',
+    hint: 'Recall how TypeORM implements a lazy relation and when it goes to the database for it.',
   },
   {
     id: 'typeorm-leftjoin-vs-leftjoinandselect',
@@ -174,7 +174,7 @@ const users = await dataSource
     source: 'topic-list',
     explanation:
       '`leftJoin` adds the join to the SQL but not the joined columns to the `SELECT`, so there is nothing to map onto `user.photos`. `leftJoinAndSelect` selects them and hydrates the relation. There is a second, subtler bug: a condition on the joined table in `WHERE` removes users with no published photos, which effectively turns the left join into an inner join. To keep every user and only attach published photos, put the condition in the join: `.leftJoinAndSelect("user.photos", "photo", "photo.isPublished = :published", { published: true })`.',
-    hint: 'Compare what each query-builder join method adds to the `SELECT` list, not only to the `FROM` clause.',
+    hint: 'Recall how the query builder decides which relations to hydrate on the entities that `getMany` returns.',
   },
   {
     id: 'typeorm-synchronize-and-migrations',

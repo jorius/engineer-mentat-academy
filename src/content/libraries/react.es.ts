@@ -14,7 +14,7 @@ export const translations: Record<string, QuestionTranslation> = {
   'react-strict-mode-effect-twice': {
     prompt: '```jsx\nfunction Chat({ roomId }) {\n  useEffect(() => {\n    console.log(\'connect \' + roomId);\n    return () => console.log(\'disconnect \' + roomId);\n  }, [roomId]);\n  return null;\n}\n\n// development build, React 18+\nconst root = createRoot(document.getElementById(\'root\'));\nroot.render(<StrictMode><Chat roomId="a" /></StrictMode>);\n```\n¿Qué se imprime justo después del primer montaje?',
     explanation: 'En desarrollo, `StrictMode` monta el componente, ejecuta sus efectos, simula un desmontaje (ejecutando los cleanups) y lo vuelve a montar. Existe para exponer efectos cuyo cleanup no deshace el setup. Si faltara el cleanup, terminarías con dos conexiones abiertas, que es justo el bug que intenta mostrarte. En producción el efecto se ejecuta una sola vez. La doble ejecución requiere una raíz creada con `createRoot`; las raíces legacy de `ReactDOM.render` en React 18 nunca volvían a ejecutar los efectos.\n\nLa corrección equivocada es una bandera con `useRef` que se salta la segunda ejecución; la correcta es un cleanup simétrico.',
-    hint: 'Recuerda qué hace `StrictMode` con los efectos en desarrollo para comprobar que el cleanup de verdad deshace el setup.',
+    hint: 'Recuerda qué hace `StrictMode` con los efectos en un build de desarrollo, y por qué lo hace.',
   },
   'react-error-boundary-scope': {
     prompt: 'Un componente de clase `ErrorBoundary` (con `static getDerivedStateFromError` y `componentDidCatch`) envuelve a `<Dashboard />`. ¿Qué errores atrapa? Selecciona todas las que apliquen.',
@@ -26,7 +26,7 @@ export const translations: Record<string, QuestionTranslation> = {
       e: 'Un error lanzado en el propio `render` del `ErrorBoundary`',
     },
     explanation: 'Los error boundaries atrapan errores lanzados mientras React renderiza, en los métodos de ciclo de vida y en los constructores del árbol **debajo** de ellos. No atrapan errores en event handlers (usa `try/catch` y guarda el error en el state), en código asíncrono (una promesa rechazada ocurre fuera del render de React) ni en el propio boundary (de eso se encarga el siguiente boundary hacia arriba).\n\nPara enviar un error asíncrono a un boundary, llama a `setState(() => { throw error; })` o usa `showBoundary` de `react-error-boundary`. Todavía no existe un hook equivalente a `getDerivedStateFromError`, y esa es una de las razones por las que los componentes de clase siguen apareciendo en codebases modernos.',
-    hint: 'Pregúntate qué errores ocurren mientras React renderiza o hace commit del árbol debajo del boundary y cuáles ocurren fuera de ese trabajo.',
+    hint: 'Recuerda en qué tipo de trabajo de React se engancha un error boundary, y dónde se lanza cada error con respecto al boundary.',
   },
   'react-hooks-rules-violations': {
     prompt: '¿Cuáles de estos rompen las Reglas de los Hooks? Selecciona todas las que apliquen.',
@@ -72,7 +72,7 @@ export const translations: Record<string, QuestionTranslation> = {
       d: 'Sigue subiendo, pero se salta un valor de cada dos',
     },
     explanation: 'El efecto se ejecuta una vez, así que el callback del intervalo encierra el `count` del primer render, que es `0`. Cada tick llama a `setCount(1)`; después del primero, React evita el render porque el valor no cambió. Es el clásico stale closure causado por mentir sobre las dependencias (la regla del linter marcaría `count`).\n\nLa mejor corrección es la forma updater `setCount((c) => c + 1)`, que saca `count` del efecto por completo y mantiene honesto el `[]`. Agregar `count` a las dependencias también funciona, pero destruye y recrea el intervalo cada segundo.',
-    hint: 'Pregúntate de qué render es el `count` que capturó el callback del intervalo, dado que el efecto se ejecuta una sola vez.',
+    hint: 'Recuerda qué captura un callback creado dentro de un efecto del render que lo creó, y cómo el arreglo de dependencias decide cuándo vuelve a ejecutarse el efecto.',
   },
   'react-exhaustive-deps-infinite-loop': {
     prompt: '```jsx\nfunction Profile({ userId }) {\n  const [user, setUser] = useState(null);\n  const options = { include: [\'teams\'] };\n  async function load() {\n    setUser(await api.getUser(userId, options));\n  }\n  useEffect(() => {\n    load();\n  }, [load]);\n  // ...\n}\n```\nLa regla de lint `exhaustive-deps` pidió `load` en el arreglo. Ahora el componente hace fetch en un bucle infinito. Explica por qué y enumera tus correcciones en orden de preferencia.',
@@ -101,7 +101,7 @@ export const translations: Record<string, QuestionTranslation> = {
       e: 'El padre muta en el lugar una prop de tipo objeto (`user.name = "x"`) sin actualizar ningún state',
     },
     explanation: 'Un componente vuelve a renderizar cuando (1) cambia su propio state, (2) su padre vuelve a renderizar (por defecto los hijos se renderizan junto con su padre, cambien o no las props) o (3) cambia un context que consume. Los refs están fuera de ese sistema a propósito: escribir `ref.current` nunca programa un render. Mutar una prop en el lugar tampoco programa un render; React solo se entera de los cambios a través de los setters de state, y la mutación además va a romper cualquier comparación de `memo` más adelante.\n\nUn render no es una actualización del DOM: React vuelve a ejecutar el componente, compara el resultado y hace commit solo de lo que cambió.\n\nCon el React Compiler habilitado, el JSX del padre queda memoizado, así que un elemento `<Child />` sin cambios se salta como si `Child` estuviera envuelto en `memo`; por eso el enunciado descarta el compilador.',
-    hint: 'Enumera lo que de verdad programa un render en React (setters de estado, renders del padre, context) y luego pregúntate si cada caso pasa por alguno de ellos.',
+    hint: 'Para cada caso, pregúntate si React se entera del cambio por una de sus propias APIs o si es una escritura de JavaScript común que React nunca ve.',
   },
   'react-memo-inline-callback': {
     prompt: '```jsx\nconst Row = React.memo(function Row({ ticket, onSelect }) {\n  return <tr onClick={() => onSelect(ticket.id)}>{/* ... */}</tr>;\n});\n\nfunction List({ tickets }) {\n  const [selected, setSelected] = useState(null);\n  return tickets.map((t) => (\n    <Row key={t.id} ticket={t} onSelect={(id) => setSelected(id)} />\n  ));\n}\n```\nCuando cambia `selected`, ¿qué filas vuelven a renderizar? (La app no usa el React Compiler.)',
@@ -112,12 +112,12 @@ export const translations: Record<string, QuestionTranslation> = {
       d: 'Todas las filas, porque `React.memo` compara las props en profundidad y `tickets` cambió',
     },
     explanation: '`React.memo` hace una comparación **superficial** de las props. La arrow function inline es una función nueva en cada render de `List`, así que `onSelect` nunca es igual y memo nunca se salta nada; pagas por la comparación y no obtienes nada. Corrección: pasa un handler estable, por ejemplo `const handleSelect = useCallback((id) => setSelected(id), [])`, o pasa `setSelected` directamente (los setters de state ya son estables). La misma trampa aplica a objetos inline como `style={{...}}`. Con el React Compiler habilitado, la arrow function quedaría en caché (solo lee el `setSelected` estable) y ninguna fila volvería a renderizar; por eso el enunciado descarta el compilador.',
-    hint: 'Recuerda que `React.memo` compara las props de forma superficial y revisa si cada prop conserva la misma referencia entre renders de `List`.',
+    hint: 'Recuerda exactamente cómo compara `React.memo` las props viejas con las nuevas, y luego sigue lo que `List` le pasa a cada `Row` en cada render.',
   },
   'react-keys-index-state-fix': {
     prompt: 'React asocia el state de cada fila (aquí, un borrador escrito en el input de cada fila) a las filas por `key`. `solution(prev, drafts, next)` simula eso: guarda el borrador de cada fila anterior bajo su key y devuelve el borrador con el que termina cada fila de `next`. La lista actualmente usa el índice del arreglo como key, así que borrar o insertar una fila hace que los borradores salten a la fila equivocada. Corrige `keyFor` para que los borradores sigan a sus filas.',
     explanation: 'Durante la reconciliación, React empareja los hijos viejos y nuevos por `key`; una key que coincide conserva la instancia del componente, su state y su nodo del DOM. Con keys por índice, eliminar la fila 0 hace que la antigua fila 1 "se convierta" en la key 0, así que su state cae en el elemento equivocado. Usa un id estable y único que venga de los datos. Las keys por índice solo son aceptables en listas estáticas que nunca se filtran, ordenan ni editan y cuyas filas no tienen state. Nunca generes keys durante el render (`Math.random()`, `crypto.randomUUID()`): cada render volvería a montar cada fila. Si los datos no tienen id, asígnale uno al elemento cuando se **crea**.',
-    hint: 'Una key debe identificar al elemento en sí, no su posición en el arreglo; usa un id estable de los datos de la fila.',
+    hint: 'Pregúntate qué debe identificar una key para que no cambie cuando se insertan o borran filas antes de ella.',
   },
   'react-derived-state-anti-pattern': {
     prompt: 'Estás revisando este pull request. ¿Qué está mal y qué le pides al autor que escriba en su lugar?\n```jsx\nfunction TicketList({ tickets }) {\n  const [query, setQuery] = useState(\'\');\n  const [filtered, setFiltered] = useState(tickets);\n  useEffect(() => {\n    setFiltered(tickets.filter((t) => t.title.includes(query)));\n  }, [tickets, query]);\n  // renders <input> for query and the filtered list\n}\n```',
@@ -153,7 +153,7 @@ export const translations: Record<string, QuestionTranslation> = {
       d: 'Envolver `CommentBox` en `React.memo` para que se vuelva a montar cuando cambian sus props',
     },
     explanation: 'React conserva el state del mismo tipo de componente en la misma posición del árbol. Cambiar la `key` le dice a React que es una instancia distinta, así que desmonta la vieja y monta una nueva con state nuevo (incluido el state de cada hijo). El reinicio con `useEffect` funciona, pero renderiza una vez con el borrador obsoleto y solo reinicia el campo que recordaste. El inicializador lazy se ejecuta solo al montar. `React.memo` nunca vuelve a montar nada; solo se salta renders.',
-    hint: 'Recuerda cómo decide React si conserva el estado de un componente: mismo tipo, misma posición en el árbol, misma `key`.',
+    hint: 'Recuerda las reglas que usa React para conservar o descartar el estado de un componente entre renders, y cuáles controla el padre.',
   },
   'react-controlled-input-no-onchange': {
     prompt: 'Los entrevistadores preguntan sobre data binding. En un build de desarrollo de React, `const [name, setName] = useState("Ada")` y el JSX renderiza `<input value={name} />` sin `onChange`. ¿Qué pasa cuando el usuario escribe?',
@@ -164,7 +164,7 @@ export const translations: Record<string, QuestionTranslation> = {
       d: 'React lanza un error y desmonta el componente',
     },
     explanation: 'React tiene un flujo de datos **unidireccional**: `value={name}` hace que el input sea controlado, así que después de cada evento de input React devuelve el valor del DOM a `name` (no hace falta un re-render). Las teclas no cambian nada hasta que un `onChange` llama a `setName(e.target.value)`, que es como React hace lo que otros frameworks llaman two-way binding. Para un input no controlado, usa `defaultValue` y lee el valor con un ref o con `FormData` al enviar. Si la intención es que sea de solo lectura, agrega `readOnly` para silenciar la advertencia (la advertencia solo existe en los builds de desarrollo).',
-    hint: 'Recuerda el flujo de datos en un solo sentido de React: ¿qué hace un `value` controlado con el DOM después de cada evento de input si nada actualiza el estado?',
+    hint: 'Recuerda el flujo de datos en un solo sentido de React y quién es dueño del valor de un input cuando le pasas una prop `value`.',
   },
   'react-large-form-performance': {
     prompt: 'Un formulario de seguros de 60 campos guarda todos los valores en un solo objeto de `useState` en la raíz del formulario, usa inputs controlados y valida el objeto completo en cada cambio. Escribir tiene un retraso de unos 150 ms por tecla en laptops de gama media. Diagnostícalo y describe tu rediseño.',
@@ -199,6 +199,6 @@ export const translations: Record<string, QuestionTranslation> = {
       d: 'Filtrar dentro de `useLayoutEffect` para que el trabajo ocurra antes del paint',
     },
     explanation: 'Los dos hooks concurrentes marcan trabajo como no urgente para que React pueda interrumpirlo y mantener la escritura fluida. `useTransition` envuelve la **actualización de state**, así que necesitas ser dueño del setter (envolver `setQuery` en `startTransition` es imposible aquí). `useDeferredValue` envuelve un **valor que recibes**: React primero vuelve a renderizar con el valor diferido anterior, luego renderiza el nuevo en segundo plano y lo abandona si llega otra tecla. La memoización importa: el render urgente igual ejecuta `BigList` con el valor diferido anterior, así que, a menos que las filas mismas (el JSX, no solo el arreglo filtrado) estén memoizadas sobre `deferred` o las renderice un hijo envuelto en `memo`, vuelve a filtrar y a renderizar las 20,000 filas de todos modos. `React.memo` no puede ayudar porque `query` realmente cambia en cada tecla, y `useLayoutEffect` bloquea el paint todavía más. A diferencia de un debounce, no hay un retraso fijo: los dispositivos rápidos se actualizan casi de inmediato. Para peticiones de red sigues aplicando debounce. Muestra `query !== deferred` como una pista de "obsoleto".\n\n**Dilo en voz alta:** "`useTransition` cuando soy dueño de la actualización de state, `useDeferredValue` cuando solo recibo el valor; los dos mantienen urgente el input y dejan que el render costoso se interrumpa, algo que un debounce no puede hacer."',
-    hint: 'Fíjate en qué controlas aquí, el setter del estado o solo el valor que recibes; los dos hooks concurrentes se diferencian justo en eso.',
+    hint: 'Recuerda qué recibe como entrada cada hook concurrente, y luego revisa qué partes de este código puedes cambiar.',
   },
 };

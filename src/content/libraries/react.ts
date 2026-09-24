@@ -56,7 +56,7 @@ What is logged right after the first mount?`,
     source: 'topic-list',
     explanation:
       'In development, `StrictMode` mounts the component, runs its effects, simulates an unmount (running cleanups) and mounts it again. It exists to expose effects whose cleanup does not undo the setup. If the cleanup were missing you would end up with two open connections, which is exactly the bug it is trying to show you. Production runs the effect once. The double run needs a `createRoot` root; React 18\'s legacy `ReactDOM.render` roots never re-ran effects.\n\nThe wrong fix is a `useRef` flag that skips the second run; the right fix is a symmetric cleanup.',
-    hint: 'Remember what `StrictMode` does to effects in development to check that the cleanup really undoes the setup.',
+    hint: 'Recall what `StrictMode` does to effects in a development build, and why it does it.',
   },
   {
     id: 'react-error-boundary-scope',
@@ -79,7 +79,7 @@ What is logged right after the first mount?`,
     source: 'topic-list',
     explanation:
       'Error boundaries catch errors thrown while React is rendering, in lifecycle methods and in constructors of the tree **below** them. They do not catch errors in event handlers (use `try/catch` and put the error in state), in asynchronous code (a rejected promise happens outside React\'s render), or in the boundary itself (the next boundary up handles that).\n\nTo route an async error into a boundary, call `setState(() => { throw error; })` or use `showBoundary` from `react-error-boundary`. There is still no hook equivalent of `getDerivedStateFromError`, which is one reason class components still show up in modern codebases.',
-    hint: 'Ask which errors happen while React itself is rendering or committing the tree below the boundary, and which happen outside that work.',
+    hint: 'Recall which kinds of React work an error boundary hooks into, and where each error is thrown relative to the boundary.',
   },
   {
     id: 'react-hooks-rules-violations',
@@ -305,7 +305,7 @@ What does the component show after 5 seconds?`,
     source: 'topic-list',
     explanation:
       'The effect runs once, so the interval callback closes over the `count` of the first render, which is `0`. Every tick calls `setCount(1)`; after the first one React bails out because the value did not change. This is the classic stale closure caused by lying about dependencies (the lint rule would flag `count`).\n\nThe best fix is the updater form `setCount((c) => c + 1)`, which removes `count` from the effect entirely and keeps `[]` honest. Adding `count` to the dependencies also works, but tears down and recreates the interval every second.',
-    hint: 'Ask which render\'s `count` the interval callback closed over, given that the effect runs only once.',
+    hint: 'Recall what a callback created inside an effect captures from the render that created it, and how the dependency array decides when the effect runs again.',
   },
   {
     id: 'react-exhaustive-deps-infinite-loop',
@@ -414,7 +414,7 @@ export function solution(changes: Change[], delay: number): Change[] {
     source: 'notion',
     explanation:
       'A component re-renders when (1) its own state changes, (2) its parent re-renders (by default children re-render with their parent, whether or not props changed), or (3) a context it consumes changes. Refs are deliberately outside that system: writing `ref.current` never schedules a render. Mutating a prop in place does not schedule a render either; React only learns about changes through state setters, and the mutation will also defeat any `memo` comparison later.\n\nA render is not a DOM update: React re-runs the component, diffs the result and commits only what changed.\n\nWith the React Compiler enabled, the parent\'s JSX is memoized, so an unchanged `<Child />` element is skipped as if `Child` were wrapped in `memo`; that is why the prompt rules the compiler out.',
-    hint: 'List what actually schedules a render in React (state setters, parent renders, context), then ask whether each case goes through one of them.',
+    hint: 'For each case, ask whether React is told about the change through one of its own APIs or whether it is a plain JavaScript write React never sees.',
   },
   {
     id: 'react-memo-inline-callback',
@@ -447,7 +447,7 @@ When \`selected\` changes, which rows re-render? (The app does not use the React
     source: 'notion',
     explanation:
       '`React.memo` does a **shallow** comparison of props. The inline arrow is a new function on each render of `List`, so `onSelect` is never equal and memo never skips anything; you pay for the comparison and get nothing. Fix: pass a stable handler, e.g. `const handleSelect = useCallback((id) => setSelected(id), [])`, or pass `setSelected` directly (state setters are already stable). The same trap applies to inline objects like `style={{...}}`. With the React Compiler enabled, the arrow would be cached (it only reads the stable `setSelected`) and no row would re-render; that is why the prompt rules the compiler out.',
-    hint: 'Recall that `React.memo` compares props shallowly, and check whether every prop keeps the same reference between renders of `List`.',
+    hint: 'Recall exactly how `React.memo` compares old and new props, then trace what `List` passes to each `Row` on every render.',
   },
   {
     id: 'react-keys-index-state-fix',
@@ -504,7 +504,7 @@ export function solution(prev: Row[], drafts: string[], next: Row[]): string[] {
     source: 'notion',
     explanation:
       'During reconciliation React pairs old and new children by `key`; a matching key keeps the component instance, its state and its DOM node. With index keys, removing row 0 makes the old row 1 "become" key 0, so its state lands on the wrong item. Use a stable, unique id from the data. Index keys are acceptable only for static lists that are never filtered, sorted or edited and whose rows hold no state. Never generate keys during render (`Math.random()`, `crypto.randomUUID()`): every render would remount every row. If the data has no id, assign one when the item is **created**.',
-    hint: 'A key must identify the item itself, not its position in the array; reach for a stable id from the row data.',
+    hint: 'Ask what a key has to identify so it stays the same when rows are inserted or deleted before it.',
   },
   {
     id: 'react-derived-state-anti-pattern',
@@ -582,7 +582,7 @@ function TicketList({ tickets }) {
     source: 'topic-list',
     explanation:
       'React keeps state for the same component type at the same position in the tree. Changing `key` tells React it is a different instance, so it unmounts the old one and mounts a fresh one with fresh state (including every child\'s state). The `useEffect` reset works but renders once with the stale draft and only resets the one field you remembered. The lazy initializer runs only on mount. `React.memo` never remounts anything; it only skips renders.',
-    hint: 'Remember how React decides whether to keep a component\'s state: same type, same position in the tree, same `key`.',
+    hint: "Recall the rules React uses to keep or discard a component's state between renders, and which of them the parent controls.",
   },
   {
     id: 'react-controlled-input-no-onchange',
@@ -604,7 +604,7 @@ function TicketList({ tickets }) {
     source: 'core-list',
     explanation:
       'React has **one-way** data flow: `value={name}` makes the input controlled, so after every input event React puts the DOM value back to `name` (no re-render is needed). Keystrokes change nothing until an `onChange` calls `setName(e.target.value)`, which is how React does what other frameworks call two-way binding. For an uncontrolled input, use `defaultValue` and read the value through a ref or `FormData` on submit. If read-only is intended, add `readOnly` to silence the warning (the warning exists only in development builds).',
-    hint: 'Recall React\'s one-way data flow: what does a controlled `value` do to the DOM after each input event when nothing updates the state?',
+    hint: "Recall React's one-way data flow and who owns an input's value once you pass it a `value` prop.",
   },
   {
     id: 'react-large-form-performance',
@@ -672,6 +672,6 @@ function TicketList({ tickets }) {
     source: 'notion',
     explanation:
       'Both concurrent hooks mark work as non-urgent so React can interrupt it to keep typing responsive. `useTransition` wraps the **state update**, so you need to own the setter (wrapping `setQuery` in `startTransition` is impossible here). `useDeferredValue` wraps a **value you receive**: React first re-renders with the old deferred value, then renders the new one in the background and abandons it if another keystroke arrives. The memoization matters: the urgent render still runs `BigList` with the old deferred value, so unless the rows themselves (the JSX, not only the filtered array) are memoized on `deferred` or rendered by a `memo` child, it re-filters and re-renders all 20,000 rows anyway. `React.memo` cannot help because `query` really changes on each keystroke, and `useLayoutEffect` blocks paint even harder. Unlike a debounce there is no fixed delay: fast devices update almost immediately. For network requests you still debounce. Show `query !== deferred` as a "stale" hint.\n\n**Say this out loud:** "`useTransition` when I own the state update, `useDeferredValue` when I only receive the value; both keep input urgent and let the expensive render be interrupted, which a debounce cannot do."',
-    hint: 'Note what you own here, the state setter or only the incoming value; the two concurrent hooks differ exactly on that.',
+    hint: 'Recall what each concurrent hook takes as its input, then check which parts of this code you are allowed to change.',
   },
 ];

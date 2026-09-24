@@ -331,7 +331,7 @@ export function solution(todos: Todo[], steps: Step[]) {
     source: 'topic-list',
     explanation:
       "`useSelector` runs the selector after **every** dispatch and re-renders when the result is `!==` the previous one. A selector that returns `filter(...)` produces a new array every time, so the component re-renders on unrelated actions. Memoizing on the input references works because reducers use structural sharing: a theme toggle creates a new root object but keeps the same `todos` array. This exercise builds the classic cache-of-one version, which is what Reselect 4 did (`defaultMemoize`, now `lruMemoize`) and why selectors shared by components with different arguments used to need a factory. Reselect 5, re-exported by Redux Toolkit 2, defaults to `weakMapMemoize`, which keeps one result per distinct set of arguments, so per-component factories are rarely needed now.\n\n**Say this out loud:** \"Selectors that derive arrays or objects must be memoized, otherwise `useSelector` sees a new reference on every dispatch and re-renders. Memoization works because immutable updates keep unchanged branches referentially equal.\"",
-    hint: 'Keep the last input results and the last output in a closure, and compare the new inputs with `===` before re-running the combiner.',
+    hint: 'Think about what the returned selector has to remember between calls, and which comparison matches how Reselect decides that an input changed.',
   },
   {
     id: 'redux-toolkit-immer-reassign',
@@ -364,7 +364,7 @@ Which case reducer does **not** change the store state?`,
     source: 'topic-list',
     explanation:
       '`createSlice` runs case reducers through Immer: `state` is a draft proxy, and Immer records **mutations** of that draft (the `push` in `added`, the assignment in `couponApplied`) or accepts a **returned** replacement value (as in `cleared`). `state = ...` only rebinds a local variable; the draft is untouched and nothing is returned, so Immer returns the original state. Write `return { items: [], coupon: null };` instead (or hoist that object into a named `initialState` constant and return it). The other Immer trap: you may mutate the draft **or** return a new value, not both; doing both throws.',
-    hint: 'Immer picks up two things: mutations of the draft and a returned value. Check what each case reducer does with the draft.',
+    hint: "Recall how Immer's draft works inside a `createSlice` case reducer, and how Immer finds out what the next state should be.",
   },
   {
     id: 'redux-async-thunk-vs-rtk-query',

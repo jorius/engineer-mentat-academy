@@ -23,7 +23,7 @@ export const questions: Question[] = [
     explanation:
       "In the App Router every component is a **Server Component** by default: it runs only on the server and ships no JavaScript, so it cannot use state, effects, event handlers or browser APIs. `'use client'` marks a **boundary**: that module and everything it imports become part of the client bundle. Put the boundary as low (as close to the leaves) as possible. Marking `app/layout.tsx` would not even fix this build: the router passes each page to its layout as `children`, so `page.tsx` stays a Server Component and its import of `LikeButton` still fails; it would only turn the layout itself (and everything it imports) into client code and forbid exporting `metadata` from it. Stateful and effect hooks (`useState`, `useReducer`, `useEffect`, `useRef`, `useContext`) are unavailable in Server Components; only a few stateless ones such as `use`, `useId` and `useMemo` are allowed.",
     hint:
-      "Think about where to place the client boundary: `'use client'` pulls that module and everything it imports into the browser bundle.",
+      'Recall how Next.js decides that a component is a Client Component, and how far that decision reaches.',
   },
   {
     id: 'nextjs-route-handler-basics',
@@ -45,7 +45,7 @@ export const questions: Question[] = [
     explanation:
       "Route Handlers live in a `route.ts` file inside the `app` directory and export one function per HTTP method (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`). They use the Web `Request`/`Response` APIs (and the `NextRequest`/`NextResponse` helpers), not Node's `req`/`res`. The `handler(req, res)` default export is the **Pages Router** API route in `pages/api`. A segment cannot contain both `route.ts` and `page.tsx`. In Next.js 15 `GET` handlers are **not** cached by default; opt in with `export const dynamic = 'force-static'`. The `api/` folder name is a convention, not a requirement.",
     hint:
-      "Recall the App Router file convention for HTTP endpoints and how it differs from the Pages Router's `pages/api` handlers.",
+      'Recall the App Router file convention for HTTP endpoints, and what its handlers receive and return.',
   },
   {
     id: 'nextjs-client-boundary-rules',
@@ -68,7 +68,7 @@ export const questions: Question[] = [
     explanation:
       "Client Components are still **prerendered to HTML on the server** and then hydrated, so `'use client'` means \"this also ships to and runs in the browser\", not \"browser only\". Anything a client module imports is already client code, so nested files do not need the directive. Props that cross the server-to-client boundary must be **serializable** by React: plain data, Dates, Maps, promises and JSX are fine, but ordinary functions are not. The exception is a **Server Action** (`'use server'`), which crosses as a reference. The composition pattern (`<ClientShell><ServerList /></ClientShell>`) is how you keep interactive wrappers without dragging data-heavy children into the bundle. Use the `server-only` package to make an accidental client import of server code fail the build.",
     hint:
-      'Remember that Client Components are still prerendered on the server, and check which props React can serialize across the server-to-client boundary.',
+      "Recall where Client Components render on the first page load, what can cross the server-to-client boundary as props, and how far a `'use client'` directive reaches through imports.",
   },
   {
     id: 'nextjs-dynamic-api-opts-out-of-static',
@@ -91,7 +91,7 @@ export const questions: Question[] = [
     explanation:
       "`cookies()`, `headers()`, `draftMode()`, `connection()` and the `searchParams` page prop depend on the incoming request. Using any of them (or `fetch` with `cache: 'no-store'`, or `export const dynamic = 'force-dynamic'`) makes the route render on every request. In Next.js 15 these APIs are **async** (`await cookies()`; `params` and `searchParams` are promises), and synchronous access only works through a temporary compatibility shim that logs a warning. To keep the page static, convert the currency on the client. With Partial Prerendering (experimental in Next.js 15) you can instead read the cookie inside a small component wrapped in `<Suspense>`, which becomes a dynamic hole in a static shell; without PPR, `<Suspense>` only streams and the whole route is still rendered per request. `async` components alone are fine to prerender, and `generateStaticParams` is only needed for dynamic segments such as `[id]`.",
     hint:
-      'Ask whether the value `cookies()` returns can be known while `next build` runs.',
+      'Recall what makes Next.js render a route on each request instead of at build time.',
   },
   {
     id: 'nextjs-isr-stale-while-revalidate',
@@ -137,7 +137,7 @@ export const questions: Question[] = [
     explanation:
       "ISR is **stale-while-revalidate**, not a cron job. `revalidate = 60` does not rebuild the page every minute. It means the first request that arrives **after** the page is older than 60 s still gets the stale page, and triggers one background regeneration. Only later requests see the new version. With no traffic, nothing regenerates (the 1000-second test). If regeneration throws, Next.js keeps serving the last good version. Compare the modes: **SSG** builds once at `next build`; **ISR** is SSG plus background refresh (time-based via `revalidate`, or on demand via `revalidatePath`/`revalidateTag`); **SSR** (dynamic rendering) renders on every request; **CSR** fetches in the browser after hydration.",
     hint:
-      'Simulate a small state machine: the cached version, when it was generated, and any pending regeneration with its finish time; apply finished regenerations before serving each request.',
+      'Carry the cache state from one request to the next, and reread the rules for the order in which things happen at a single request time.',
   },
   {
     id: 'nextjs-caching-defaults-15',
@@ -160,7 +160,7 @@ export const questions: Question[] = [
     explanation:
       "Next.js 14 cached `fetch` by default, which surprised many teams. Next.js 15 flipped the defaults: no Data Cache for `fetch` and no caching for `GET` Route Handlers, and the client Router Cache no longer reuses page segments (`staleTime` 0 for pages). The trap is the build-time prerendering statement: \"not cached\" does **not** mean \"fresh on every request\". A route without request-time APIs is still statically prerendered, so the data is baked in at build time. Add a Dynamic API, `cache: 'no-store'`, `connection()` or `dynamic = 'force-dynamic'` when you truly need per-request data. `revalidatePath`/`revalidateTag` are server-only; the client calls a Server Action that calls them (and `router.refresh()` only re-fetches the current route's RSC payload). `revalidate = 60` is ISR (stale-while-revalidate), not per-request rendering. Next.js 16's Cache Components (`'use cache'`, `cacheLife`, `cacheTag`) make caching explicitly opt-in again, so in an interview, name the version you are describing.\n\n**Say this out loud:** \"In Next 15, a fetch with no cache option is not cached, but that does not make the route dynamic. If a route has no request-time APIs it is still prerendered at build time, so I decide static versus dynamic per route and invalidate with tags from Server Actions.\"",
     hint:
-      'Recall which cache defaults Next.js 15 flipped from 14, and keep "not cached" separate from "rendered on every request".',
+      'Recall which caching defaults changed between Next.js 14 and 15, and what each API or option actually controls.',
   },
   {
     id: 'nextjs-server-action-authorization',
@@ -183,7 +183,7 @@ export const questions: Question[] = [
     explanation:
       "Every exported `'use server'` function becomes a network-reachable endpoint. The page only decides whether to **render a button**; nothing stops a non-admin (or a script) from sending the POST that invokes the action. Treat each Server Action like a public API route: authenticate (`await auth()`), authorize (role or ownership of that specific post), validate input with a schema (for example zod), and rate-limit where it matters. Next.js does mitigate CSRF (actions are POST-only and the `Origin` header is compared with `Host`), and in Next.js 15 the action ids are unguessable and unused actions are removed from the build. Those are defence in depth, **not** access control. Middleware is not a sufficient check either; do authorization close to the data (a data access layer).\n\n**Say this out loud:** \"A Server Action is a public POST endpoint with a nicer calling convention, so authentication, authorization and input validation go inside the action, not in the component that renders the button.\"",
     hint:
-      "Ask who can actually reach a `'use server'` function over the network, and whether hiding a button counts as access control.",
+      "Ask who can actually reach a `'use server'` function over the network, and what they can send it.",
   },
   {
     id: 'nextjs-when-not-to-use',

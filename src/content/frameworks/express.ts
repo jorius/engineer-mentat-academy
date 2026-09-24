@@ -133,7 +133,7 @@ export const questions: Question[] = [
     explanation:
       'Express keeps one ordered stack of layers (middleware and routes). A request walks that stack top to bottom and only moves on when the current layer calls `next()`. The `/health` handler sends a response and never calls `next()`, so nothing registered after it runs. Cross-cutting middleware (logging, request ids, security headers, body parsing) goes **before** the routes; the 404 handler and the error handler go **after** them.',
     hint:
-      'Walk the request down the stack in the order things were registered, and ask what happens to the later layers once a handler has sent its response.',
+      'Recall how Express decides which layer of the stack runs next for a request.',
   },
   {
     id: 'express-error-handler-arity',
@@ -156,7 +156,7 @@ export const questions: Question[] = [
     explanation:
       "Express checks `fn.length === 4` to decide whether a layer is an error handler. With three parameters this function is treated as a normal middleware (so `err` would actually be `req`), and it is skipped while an error is being propagated. Declare `(err, req, res, next)` even if you never call `next`, and register it **after** all routes. In Express 5 the rejected promise from the async route is forwarded to `next(err)` automatically, so once the signature is fixed the handler does run. On Express 4 the rejected promise would never reach any error handler, so the arity fix alone would not be enough there.",
     hint:
-      'Think about how Express tells an error-handling middleware apart from a regular one when all it has is the function object.',
+      'Recall exactly how Express recognizes an error-handling middleware, and what Express 5 does with a rejected async handler.',
   },
   {
     id: 'express-async-errors-v4-vs-v5',
@@ -202,7 +202,7 @@ export const questions: Question[] = [
     explanation:
       "Express does not track whether you already responded: if you `res.json()` and then `next()`, a later layer may try to write again and you get `ERR_HTTP_HEADERS_SENT` (\"Cannot set headers after they are sent to the client\"). `next()` is an ordinary function call, so the rest of your function keeps running after it returns; write `return next()` when you mean \"stop here\". `next('router')` is the sibling of `next('route')`: it leaves the current `Router` instance entirely.",
     hint:
-      'Check each statement against the fact that `next` is an ordinary JavaScript function call, and recall the special string arguments it accepts.',
+      "Recall what each form of the `next` call does, and what actually ends a middleware function's execution.",
   },
   {
     id: 'express-route-order-param-shadowing',
@@ -225,7 +225,7 @@ export const questions: Question[] = [
     explanation:
       "Express has no route specificity ranking (unlike Fastify's radix-tree router or Next.js file routing, where static segments win): it tests layers in order and runs the first match. `getUserById` then responds (probably 404 or a DB cast error) and `getCurrentUser` is unreachable. Fixes: register `/users/me` first, or validate `id` inside the handler. Express 5 uses path-to-regexp v8, which **removed** inline regex constraints such as `/:id(\\\\d+)`, removed `?` optional params in favour of braces (`/users{/:id}`), and requires wildcards to be named (`/*splat`), so ordering and explicit validation matter even more after an upgrade.",
     hint:
-      'Ask whether Express ranks routes by specificity or simply tries them in a fixed order.',
+      'Recall how Express matches a request path against the routes registered on a router.',
   },
   {
     id: 'express-error-handler-headers-sent',
@@ -248,7 +248,7 @@ export const questions: Question[] = [
     explanation:
       "Once the status line and headers are on the wire you cannot change the status code. Trying produces `ERR_HTTP_HEADERS_SENT` inside your error handler. Express's docs prescribe exactly this guard: if `res.headersSent`, call `next(err)` and let the built-in handler close the socket. The client then sees an aborted transfer instead of a truncated file that looks complete. Ending the response cleanly with `res.end()` is the worst choice because it turns a failure into silent data loss. (This relies on Express 5 forwarding the rejected async handler to the error middleware; on Express 4 the handler would need an async wrapper to be reached at all.)\n\n**Say this out loud:** \"An error handler has to check `res.headersSent`; after streaming has started the only honest signal left is aborting the connection, so I delegate to Express's default handler.\"",
     hint:
-      'Consider what can still change once the status line and headers are on the wire, and which `res` property tells you that has happened.',
+      'Consider what the client has already received when the stream fails, and what can still change about the response at that point.',
   },
   {
     id: 'express-compose-middleware-fix',
@@ -273,7 +273,7 @@ export const questions: Question[] = [
     explanation:
       "The `next` passed to each middleware must **return** `dispatch(i + 1)`. Otherwise the caller awaits a promise that settles as soon as the synchronous part of `dispatch` returns, while the downstream async work is still pending. Returning the promise is also what makes a downstream rejection travel back up to the caller's `try/catch`; a dropped promise becomes an unhandled rejection instead. The `lastIndex` guard detects re-entry: `next()` from middleware `i` must advance the index past `i` exactly once. The `try/catch` around `fn(...)` turns a synchronous throw into a rejected promise, so callers see one error channel.\n\nExpress's own `next` is callback-style and returns nothing, even in Express 5, so `await next()` in Express does not wait for downstream handlers and there is no onion-style post-processing. Async errors are a separate mechanism: Express 4 ignored the promise a handler returned, and Express 5's router attaches a rejection handler to that promise and calls `next(err)`.\n\n**Say this out loud:** \"Middleware composition is an onion: `next()` has to return a promise for the entire downstream chain, otherwise post-processing runs too early and downstream errors escape as unhandled rejections.\"",
     hint:
-      'Look at what the `next` callback gives back to its caller, and keep track of the last dispatched index so a repeated call can be detected.',
+      'Check what `next` returns to the middleware that awaits it, and what `compose` would need to remember to notice a second call.',
   },
   {
     id: 'express-production-hardening',

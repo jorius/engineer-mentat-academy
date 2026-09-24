@@ -14,7 +14,7 @@ export const translations: Record<string, QuestionTranslation> = {
     explanation:
       "Los providers están **encapsulados** en el módulo que los declara. Otro módulo puede inyectar un provider solo si el módulo dueño lo incluye en `exports` y el consumidor incluye ese módulo en `imports`. Agregar `UsersService` a los `providers` de `OrdersModule` compila, pero crea una **segunda instancia independiente** de `UsersService` (y obliga a `OrdersModule` a satisfacer todas sus dependencias), lo que rompe cualquier estado en memoria o caché. `providedIn: 'root'` es de Angular, no de Nest. Los módulos `@Global()` existen, pero están pensados para unos pocos providers realmente transversales, como la configuración o el logging.",
     hint:
-      'Recuerda que los providers quedan encapsulados en el módulo que los declara: piensa en qué deben declarar tanto el módulo dueño como el módulo que los consume.',
+      'Recuerda cómo limita Nest los providers al módulo que los declara, y qué metadatos del módulo controlan lo que un módulo comparte con otro.',
   },
   'nestjs-unhandled-error-default-response': {
     prompt:
@@ -41,7 +41,7 @@ export const translations: Record<string, QuestionTranslation> = {
     explanation:
       "El middleware se ejecuta primero; es middleware normal de Express/Fastify y no sabe qué handler de Nest se va a ejecutar. Los **guards** deciden si la petición puede continuar, así que se ejecutan antes de cualquier trabajo de interceptors o pipes. Los **interceptors** envuelven al handler (código antes de `next.handle()` y operadores de RxJS después). Los **pipes** validan y transforman los argumentos del handler justo antes de la llamada. Las excepciones lanzadas por guards, interceptors, pipes o el handler van a los **exception filters**, que se resuelven desde el binding más específico hacia afuera (ruta, luego controller, luego global). Dentro de cada tipo de enhancer, el orden es global → controller → ruta. Una consecuencia que vale la pena mencionar: un guard ve la petición **cruda, sin validar**, porque los pipes de validación se ejecutan después.",
     hint:
-      'Pregúntate qué enhancer debe decidir si la petición puede continuar antes de trabajar sobre los argumentos del handler, y cuál envuelve la propia llamada al handler.',
+      'Recuerda el trabajo de cada enhancer, y qué tiene que estar disponible antes de que cada uno pueda hacerlo.',
   },
   'nestjs-validation-pipe-query-transform': {
     prompt:
@@ -55,7 +55,7 @@ export const translations: Record<string, QuestionTranslation> = {
     explanation:
       "Los tipos de TypeScript se borran en tiempo de ejecución; todo lo que viene en un query string o en la ruta es un string. `ValidationPipe` construye una instancia del DTO con class-transformer y ejecuta class-validator sobre ella, así que `@IsInt()` ve `\"2\"` y falla (`@Min(1)` también falla, así que el 400 lista ambos mensajes). `transform: true` hace que el pipe le pase al handler la **instancia transformada** (y convierte parámetros primitivos como `@Query('page') page: number`), mientras que `enableImplicitConversion` (que usa la metadata `design:type` reflejada) o un `@Type(() => Number)` explícito convierten la propiedad del DTO:\n\n```ts\nnew ValidationPipe({\n  transform: true,\n  transformOptions: { enableImplicitConversion: true },\n});\n// or keep transform: true and add\n@Type(() => Number)\npage: number;\n```\n\n`@Type` sin `transform: true` solo hace que la validación pase: el pipe le sigue entregando al handler el objeto plano original, así que `query.page` sigue siendo el string `\"2\"`. `ParseIntPipe` es un pipe de parámetro (`@Query('page', ParseIntPipe)`), no un decorador de propiedad. En producción agrega también `whitelist: true` (elimina las propiedades desconocidas) y a menudo `forbidNonWhitelisted: true` para bloquear la asignación masiva (mass assignment).",
     hint:
-      'Recuerda que los tipos de TypeScript se borran en tiempo de ejecución: pregúntate qué tipo tienen los valores del query string cuando class-validator los inspecciona.',
+      'Recuerda qué información de una propiedad del DTO sobrevive en runtime, y qué hace `ValidationPipe` con la query cruda por defecto.',
   },
   'nestjs-guards-vs-middleware-roles': {
     prompt:
@@ -69,7 +69,7 @@ export const translations: Record<string, QuestionTranslation> = {
     explanation:
       "El `canActivate(context)` de un guard puede llamar a `this.reflector.getAllAndOverride(ROLES_KEY, [context.getHandler(), context.getClass()])` y comparar el resultado con `request.user.roles`. Devolver `false` produce `403 Forbidden`; lanzar `UnauthorizedException` produce un 401. El middleware sirve para la plomería de la autenticación (parsear el token, adjuntar `req.user`), pero no tiene idea de qué ruta ni qué decoradores aplican. La misma abstracción `ExecutionContext` también permite que un solo guard funcione para HTTP, WebSockets y microservicios. Registra un guard global con `{ provide: APP_GUARD, useClass: RolesGuard }` en un módulo en lugar de `app.useGlobalGuards(new RolesGuard())`, porque esto último se crea fuera del contenedor de DI y no puede inyectar `Reflector` ni otros providers.",
     hint:
-      'Piensa en qué sabe cada mecanismo sobre el handler de destino en el momento en que se ejecuta, y dónde vive la metadata de `@Roles`.',
+      'Recuerda dónde se ubica cada mecanismo en el ciclo de vida de la petición y qué le entrega Nest a cada uno cuando se ejecuta.',
   },
   'nestjs-injection-scopes': {
     prompt: '¿Qué afirmaciones sobre los **injection scopes** de los providers de NestJS son verdaderas? Selecciona todas las que apliquen.',
@@ -83,7 +83,7 @@ export const translations: Record<string, QuestionTranslation> = {
     explanation:
       "El scope **se propaga hacia arriba** por la cadena de inyección: un controller que depende de un servicio request-scoped tiene que reconstruirse en cada petición, y así sucesivamente hacia arriba. Por eso un solo `@Injectable({ scope: Scope.REQUEST })` descuidado en lo profundo del grafo puede volver más lenta toda una funcionalidad sin que nadie lo note. `TRANSIENT` le da a **cada consumidor** su propia instancia dedicada, y no se propaga hacia arriba: un singleton que inyecta un provider transient mantiene una sola instancia durante toda su vida. Los gateways, y todo lo que deba comportarse como singleton (cron jobs, estrategias de Passport), no deberían depender de providers request-scoped. Prefiere pasar el contexto de forma explícita o usar `AsyncLocalStorage` (por ejemplo `nestjs-cls`) para datos con alcance de petición, como el id del tenant o un correlation id.\n\n**Dilo en voz alta:** \"Los singletons son el valor por defecto por una razón. El request scope se propaga hacia arriba por toda la cadena de dependencias y cuesta una asignación por petición, así que, para el contexto de la petición, recurro primero a AsyncLocalStorage o a durable providers.\"",
     hint:
-      'Piensa en cómo se propaga un scope por la cadena de inyección, en instancias por petición frente a por consumidor, y en qué significa siquiera una petición para un gateway de WebSocket.',
+      'Recuerda los tres scopes de inyección, por qué unidad crea instancias cada uno y cómo afecta un scope a los providers que dependen de él.',
   },
   'nestjs-interceptor-tap-misses-errors': {
     prompt:
@@ -97,7 +97,7 @@ export const translations: Record<string, QuestionTranslation> = {
     explanation:
       "Un interceptor envuelve al handler como un stream observable: el éxito es un `next` seguido de un `complete`, y el fallo es una notificación `error`. `tap(fn)` solo reacciona a `next`; `finalize(() => ...)` se ejecuta en complete, en error **y** al cancelar la suscripción, lo que lo convierte en el hook correcto para medir tiempos. Los interceptors también pueden transformar errores con `catchError` (por ejemplo, convertir un timeout en `RequestTimeoutException`). Los guards se ejecutan antes en el ciclo de vida, así que ninguna petición que rechacen llega a los interceptors. El logging de latencia o de accesos que deba cubrir todas las peticiones va en middleware (o en la capa del servidor HTTP o del proxy).\n\n**Dilo en voz alta:** \"Los interceptors ven al handler como un Observable, así que mido con `finalize`, no con `tap`. Para las métricas que deban incluir los rechazos de los guards, mido en middleware, porque los guards se ejecutan antes que los interceptors.\"",
     hint:
-      'Recuerda a qué notificaciones de RxJS reacciona `tap(fn)`, y dónde se ubican los guards respecto a los interceptors en el ciclo de vida de la petición.',
+      'Sigue las dos peticiones fallidas por el ciclo de vida de la petición en Nest y por el pipeline de RxJS que arma este interceptor.',
   },
   'nestjs-circular-module-design': {
     prompt:

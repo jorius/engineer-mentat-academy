@@ -5,7 +5,7 @@ export const translations: Record<string, QuestionTranslation> = {
   'react-testing-library-query-priority': {
     prompt: 'Un formulario tiene un `<button type="submit">Save changes</button>`. ¿Qué query recomienda React Testing Library para encontrarlo?',
     explanation: 'El principio guía es "cuanto más se parezcan tus tests a la forma en que se usa tu software, más confianza te dan". Los usuarios y las tecnologías de asistencia encuentran los controles por rol y nombre accesible, así que `getByRole` encuentra el botón y a la vez verifica que esté expuesto correctamente (un `<div onClick>` fallaría). La prioridad es aproximadamente: rol, label, placeholder, texto, valor mostrado, texto alternativo, title, y `getByTestId` solo como último recurso. `getByText` funciona, pero no prueba que sea un botón; los selectores CSS acoplan el test a los estilos.',
-    hint: 'Recuerda el principio guía de RTL: consulta la página como los usuarios y las tecnologías de asistencia encuentran los controles.',
+    hint: 'Recuerda el orden de prioridad que dan los docs de RTL para las queries, y el principio detrás de ese orden.',
   },
   'react-testing-library-get-query-find': {
     prompt: '¿Qué afirmaciones sobre `getBy*`, `queryBy*` y `findBy*` son verdaderas? Selecciona todas las que apliquen.',
@@ -26,7 +26,7 @@ export const translations: Record<string, QuestionTranslation> = {
       c: '```js\nuserEvent.type(input, \'abc\');\n```\nsin `await` (user-event v14)',
     },
     explanation: '`fireEvent.change` despacha un único evento sintético `change` con el valor ya asignado, saltándose `keydown`, `keypress`, `input` y `keyup`, así que el handler que bloquea las letras nunca se ejecuta. `user.type` simula lo que hace el navegador con cada carácter (foco, eventos de teclado, eventos de input, respetando `preventDefault`). En user-event v14 cada API devuelve una promesa; olvidar el `await` en `userEvent.type` significa que la aserción se ejecuta antes de que terminen los eventos. Crea el `user` con `userEvent.setup()` antes de renderizar.',
-    hint: 'Pregúntate qué eventos del navegador dispara una tecla real y cuáles se salta este test; ten en cuenta también que la API de v14 es asíncrona.',
+    hint: 'Enumera los eventos del navegador que dispara una tecla real, y luego revisa qué enfoque los despacha como lo haría un usuario y cómo hay que llamar a su API.',
   },
   'react-testing-library-async-findby': {
     prompt: '```jsx\ntest(\'shows the user name\', () => {\n  render(<UserCard id="1" />); // fetches the user in an effect (mocked with MSW)\n  expect(screen.getByText(\'Ada Lovelace\')).toBeInTheDocument();\n});\n```\nEl test falla con "Unable to find an element with the text: Ada Lovelace". ¿Cuál es la corrección correcta?',
@@ -37,7 +37,7 @@ export const translations: Record<string, QuestionTranslation> = {
       d: 'Usar `screen.queryByText` en lugar de `getByText`',
     },
     explanation: 'En el primer render el componente muestra su estado de carga; el nombre aparece solo después de que la petición mockeada se resuelve y el state se actualiza. `findBy*` consulta repetidamente hasta que el elemento aparece (o vence el timeout), y RTL ya envuelve `render`, user-event y `waitFor` en `act`, así que volver a envolver `render` en `act` no cambia nada. Una espera fija es lenta e inestable. `queryByText` solo devuelve `null` y la aserción igual falla. Si además ves advertencias de "not wrapped in act(...)", normalmente significa que ocurrió una actualización después de que el test dejó de esperar, y la corrección es la misma: espera con await el estado de la UI que esperas.',
-    hint: 'El nombre aparece solo después de que se resuelve el request mockeado, así que usa una query que espere y reintente.',
+    hint: 'El nombre aparece solo después de que se resuelve la petición simulada; recuerda qué herramientas de RTL están pensadas para UI que aparece de forma asíncrona.',
   },
   'react-testing-library-waitfor-pitfalls': {
     prompt: 'Estás revisando una suite de tests. ¿Cuáles de estos son anti-patrones? Selecciona todas las que apliquen.',
@@ -46,7 +46,7 @@ export const translations: Record<string, QuestionTranslation> = {
       e: '```js\nconst user = userEvent.setup();\nrender(...);\nawait user.click(...);\n```',
     },
     explanation: '`waitFor` vuelve a ejecutar su callback hasta que deja de lanzar errores, así que los efectos secundarios dentro de él, como `user.click(saveButton)`, pueden ejecutarse muchas veces (varios clics, varios envíos). Pon la acción antes de `waitFor` y solo aserciones dentro. Varias aserciones en un mismo callback, como el par de `fetchMock` y los resultados, lo hacen esperar a todas y ocultan cuál falló; espera una condición y luego afirma el resto de forma síncrona. Un callback vacío se resuelve en el primer tick y solo funciona por suerte con los tiempos; en su lugar, espera un cambio concreto en la UI. La comprobación síncrona de ausencia con `queryByRole(\'alert\')` y `userEvent.setup()` antes de `render` son los patrones recomendados.\n\n**Dilo en voz alta:** "`waitFor` es un bucle de reintentos para aserciones, así que no debe tener efectos secundarios y debe esperar una sola condición observable; para elementos que aparecen, simplemente uso `findBy`."',
-    hint: 'Recuerda que `waitFor` vuelve a ejecutar su callback hasta que deja de lanzar errores; pregúntate qué provoca eso con los side effects y con varias aserciones dentro.',
+    hint: 'Recuerda cómo ejecuta `waitFor` su callback y cuándo se resuelve, y luego juzga cada fragmento según aquello de lo que depende.',
   },
   'react-testing-library-debounced-search-strategy': {
     prompt: '¿Cómo probarías un componente `<TicketSearch>` que aplica un debounce de 300 ms al input, llama a `/api/tickets?q=...`, muestra un spinner mientras carga, renderiza los resultados y muestra un mensaje de error cuando la API falla?',
