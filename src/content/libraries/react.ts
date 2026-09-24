@@ -87,7 +87,7 @@ What is logged right after the first mount?`,
     kind: 'multi',
     prompt: 'Which of these break the Rules of Hooks? Select all that apply.',
     options: [
-      { id: 'a', text: '```js\nif (!user) return null;\nconst [tab, setTab] = useState("a");\n```\n(in this order, in a component body)' },
+      { id: 'a', text: "An early `return null` (when `user` is missing) placed before the component's `useState(\"a\")` call" },
       { id: 'b', text: 'Calling `useState` inside a `for` loop over a `fields` prop' },
       { id: 'c', text: 'Calling `useContext(Theme)` inside a custom hook `useThemeColor()` that the component calls at its top level' },
       { id: 'd', text: 'Calling `useEffect` inside a plain helper `function track() {}` that runs from an `onClick` handler' },

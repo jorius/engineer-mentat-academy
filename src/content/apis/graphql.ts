@@ -10,7 +10,7 @@ export const questions: Question[] = [
     level: 'junior',
     kind: 'single',
     prompt:
-      'A mobile screen shows a user\'s name plus the titles of their last 3 orders. With the REST API it calls `GET /users/7` (returns 40 fields) and then `GET /users/7/orders` (returns full orders with line items). Which problems does a GraphQL query like this one address?\n\n```\n{\n  user(id: 7) {\n    name\n    orders(last: 3) {\n      title\n    }\n  }\n}\n```',
+      'A mobile screen shows a user\'s name plus the titles of their last 3 orders. With the REST API it calls `GET /users/7` (returns 40 fields) and then `GET /users/7/orders` (returns full orders with line items). Which problems does a GraphQL query like this one address?\n\n```plain\n{\n  user(id: 7) {\n    name\n    orders(last: 3) {\n      title\n    }\n  }\n}\n```',
     options: [
       { id: 'a', text: 'Over-fetching only: the client receives fewer fields, but still needs two round trips' },
       { id: 'b', text: 'Both over-fetching (unneeded fields) and under-fetching (extra round trips), because the client selects exactly the fields and nested data it needs in one request' },

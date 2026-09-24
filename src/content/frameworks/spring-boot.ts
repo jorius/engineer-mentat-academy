@@ -88,7 +88,7 @@ export const questions: Question[] = [
         id: 'a',
         text: "`@RequestBody` deserializes the JSON body into a `CreateOrderRequest` via a registered `HttpMessageConverter` (Jackson by default); with `spring-boot-starter-validation` on the classpath, `@Valid` then runs the constraints on `CreateOrderRequest`'s fields, and a failing one rejects the request with `400 Bad Request` (`MethodArgumentNotValidException`) before `create` runs",
       },
-      { id: 'b', text: "```java\n@PathVariable Long id,\n@RequestParam(required = false) Boolean includeItems\n```\n`id` binds the `{id}` segment of the URL template, while `includeItems` binds an optional query-string parameter (e.g. `?includeItems=true`); a request that omits `includeItems` leaves it `null` instead of failing" },
+      { id: 'b', text: "`@PathVariable Long id` binds the `{id}` segment of the URL template, while `@RequestParam(required = false)` on `Boolean includeItems` binds an optional query-string parameter (e.g. `?includeItems=true`); a request that omits `includeItems` leaves it `null` instead of failing" },
       {
         id: 'c',
         text: 'Returning `ResponseEntity<OrderResponse>` instead of a plain `OrderResponse` is required for JSON serialization to work at all — if `create` instead returned a plain `OrderResponse`, `@RestController` would have no way to write it to the response body',

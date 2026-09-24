@@ -138,9 +138,9 @@ export const questions: Question[] = [
     kind: 'multi',
     prompt: 'Which statements about caching and revalidation in the **Next.js 15** App Router are true? Select all that apply.',
     options: [
-      { id: 'a', text: "`fetch` results are no longer stored in the Data Cache by default; opt in per request:\n\n```ts\nfetch(url, { cache: 'force-cache' });\n// or\nfetch(url, { next: { revalidate: N } });\n```" },
+      { id: 'a', text: "`fetch` results are no longer stored in the Data Cache by default; opt in per request with the `cache: 'force-cache'` or `next.revalidate` fetch option" },
       { id: 'b', text: 'A route that uses no Dynamic APIs is still prerendered at build time, so a `fetch` with no cache option in it runs once during `next build` and its result is frozen in the static output until revalidation or redeploy' },
-      { id: 'c', text: "Calling `revalidateTag('products')` from a Server Action or Route Handler invalidates every cached `fetch` tagged `products`, on every route that used it. The tag is set per request:\n\n```ts\nfetch(url, { next: { tags: ['products'] } });\n```" },
+      { id: 'c', text: "Calling `revalidateTag('products')` from a Server Action or Route Handler invalidates every cached `fetch` tagged `products` (through its `next.tags` option), on every route that used it" },
       { id: 'd', text: 'You can call `revalidatePath` directly from a Client Component event handler to refresh server data' },
       { id: 'e', text: '`export const revalidate = 60` renders the page on every request and adds a 60-second CDN `Cache-Control` header' },
     ],

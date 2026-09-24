@@ -111,7 +111,7 @@ export const translations: Record<string, QuestionTranslation> = {
   },
   'sql-n-plus-one-at-sql-layer': {
     prompt:
-      'El log de la base de datos para una sola carga de página muestra:\n\n```sql\nSELECT id, name FROM customers WHERE country = \'CO\';\nSELECT * FROM orders WHERE customer_id = 1;\nSELECT * FROM orders WHERE customer_id = 2;\n-- ... una más por cada cliente\n```\n\n¿Qué cambio resuelve el problema de fondo?',
+      'El log de la base de datos para una sola carga de página muestra:\n\n```sql\nSELECT id, name FROM customers WHERE country = \'CO\';\nSELECT * FROM orders WHERE customer_id = 1;\nSELECT * FROM orders WHERE customer_id = 2;\n-- ... one more per customer\n```\n\n¿Qué cambio resuelve el problema de fondo?',
     options: {
       a: 'Agregar un índice sobre `orders.customer_id` para que cada consulta por cliente sea más rápida.',
       b: 'Traer los pedidos de todos los clientes en una sola sentencia, ya sea con un `JOIN` o con `WHERE customer_id IN (...)`, y agruparlos en la aplicación.',

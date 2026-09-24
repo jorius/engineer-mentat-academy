@@ -28,7 +28,7 @@ export const translations: Record<string, QuestionTranslation> = {
   'react-hooks-rules-violations': {
     prompt: '¿Cuáles de estos rompen las Reglas de los Hooks? Selecciona todas las que apliquen.',
     options: {
-      a: '```js\nif (!user) return null;\nconst [tab, setTab] = useState("a");\n```\n(en este orden, en el cuerpo de un componente)',
+      a: 'Un `return null` anticipado (cuando falta `user`) colocado antes de la llamada a `useState("a")` del componente',
       b: 'Llamar a `useState` dentro de un bucle `for` sobre una prop `fields`',
       c: 'Llamar a `useContext(Theme)` dentro de un custom hook `useThemeColor()` que el componente llama en su nivel superior',
       d: 'Llamar a `useEffect` dentro de un helper común `function track() {}` que se ejecuta desde un handler `onClick`',

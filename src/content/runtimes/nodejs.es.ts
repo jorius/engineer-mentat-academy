@@ -101,7 +101,7 @@ console.log('sync');
       a: 'Un error en cualquier etapa llega a un solo callback o a una sola promesa rechazada, en vez de necesitar un listener de `error` en cada stream',
       b: 'Cuando cualquier etapa falla o el destino se cierra antes de tiempo, todos los streams de la cadena se destruyen, así que no se filtran descriptores de archivo ni sockets',
       c: 'Es la única forma de obtener backpressure; `.pipe()` ignora que `write()` devuelva `false`',
-      d: 'Las etapas pueden ser funciones generadoras asíncronas, por ejemplo:\n\n```js\nasync function* (source) {\n  for await (const chunk of source) {\n    yield transform(chunk);\n  }\n}\n```',
+      d: 'Las etapas pueden ser funciones generadoras asíncronas (una `async function*` que recorre `source` con `for await` y hace `yield` de los chunks transformados)',
     },
     explanation:
       '`.pipe()` **sí** implementa backpressure: pausa el origen cuando `dest.write()` devuelve `false` y lo reanuda con `drain`. Lo que no hace es manejar errores. Los errores no se propagan a lo largo de una cadena de `.pipe()`, así que un evento `error` sin manejar en un stream intermedio hace caer el proceso, y cuando el destino falla, el origen queda abierto (un fd filtrado o un socket upstream colgado).\n\n`pipeline()` conecta los errores y el cierre de cada etapa, invoca el callback una sola vez, y la versión con promesas se combina con `await` y `AbortSignal`. También acepta iterables asíncronos y etapas con generadores asíncronos, que muchas veces son la forma más clara de escribir un transform.',

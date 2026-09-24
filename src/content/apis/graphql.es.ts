@@ -4,7 +4,7 @@ import type { QuestionTranslation } from '../../engine/question';
 export const translations: Record<string, QuestionTranslation> = {
   'graphql-over-under-fetching': {
     prompt:
-      'Una pantalla móvil muestra el nombre de un usuario y los títulos de sus últimas 3 órdenes. Con la API REST llama a `GET /users/7` (devuelve 40 campos) y luego a `GET /users/7/orders` (devuelve las órdenes completas con sus líneas). ¿Qué problemas resuelve una query GraphQL como esta?\n\n```\n{\n  user(id: 7) {\n    name\n    orders(last: 3) {\n      title\n    }\n  }\n}\n```',
+      'Una pantalla móvil muestra el nombre de un usuario y los títulos de sus últimas 3 órdenes. Con la API REST llama a `GET /users/7` (devuelve 40 campos) y luego a `GET /users/7/orders` (devuelve las órdenes completas con sus líneas). ¿Qué problemas resuelve una query GraphQL como esta?\n\n```plain\n{\n  user(id: 7) {\n    name\n    orders(last: 3) {\n      title\n    }\n  }\n}\n```',
     options: {
       a: 'Solo el over-fetching: el cliente recibe menos campos, pero sigue necesitando dos viajes de ida y vuelta',
       b: 'Tanto el over-fetching (campos innecesarios) como el under-fetching (viajes de ida y vuelta extra), porque el cliente selecciona exactamente los campos y los datos anidados que necesita en una sola petición',
