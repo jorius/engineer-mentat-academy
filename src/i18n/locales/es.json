@@ -144,8 +144,18 @@
     "spaces": "Espacios",
     "tabs": "Tabulaciones",
     "editorFonts": {
-      "jetbrains": "JetBrains Mono (si está instalada)",
-      "fira": "Fira Code (si está instalada)"
+      "jetbrains": "JetBrains Mono",
+      "fira": "Fira Code",
+      "source-code": "Source Code Pro",
+      "ibm-plex": "IBM Plex Mono",
+      "cascadia": "Cascadia Code",
+      "ubuntu": "Ubuntu Mono",
+      "roboto": "Roboto Mono",
+      "inconsolata": "Inconsolata",
+      "space": "Space Mono",
+      "geist": "Geist Mono",
+      "commit": "Commit Mono",
+      "victor": "Victor Mono"
     },
     "systemMonospace": "Monoespaciada del sistema",
     "preview": "Vista previa",

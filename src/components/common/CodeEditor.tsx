@@ -15,7 +15,6 @@ import { useTheme } from '../../contexts/ThemeContext';
 
 // engine
 import { editorThemeExtension } from '../../engine/editorThemes';
-import type { EditorFont } from '../../engine/preferences';
 
 // hooks
 import { usePreferences } from '../../hooks/usePreferences';
@@ -25,12 +24,6 @@ export type EditorLanguage = 'javascript' | 'typescript' | 'sql';
 type Props = { value: string; onChange: (value: string) => void; language: EditorLanguage; readOnly?: boolean; ariaLabel?: string; minLines?: number };
 
 const LINE_HEIGHT_RATIO = 1.5;
-
-const FONT_STACKS: Record<EditorFont, string> = {
-  jetbrains: "'JetBrains Mono', ui-monospace, monospace",
-  fira: "'Fira Code', ui-monospace, monospace",
-  system: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-};
 
 function languageExtension(language: EditorLanguage): ReturnType<typeof javascript> {
   if (language === 'sql') {
@@ -66,7 +59,7 @@ export function CodeEditor({ value, onChange, language, readOnly = false, ariaLa
         keymap.of([indentWithTab]),
         EditorView.theme({
           '&': { fontSize: `${editorFontSize}px`, ...(minLines === undefined ? {} : { minHeight: `${Math.round(minLines * editorFontSize * LINE_HEIGHT_RATIO)}px` }) },
-          '.cm-content': { fontFamily: FONT_STACKS[editorFont] },
+          '.cm-content': { fontFamily: 'var(--editor-font, ui-monospace, monospace)' },
         }),
         EditorView.updateListener.of((update): void => {
           if (update.docChanged) {
@@ -82,6 +75,7 @@ export function CodeEditor({ value, onChange, language, readOnly = false, ariaLa
       view.current = null;
     };
     // The editor is recreated only when language, theme, readOnly, its label or these preferences change; `value` is the initial doc.
+    // The font itself comes from --editor-font; editorFont stays listed so a new face is measured by a fresh view.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language, theme, readOnly, label, editorFont, editorFontSize, tabSize, indentWithTabs, editorTheme, minLines]);
 

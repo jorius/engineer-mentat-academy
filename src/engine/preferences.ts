@@ -1,7 +1,20 @@
 export const PREFERENCES_KEY = 'ema:prefs:v1';
 
 export type Accent = 'spice' | 'sky' | 'emerald' | 'violet' | 'rose';
-export type EditorFont = 'jetbrains' | 'fira' | 'system';
+export type EditorFont =
+  | 'jetbrains'
+  | 'fira'
+  | 'source-code'
+  | 'ibm-plex'
+  | 'cascadia'
+  | 'ubuntu'
+  | 'roboto'
+  | 'inconsolata'
+  | 'space'
+  | 'geist'
+  | 'commit'
+  | 'victor'
+  | 'system';
 export type TabSize = 2 | 4 | 8;
 export type MaxAttempts = 1 | 2 | 3 | 'unlimited';
 export type EditorTheme =
@@ -58,9 +71,42 @@ export const DEFAULT_PREFERENCES: Preferences = {
 };
 
 const ACCENTS: readonly string[] = ['spice', 'sky', 'emerald', 'violet', 'rose'];
-const EDITOR_FONTS: readonly string[] = ['jetbrains', 'fira', 'system'];
 const TAB_SIZES: readonly number[] = [2, 4, 8];
 const MAX_ATTEMPTS_NUMBERS: readonly number[] = [1, 2, 3];
+// The order the Settings font select lists them in: the default first, the system face last.
+export const EDITOR_FONTS: readonly EditorFont[] = [
+  'jetbrains',
+  'fira',
+  'source-code',
+  'ibm-plex',
+  'cascadia',
+  'ubuntu',
+  'roboto',
+  'inconsolata',
+  'space',
+  'geist',
+  'commit',
+  'victor',
+  'system',
+];
+
+// Every web font ships with the app (@fontsource, imported in main.tsx), so its family name leads the stack.
+export const FONT_STACKS: Readonly<Record<EditorFont, string>> = {
+  jetbrains: "'JetBrains Mono', ui-monospace, monospace",
+  fira: "'Fira Code', ui-monospace, monospace",
+  'source-code': "'Source Code Pro', ui-monospace, monospace",
+  'ibm-plex': "'IBM Plex Mono', ui-monospace, monospace",
+  cascadia: "'Cascadia Code', ui-monospace, monospace",
+  ubuntu: "'Ubuntu Mono', ui-monospace, monospace",
+  roboto: "'Roboto Mono', ui-monospace, monospace",
+  inconsolata: "'Inconsolata', ui-monospace, monospace",
+  space: "'Space Mono', ui-monospace, monospace",
+  geist: "'Geist Mono', ui-monospace, monospace",
+  commit: "'Commit Mono', ui-monospace, monospace",
+  victor: "'Victor Mono', ui-monospace, monospace",
+  system: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+};
+
 export const EDITOR_THEME_IDS: readonly EditorTheme[] = [
   'auto',
   'andromeda',
@@ -105,7 +151,7 @@ function validateAccent(value: unknown): Accent {
 }
 
 function validateEditorFont(value: unknown): EditorFont {
-  return typeof value === 'string' && EDITOR_FONTS.includes(value) ? (value as EditorFont) : DEFAULT_PREFERENCES.editorFont;
+  return EDITOR_FONTS.find((id) => id === value) ?? DEFAULT_PREFERENCES.editorFont;
 }
 
 function validateEditorFontSize(value: unknown): number {

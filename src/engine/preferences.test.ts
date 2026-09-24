@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 // engine
-import { DEFAULT_PREFERENCES, PREFERENCES_KEY, createPreferencesStore } from './preferences';
+import { DEFAULT_PREFERENCES, EDITOR_FONTS, FONT_STACKS, PREFERENCES_KEY, createPreferencesStore } from './preferences';
 
 function memoryStorage(): Storage {
   const map = new Map<string, string>();
@@ -128,6 +128,28 @@ describe('createPreferencesStore', () => {
     expect(createPreferencesStore(storage).get().editorTheme).toBe(DEFAULT_PREFERENCES.editorTheme);
   });
 
+  it('defaults the editor font to JetBrains Mono', () => {
+    expect(DEFAULT_PREFERENCES.editorFont).toBe('jetbrains');
+  });
+
+  it.each(EDITOR_FONTS)('keeps the %s editor font', (font) => {
+    const storage = memoryStorage();
+    storage.setItem(PREFERENCES_KEY, JSON.stringify({ editorFont: font }));
+    expect(createPreferencesStore(storage).get().editorFont).toBe(font);
+  });
+
+  it('falls back to the default for an unknown editor font', () => {
+    const storage = memoryStorage();
+    storage.setItem(PREFERENCES_KEY, JSON.stringify({ editorFont: 'comic-sans' }));
+    expect(createPreferencesStore(storage).get().editorFont).toBe(DEFAULT_PREFERENCES.editorFont);
+
+    storage.setItem(PREFERENCES_KEY, JSON.stringify({ editorFont: 'constructor' }));
+    expect(createPreferencesStore(storage).get().editorFont).toBe(DEFAULT_PREFERENCES.editorFont);
+
+    storage.setItem(PREFERENCES_KEY, JSON.stringify({ editorFont: 3 }));
+    expect(createPreferencesStore(storage).get().editorFont).toBe(DEFAULT_PREFERENCES.editorFont);
+  });
+
   it('rejects a non-boolean indentWithTabs', () => {
     const storage = memoryStorage();
     storage.setItem(PREFERENCES_KEY, JSON.stringify({ indentWithTabs: 'yes' }));
@@ -169,5 +191,26 @@ describe('createPreferencesStore', () => {
     unsubscribe();
     store.set({ accent: 'rose' });
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('editor fonts', () => {
+  it('lists twelve web fonts and the system monospace once each', () => {
+    expect(EDITOR_FONTS).toHaveLength(13);
+    expect(new Set(EDITOR_FONTS).size).toBe(EDITOR_FONTS.length);
+    expect(EDITOR_FONTS[0]).toBe(DEFAULT_PREFERENCES.editorFont);
+    expect(EDITOR_FONTS.at(-1)).toBe('system');
+  });
+
+  it('has exactly one stack for every editor font', () => {
+    expect(Object.keys(FONT_STACKS).sort()).toEqual([...EDITOR_FONTS].sort());
+  });
+
+  it.each(EDITOR_FONTS.filter((font) => font !== 'system'))('stacks the %s web font first with a monospace fallback', (font) => {
+    expect(FONT_STACKS[font]).toMatch(/^'[A-Z][\w ]+', ui-monospace, monospace$/);
+  });
+
+  it('stacks the system font from the platform monospace faces', () => {
+    expect(FONT_STACKS.system).toBe('ui-monospace, SFMono-Regular, Menlo, monospace');
   });
 });

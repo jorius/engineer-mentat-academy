@@ -14,6 +14,7 @@ import { useDrills } from '../hooks/useDrills';
 // engine
 import { EDITOR_THEMES } from '../engine/editorThemes';
 import type { ThemeFamily } from '../engine/editorThemes';
+import { EDITOR_FONTS, FONT_STACKS } from '../engine/preferences';
 import type { Accent, EditorFont, EditorTheme, MaxAttempts, TabSize } from '../engine/preferences';
 
 // components
@@ -33,14 +34,6 @@ const ACCENT_SWATCH_CLASSES: Record<Accent, string> = {
   rose: 'bg-rose-500',
 };
 
-// Font names are product names and stay as-is; the "(if installed)" qualifier and the
-// generic system entry are translated.
-const EDITOR_FONTS: readonly { value: EditorFont; labelKey?: string }[] = [
-  { value: 'jetbrains', labelKey: 'settings.editorFonts.jetbrains' },
-  { value: 'fira', labelKey: 'settings.editorFonts.fira' },
-  { value: 'system' },
-];
-
 const TAB_SIZES: readonly TabSize[] = [2, 4, 8];
 
 const EDITOR_FONT_SIZES: readonly number[] = [12, 13, 14, 15, 16, 17, 18, 19, 20];
@@ -58,7 +51,35 @@ const THEME_GROUPS: readonly { labelKey: string; families: readonly ThemeFamily[
 // change that resolves after the message was set (the full reset switches language).
 type StatusMessage = { key: string; count?: number } | { text: string };
 
-const PREVIEW_CODE = ['function greet(name: string): string {', "  return `Hello, ${name}!`;", '}', '', 'console.log(greet("Mentat"));'].join('\n');
+// A TypeScript sample that exercises most token kinds, so a theme or font can be judged at a glance.
+const PREVIEW_CODE = [
+  '/* A little of everything the editor highlights. */',
+  'interface User { id: number; name: string; email?: string }',
+  "type Role = 'admin' | 'editor' | 'viewer';",
+  'const EMAIL = /^[\\w.+-]+@[\\w-]+\\.[a-z]{2,}$/i;',
+  'const first = <T extends { id: number }>(list: T[]): T | null => list[0] ?? null;',
+  '',
+  'class Cache<V> {',
+  '  #items = new Map<string, V>();',
+  '  get size(): number { return this.#items.size; }',
+  '}',
+  '',
+  'async function names(base: string, limit = 10): Promise<string[]> {',
+  '  try {',
+  '    const response = await fetch(`${base}/users?limit=${limit}`);',
+  '    const users: User[] = await response.json();',
+  '    return users.map(({ name, email }) => email?.trim() ?? name);',
+  '  } catch { return []; }',
+  '}',
+  '',
+  '// One log line per role.',
+  "for (const role of ['admin', 'viewer'] as Role[]) {",
+  '  switch (role) {',
+  "    case 'admin': console.log(role, EMAIL.test('ada@example.com'), true); break;",
+  '    default: console.log(role, new Cache<User>().size, 0xff, 2.5, false, null);',
+  '  }',
+  '}',
+].join('\n');
 
 export function Settings(): JSX.Element {
   const { t } = useTranslation();
@@ -155,7 +176,9 @@ export function Settings(): JSX.Element {
               onChange={(e): void => preferencesStore.set({ editorFont: e.target.value as EditorFont })}
             >
               {EDITOR_FONTS.map((font) => (
-                <option key={font.value} value={font.value}>{font.labelKey !== undefined ? t(font.labelKey) : t('settings.systemMonospace')}</option>
+                <option key={font} value={font} style={{ fontFamily: FONT_STACKS[font] }}>
+                  {font === 'system' ? t('settings.systemMonospace') : t(`settings.editorFonts.${font}`)}
+                </option>
               ))}
             </select>
           </label>

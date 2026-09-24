@@ -19,9 +19,9 @@ import { DrillsProvider } from '../hooks/useDrills';
 import { createDrillsStore } from '../engine/drills';
 import type { DrillsStore } from '../engine/drills';
 import { createProgressStore } from '../engine/progress';
-import { createPreferencesStore, DEFAULT_PREFERENCES } from '../engine/preferences';
+import { createPreferencesStore, DEFAULT_PREFERENCES, EDITOR_FONTS, FONT_STACKS } from '../engine/preferences';
 import type { ProgressStore } from '../engine/progress';
-import type { PreferencesStore } from '../engine/preferences';
+import type { EditorFont, PreferencesStore } from '../engine/preferences';
 
 // i18n
 import i18n, { LANGUAGE_KEY } from '../i18n';
@@ -100,6 +100,49 @@ describe('Settings', () => {
     expect(fontSize.tagName).toBe('SELECT');
     await user.selectOptions(fontSize, '18');
     expect(preferencesStore.get().editorFontSize).toBe(18);
+  });
+
+  it('lists every editor font by its name, each option in its own face', () => {
+    renderSettings();
+    const options = within(screen.getByLabelText('Font')).getAllByRole<HTMLOptionElement>('option');
+    expect(options.map((option) => option.value)).toEqual([...EDITOR_FONTS]);
+    expect(options.map((option) => option.textContent)).toEqual([
+      'JetBrains Mono',
+      'Fira Code',
+      'Source Code Pro',
+      'IBM Plex Mono',
+      'Cascadia Code',
+      'Ubuntu Mono',
+      'Roboto Mono',
+      'Inconsolata',
+      'Space Mono',
+      'Geist Mono',
+      'Commit Mono',
+      'Victor Mono',
+      'System monospace',
+    ]);
+    options.forEach((option) => {
+      expect(option).toHaveStyle({ fontFamily: FONT_STACKS[option.value as EditorFont] });
+    });
+  });
+
+  it('sets --editor-font on the document root from the chosen font', async () => {
+    const user = userEvent.setup();
+    const preferencesStore = createPreferencesStore(null);
+    renderSettings({ preferencesStore });
+    expect(document.documentElement.style.getPropertyValue('--editor-font')).toBe(FONT_STACKS.jetbrains);
+    await user.selectOptions(screen.getByLabelText('Font'), 'victor');
+    expect(preferencesStore.get().editorFont).toBe('victor');
+    expect(document.documentElement.style.getPropertyValue('--editor-font')).toBe(FONT_STACKS.victor);
+  });
+
+  it('previews TypeScript with an interface, async code and a regex literal', () => {
+    renderSettings();
+    const preview = screen.getByRole('textbox', { name: 'Editor preview' });
+    const lines = Array.from(preview.querySelectorAll('.cm-line'), (line) => line.textContent ?? '');
+    expect(lines.some((line) => /^interface \w+/.test(line))).toBe(true);
+    expect(lines.some((line) => /^async function \w+/.test(line))).toBe(true);
+    expect(lines.some((line) => /= \/\S+\/[dgimsuvy]*;$/.test(line))).toBe(true);
   });
 
   it('persists an editor colour theme change and labels auto as following the app theme', async () => {

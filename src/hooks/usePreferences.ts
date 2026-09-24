@@ -3,7 +3,7 @@ import { createContext, createElement, useContext, useLayoutEffect, useMemo, use
 import type { ReactElement, ReactNode } from 'react';
 
 // engine
-import { createPreferencesStore } from '../engine/preferences';
+import { FONT_STACKS, createPreferencesStore } from '../engine/preferences';
 import type { Preferences, PreferencesStore } from '../engine/preferences';
 
 const PreferencesContext = createContext<PreferencesStore | null>(null);
@@ -24,11 +24,22 @@ export function PreferencesProvider({ children, store }: { children: ReactNode; 
     (): Preferences['accent'] => value.get().accent,
   );
 
+  const editorFont = useSyncExternalStore(
+    value.subscribe,
+    (): Preferences['editorFont'] => value.get().editorFont,
+    (): Preferences['editorFont'] => value.get().editorFont,
+  );
+
   // useLayoutEffect (not useEffect) so a saved accent is applied before paint, never
   // flashing the default orange accent for a frame.
   useLayoutEffect(() => {
     document.documentElement.dataset.accent = accent;
   }, [accent]);
+
+  // The editor and Markdown code read the chosen font from this variable; set before paint for the same reason.
+  useLayoutEffect(() => {
+    document.documentElement.style.setProperty('--editor-font', FONT_STACKS[editorFont]);
+  }, [editorFont]);
 
   return createElement(PreferencesContext.Provider, { value }, children);
 }
