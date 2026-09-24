@@ -132,6 +132,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Express keeps one ordered stack of layers (middleware and routes). A request walks that stack top to bottom and only moves on when the current layer calls `next()`. The `/health` handler sends a response and never calls `next()`, so nothing registered after it runs. Cross-cutting middleware (logging, request ids, security headers, body parsing) goes **before** the routes; the 404 handler and the error handler go **after** them.',
+    hint:
+      'Walk the request down the stack in the order things were registered, and ask what happens to the later layers once a handler has sent its response.',
   },
   {
     id: 'express-error-handler-arity',
@@ -153,6 +155,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "Express checks `fn.length === 4` to decide whether a layer is an error handler. With three parameters this function is treated as a normal middleware (so `err` would actually be `req`), and it is skipped while an error is being propagated. Declare `(err, req, res, next)` even if you never call `next`, and register it **after** all routes. In Express 5 the rejected promise from the async route is forwarded to `next(err)` automatically, so once the signature is fixed the handler does run. On Express 4 the rejected promise would never reach any error handler, so the arity fix alone would not be enough there.",
+    hint:
+      'Think about how Express tells an error-handling middleware apart from a regular one when all it has is the function object.',
   },
   {
     id: 'express-async-errors-v4-vs-v5',
@@ -174,6 +178,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "Express 4's router calls the handler and ignores its return value, so a rejected promise escapes it entirely. With Node's default `--unhandled-rejections=throw` the process then exits and every in-flight connection is dropped; only when something registers an `unhandledRejection` listener does the process survive, and then this request hangs with no response. The usual Express 4 fixes were wrapping every handler in `try/catch` + `next(err)`, an `asyncHandler(fn)` wrapper that does `.catch(next)`, or the `express-async-errors` patch. Express 5 checks whether a handler returns a promise and calls `next(err)` when it rejects, for middleware and route handlers alike. It still does **not** catch errors thrown later inside callbacks such as `setTimeout` or an event emitter, because those are not part of the returned promise.",
+    hint:
+      'Ask what each router version does with the promise an async handler returns, and what Node does with a rejection nobody handles.',
   },
   {
     id: 'express-next-semantics',
@@ -195,6 +201,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "Express does not track whether you already responded: if you `res.json()` and then `next()`, a later layer may try to write again and you get `ERR_HTTP_HEADERS_SENT` (\"Cannot set headers after they are sent to the client\"). `next()` is an ordinary function call, so the rest of your function keeps running after it returns; write `return next()` when you mean \"stop here\". `next('router')` is the sibling of `next('route')`: it leaves the current `Router` instance entirely.",
+    hint:
+      'Check each statement against the fact that `next` is an ordinary JavaScript function call, and recall the special string arguments it accepts.',
   },
   {
     id: 'express-route-order-param-shadowing',
@@ -216,6 +224,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "Express has no route specificity ranking (unlike Fastify's radix-tree router or Next.js file routing, where static segments win): it tests layers in order and runs the first match. `getUserById` then responds (probably 404 or a DB cast error) and `getCurrentUser` is unreachable. Fixes: register `/users/me` first, or validate `id` inside the handler. Express 5 uses path-to-regexp v8, which **removed** inline regex constraints such as `/:id(\\\\d+)`, removed `?` optional params in favour of braces (`/users{/:id}`), and requires wildcards to be named (`/*splat`), so ordering and explicit validation matter even more after an upgrade.",
+    hint:
+      'Ask whether Express ranks routes by specificity or simply tries them in a fixed order.',
   },
   {
     id: 'express-error-handler-headers-sent',
@@ -237,6 +247,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "Once the status line and headers are on the wire you cannot change the status code. Trying produces `ERR_HTTP_HEADERS_SENT` inside your error handler. Express's docs prescribe exactly this guard: if `res.headersSent`, call `next(err)` and let the built-in handler close the socket. The client then sees an aborted transfer instead of a truncated file that looks complete. Ending the response cleanly with `res.end()` is the worst choice because it turns a failure into silent data loss. (This relies on Express 5 forwarding the rejected async handler to the error middleware; on Express 4 the handler would need an async wrapper to be reached at all.)\n\n**Say this out loud:** \"An error handler has to check `res.headersSent`; after streaming has started the only honest signal left is aborting the connection, so I delegate to Express's default handler.\"",
+    hint:
+      'Consider what can still change once the status line and headers are on the wire, and which `res` property tells you that has happened.',
   },
   {
     id: 'express-compose-middleware-fix',
@@ -260,6 +272,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "The `next` passed to each middleware must **return** `dispatch(i + 1)`. Otherwise the caller awaits a promise that settles as soon as the synchronous part of `dispatch` returns, while the downstream async work is still pending. Returning the promise is also what makes a downstream rejection travel back up to the caller's `try/catch`; a dropped promise becomes an unhandled rejection instead. The `lastIndex` guard detects re-entry: `next()` from middleware `i` must advance the index past `i` exactly once. The `try/catch` around `fn(...)` turns a synchronous throw into a rejected promise, so callers see one error channel.\n\nExpress's own `next` is callback-style and returns nothing, even in Express 5, so `await next()` in Express does not wait for downstream handlers and there is no onion-style post-processing. Async errors are a separate mechanism: Express 4 ignored the promise a handler returned, and Express 5's router attaches a rejection handler to that promise and calls `next(err)`.\n\n**Say this out loud:** \"Middleware composition is an onion: `next()` has to return a promise for the entire downstream chain, otherwise post-processing runs too early and downstream errors escape as unhandled rejections.\"",
+    hint:
+      'Look at what the `next` callback gives back to its caller, and keep track of the last dispatched index so a repeated call can be detected.',
   },
   {
     id: 'express-production-hardening',
@@ -283,5 +297,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "Interviewers are listening for layered defence and operational awareness, not a list of npm packages. The two details that separate seniors are `trust proxy` (rate limiting and secure cookies silently break without it) and a shutdown sequence that coordinates with the orchestrator (readiness first, then drain, then force-exit before SIGKILL).\n\n**Say this out loud:** \"On SIGTERM I fail readiness, stop accepting connections with `server.close()`, drain in-flight requests, close pools, and exit before the grace period ends. Behind a proxy I set `trust proxy` so rate limiting keys on the real client IP.\"",
+    hint:
+      'Cover it in layers: security headers, proxy awareness for rate limits and cookies, body and timeout limits, error output in production, and a SIGTERM sequence that cooperates with readiness probes.',
   },
 ];

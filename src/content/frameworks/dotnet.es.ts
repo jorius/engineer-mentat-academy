@@ -13,6 +13,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Un singleton se crea una vez (la primera vez que se solicita, salvo que se registre como una instancia ya existente) y esa misma instancia se entrega a todos los consumidores durante toda la vida de la app. Un servicio scoped obtiene una instancia por scope: ASP.NET Core crea un scope automáticamente por cada petición HTTP entrante, y cualquier otro tipo de host (app de consola, worker, job en segundo plano) tiene que crear los scopes de forma explícita para lograr el mismo comportamiento. Un servicio transient se construye desde cero cada vez que se resuelve, incluso más de una vez dentro del mismo grafo de objetos. Las dos opciones que revuelven las definiciones de singleton, scoped y transient simplemente las intercambian. La opción que afirma que los tiempos de vida se comportan igual fuera de ASP.NET Core es incorrecta porque el límite de scope existe en cualquier host que cree `IServiceScope`s, no solo en peticiones web — un `BackgroundService` que procesa mensajes de una cola, por ejemplo, típicamente crea un scope por mensaje.',
+    hint:
+      'Piensa en qué es un scope en ASP.NET Core frente a un host de consola o worker, y en cada cuánto entrega una instancia nueva cada registro.',
   },
   'dotnet-dbset-basics': {
     prompt:
@@ -25,6 +27,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "`DbSet<T>` implementa `IQueryable<T>`, así que el LINQ escrito contra él se traduce a SQL y se ejecuta solo cuando la consulta se enumera — nada se carga de forma anticipada en el momento de la construcción, lo cual descarta la opción de la \"lista en memoria cacheada\". Pertenece a una sola instancia de `DbContext`; no es un objeto estático compartido ni thread-safe — el propio `DbContext` no es seguro de usar desde varios hilos a la vez — lo cual descarta la opción del \"singleton estático y thread-safe\". Las entidades agregadas, modificadas o eliminadas a través del `DbSet` (o cargadas y mutadas mientras están rastreadas) son exactamente lo que `SaveChanges`/`SaveChangesAsync` persiste como sentencias `INSERT`/`UPDATE`/`DELETE`, así que la opción de la \"vista de solo lectura\" está al revés.",
+    hint:
+      'Recuerda que `DbSet<T>` implementa `IQueryable<T>`: piensa en cuándo se ejecutan realmente sus consultas y qué te permite hacer con entidades rastreadas.',
   },
   'dotnet-configuration-provider-precedence': {
     prompt:
@@ -37,6 +41,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '`IConfiguration` combina todos los proveedores en una sola vista plana de clave/valor en el orden de registro; para una clave presente en más de un proveedor, gana el que se haya agregado más tarde. Con el orden por defecto usado aquí, los argumentos de línea de comandos se agregan después de las variables de entorno, que a su vez se agregan después de los archivos JSON, así que gana el valor de línea de comandos. (El doble guion bajo en `ConnectionStrings__Default` es la forma en que las variables de entorno representan el separador de sección `:`, ya que los dos puntos son incómodos o inválidos en la mayoría de los shells y nombres de variables de entorno del sistema operativo). No hay nada relacionado con seguridad en la prioridad de las variables de entorno, y la configuración nunca lanza una excepción cuando la misma clave está definida por más de un *proveedor* — simplemente toma el último valor en silencio, que es exactamente el tipo de cosa que vale la pena revisar cuando un ajuste "no está teniendo efecto" (una clave duplicada dentro del propio objeto de un mismo archivo JSON es un caso distinto: eso sí lanza `FormatException` al cargar el archivo).',
+    hint:
+      'Recuerda cómo resuelve `IConfiguration` una clave definida por varios providers, y en qué orden los agrega el builder por defecto.',
   },
   'dotnet-addscoped-console-host': {
     prompt:
@@ -49,6 +55,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'No existe un scope automático por petición en un host de consola o worker, así que alguien tiene que crear los scopes a propósito — el framework no lo hace por ti como sí lo hace con una petición HTTP entrante. `Host.CreateApplicationBuilder` habilita `ValidateScopes` y `ValidateOnBuild` cuando el entorno del host es Development, así que en Development este fragmento lanza "`InvalidOperationException: Cannot resolve scoped service \'IOrderProcessor\' from root provider`" en el momento en que se ejecuta `GetRequiredService<IOrderProcessor>()`. Un host de consola usa por defecto el entorno `Production` a menos que se defina `DOTNET_ENVIRONMENT` (o `ASPNETCORE_ENVIRONMENT`), así que por defecto — en Production — esa validación está desactivada y la llamada tiene éxito en silencio: `processor` se resuelve una sola vez desde el proveedor raíz y luego se reutiliza para cada mensaje del bucle, junto con cualquier dependencia scoped capturada dentro de él (como un `AppDbContext` scoped), que es exactamente el bug de entidades rastreadas obsoletas y reutilización no thread-safe del que trata esta pregunta. La solución es la misma en cualquier caso: crear un scope por operación lógica — `app.Services.CreateScope()` en un script simple, o `IServiceScopeFactory.CreateScope()` inyectado en una clase como un `BackgroundService` — y resolver los servicios scoped desde `scope.ServiceProvider`, liberando el scope cuando la operación termina.',
+    hint:
+      'Pregúntate en qué scope vive un servicio resuelto desde el provider raíz cuando ninguna petición HTTP está creando scopes por ti.',
   },
   'dotnet-ef-executionstrategy': {
     prompt:
@@ -61,6 +69,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Este es uno de los mensajes de error más claros que produce EF Core, y apunta a un problema de corrección real, no solo a una preferencia de estilo: reintentar una consulta o una llamada a `SaveChanges` de forma transparente solo es seguro si el reintento puede rehacer *toda* la operación limpiamente, y una transacción que se abrió fuera de la strategy no se puede rebobinar y repetir de forma segura por ella. La solución es mover la transacción dentro del delegado de la strategy — ya sea `strategy.ExecuteAsync(async () => { await using var tx = await db.Database.BeginTransactionAsync(); db.Orders.Add(order); await db.SaveChangesAsync(); await tx.CommitAsync(); })`, o la extensión `ExecuteInTransactionAsync(operation, verifySucceeded)` construida justo para este patrón — en cualquiera de los dos casos, `strategy` (obtenida con `db.Database.CreateExecutionStrategy()`) pasa a ser responsable de iniciar y confirmar la transacción, así que un reintento reinicia toda la unidad de trabajo desde cero. La opción de "solo funciona con SQLite" es falsa — `BeginTransactionAsync` también es la forma normal de iniciar una transacción en SQL Server. La opción de "desactiva las transacciones por completo" es falsa — `EnableRetryOnFailure` no impide que `SaveChangesAsync` envuelva sus propias sentencias en una transacción (implícita); solo agrega una strategy con reintentos alrededor de toda la operación, y una transacción abierta manualmente que abarca varias llamadas igual tiene que vivir dentro del delegado de esa strategy, no alrededor de ella. La opción de `MultipleActiveResultSets=true` no tiene relación: MARS afecta la ejecución de varios result sets de forma concurrente en una misma conexión y no tiene nada que ver con esta excepción.',
+    hint:
+      'Pregúntate qué debe poder repetir una estrategia de reintentos cuando ocurre un fallo transitorio, y quién debería entonces ser dueño de los límites de la transacción.',
   },
   'dotnet-di-lifetime-pitfalls': {
     prompt: '¿Qué afirmaciones sobre los lifetimes de DI, las captive dependencies y `IHostedService`/`BackgroundService` en .NET son correctas? Selecciona todas las que apliquen.',
@@ -73,6 +83,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Una captive dependency ocurre puramente por la *forma* del grafo del constructor: nada impide inyectar un servicio scoped en un singleton, así que el contenedor de DI tiene que capturarlo (silenciosamente incorrecto) o rechazarlo (validado). La validación de scope/build existe precisamente para convertir la versión silenciosa en una ruidosa durante el arranque, en lugar de un bug sutil que aparece bajo carga. Un `BackgroundService` nunca recibe un scope entregado — se construye una sola vez, como singleton, así que cualquier trabajo scoped tiene que abrir su propio scope, típicamente una vez por iteración del bucle o por mensaje: `using var scope = _scopeFactory.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();`. Inyectar `IServiceProvider` y llamar a `GetService` directamente es el antipatrón de *service locator*: dejando de lado que oculta las dependencias reales del constructor, llamar a `GetService` sobre el proveedor entregado a un singleton sin crear antes un scope resuelve los servicios scoped desde el proveedor raíz, que es exactamente el mismo problema de captive dependency/resolución inválida del que trata esta pregunta — la herramienta correcta es `IServiceScopeFactory.CreateScope()`, no una referencia directa al proveedor. Transient solo significa "instancia nueva por llamada a resolución"; una vez que un objeto de vida más larga guarda una referencia a ella, esa referencia vive exactamente tanto como su dueño, lo cual es una fuente común de sorpresas del tipo "los servicios transient no son realmente transient".\n\n**Dilo en voz alta:** "Las captive dependencies vienen de la forma del grafo del constructor, no de un error de tipeo, así que me apoyo en la validación de scope del proveedor para detectar un singleton que arrastra un servicio scoped al arrancar, y dentro de un `BackgroundService` siempre creo un scope explícito por unidad de trabajo en lugar de inyectar servicios scoped o recurrir al service locator."',
+    hint:
+      'Piensa en las dependencias cautivas, en qué comprueba la validación de scopes al construir el provider, en cómo se registran los hosted services y en por qué se desaconseja el patrón service locator.',
   },
   'dotnet-ioptions-variants': {
     prompt:
@@ -88,6 +100,8 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       "Esta pregunta revisa si \"el options pattern\" se entiende como tres lifetimes distintos que resuelven tres problemas distintos, y no como una sola API intercambiable. El detalle que más candidatos se pierden es que `IOptionsSnapshot<T>`, por ser scoped, es exactamente tan peligroso de inyectar en un singleton como cualquier otro servicio scoped — no es solo \"la versión con soporte de recarga\", y tampoco es la única excepción por ser segura en un singleton; `IOptions<T>` e `IOptionsMonitor<T>` también lo son.\n\n**Dilo en voz alta:** \"IOptions y IOptionsMonitor son ambos singletons, así que los dos son seguros en cualquier lado, incluidos otros singletons — IOptions se vincula una sola vez y nunca se vuelve a leer, Monitor se mantiene vivo mediante CurrentValue y OnChange. Snapshot es el scoped, así que es el que no puede ir en un singleton, aunque sea el que da la copia más consistente por petición.\"",
+    hint:
+      'Compara los tres por su propio ciclo de vida y por cuándo leen los valores enlazados; incluye qué pasa al inyectar el de scope en un singleton y cómo te llegan las notificaciones de cambio.',
   },
   'dotnet-dbcontext-thread-safety-tracking': {
     prompt:
@@ -103,5 +117,7 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       "Este escenario junta a propósito varias facetas de nivel senior de EF Core en un solo reporte de bug realista: el texto de la excepción por sí solo cuenta la historia de concurrencia, pero el síntoma de \"las actualizaciones desaparecen en silencio\" es la parte que separa a quien simplemente envuelve la llamada en un lock de quien entiende que el change tracker, para empezar, no está pensado para compartirse así.\n\n**Dilo en voz alta:** \"DbContext y su change tracker no son thread-safe, así que un BackgroundService debería entregar un contexto nuevo y de vida corta por unidad de trabajo mediante IDbContextFactory o un scope, no compartir una sola instancia entre tareas concurrentes durante toda su vida.\"",
+    hint:
+      'Explica por qué `DbContext` no es thread-safe, qué le hace un change tracker de larga vida a la frescura de los datos y cómo obtener un contexto de vida corta por unidad de trabajo.',
   },
 };

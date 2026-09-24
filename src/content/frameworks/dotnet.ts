@@ -22,6 +22,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'A singleton is created once (the first time it is requested, unless registered as an existing instance) and that same instance is handed to every consumer for the life of the app. A scoped service gets one instance per scope: ASP.NET Core creates a scope automatically for each incoming HTTP request, and any other host (console app, worker, background job) has to create scopes explicitly to get the same behavior. A transient service is constructed fresh every single time it is resolved, even more than once within the same object graph. The two options that shuffle the singleton, scoped and transient definitions simply swap them around. The option claiming the lifetimes behave identically outside ASP.NET Core is wrong because the scope boundary exists in any host that creates `IServiceScope`s, not only in web requests — a `BackgroundService` that processes queue messages, for example, typically creates one scope per message.',
+    hint:
+      'Think about what a scope is in ASP.NET Core versus a console or worker host, and how often each registration hands out a new instance.',
   },
   {
     id: 'dotnet-dbset-basics',
@@ -43,6 +45,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "`DbSet<T>` implements `IQueryable<T>`, so LINQ written against it is translated to SQL and executed only when the query is enumerated — nothing is loaded eagerly at construction time, which rules out the \"cached, in-memory list\" option. It belongs to one `DbContext` instance; it is not a shared static or thread-safe object — `DbContext` itself is not safe to use from multiple threads at once — which rules out the \"static, thread-safe singleton\" option. Entities added, modified or removed through the `DbSet` (or loaded and mutated while tracked) are exactly what `SaveChanges`/`SaveChangesAsync` persists as `INSERT`/`UPDATE`/`DELETE` statements, so the \"read-only view\" option is backwards.",
+    hint:
+      'Remember that `DbSet<T>` implements `IQueryable<T>`: think about when its queries actually run and what it lets you do with tracked entities.',
   },
   {
     id: 'dotnet-configuration-provider-precedence',
@@ -64,6 +68,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '`IConfiguration` merges every provider into one flat key/value view in registration order; for a key present in more than one provider, whichever provider was added last wins. With the default order used here, command-line arguments are added after environment variables, which are added after the JSON files, so the command-line value wins. (The double underscore in `ConnectionStrings__Default` is how environment variables spell the `:` section separator, since colons are awkward or illegal in most shells and OS environment-variable names.) There is nothing security-related about environment-variable precedence, and configuration never throws when the same key is defined by more than one *provider* — it silently takes the last value, which is exactly the kind of thing worth checking for when a setting "isn\'t taking effect" (a duplicate key repeated inside one JSON file\'s own object is a different case: that throws `FormatException` when the file loads).',
+    hint:
+      'Recall how `IConfiguration` resolves a key defined by several providers, and the order in which the default builder adds them.',
   },
   {
     id: 'dotnet-addscoped-console-host',
@@ -85,6 +91,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "There is no automatic per-request scope in a console or worker host, so someone has to create scopes on purpose — the framework does not do it for you the way it does for an incoming HTTP request. `Host.CreateApplicationBuilder` enables `ValidateScopes` and `ValidateOnBuild` when the host's environment is Development, so in Development this snippet throws \"`InvalidOperationException: Cannot resolve scoped service 'IOrderProcessor' from root provider`\" the moment `GetRequiredService<IOrderProcessor>()` runs. A console host defaults to the `Production` environment unless `DOTNET_ENVIRONMENT` (or `ASPNETCORE_ENVIRONMENT`) is set, so by default — in Production — that validation is off and the call silently succeeds: `processor` is resolved once from the root provider and then reused for every message in the loop, along with any scoped dependency captured inside it (such as a scoped `AppDbContext`), which is exactly the stale-tracked-entities, non-thread-safe-reuse bug this question is about. The fix is the same either way: create a scope per logical operation — `app.Services.CreateScope()` in a simple script, or `IServiceScopeFactory.CreateScope()` injected into a class such as a `BackgroundService` — and resolve scoped services from `scope.ServiceProvider`, disposing the scope when the operation completes.",
+    hint:
+      'Ask which scope a service resolved from the root provider lives in when no HTTP request is creating scopes for you.',
   },
   {
     id: 'dotnet-ef-executionstrategy',
@@ -106,6 +114,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "This is one of the clearer error messages EF Core produces, and it is pointing at a real correctness issue, not just a style preference: retrying a query or `SaveChanges` call transparently is only safe if the retry can redo the *whole* operation cleanly, and a transaction that was opened outside the strategy cannot be safely rewound and replayed by it. The fix is to move the transaction inside the strategy's delegate — either `strategy.ExecuteAsync(async () => { await using var tx = await db.Database.BeginTransactionAsync(); db.Orders.Add(order); await db.SaveChangesAsync(); await tx.CommitAsync(); })`, or the `ExecuteInTransactionAsync(operation, verifySucceeded)` extension built for exactly this pattern — either way `strategy` (from `db.Database.CreateExecutionStrategy()`) becomes responsible for beginning and committing the transaction, so a retry restarts the whole unit of work from scratch. The \"only works against SQLite\" option is false — `BeginTransactionAsync` is the normal way to start a transaction on SQL Server too. The \"disables transactions entirely\" option is false — `EnableRetryOnFailure` does not stop `SaveChangesAsync` from wrapping its own statements in an (implicit) transaction; it only adds a retrying strategy around the whole operation, and a manually-opened, multi-call transaction still has to live inside that strategy's delegate rather than around it. The `MultipleActiveResultSets=true` option is unrelated: MARS affects running multiple result sets concurrently on one connection and has nothing to do with this exception.",
+    hint:
+      'Ask what a retrying strategy must be able to replay when a transient failure hits, and who should therefore own the transaction boundary.',
   },
   {
     id: 'dotnet-di-lifetime-pitfalls',
@@ -127,6 +137,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "A captive dependency happens purely from the *shape* of the constructor graph: nothing stops you from injecting a scoped service into a singleton, so the DI container has to either capture it (silently wrong) or refuse (validated). Scope/build validation exists precisely to turn the silent version into a loud one during startup rather than a subtle bug found under load. A `BackgroundService` never gets a scope handed to it — it is built once, as a singleton, so any scoped work has to open its own scope, typically once per loop iteration or per message: `using var scope = _scopeFactory.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();`. Injecting `IServiceProvider` and calling `GetService` directly is the *service locator* anti-pattern: even setting aside that it hides real dependencies from the constructor, calling `GetService` on the provider handed to a singleton without first creating a scope resolves scoped services from the root provider, which is the same captive/invalid-resolution problem this question is about — the correct tool is `IServiceScopeFactory.CreateScope()`, not a raw provider reference. Transient only means \"new instance per resolution call\"; once a longer-lived object holds a reference to it, that reference lives exactly as long as its owner does, which is a common source of \"transient services aren't really transient\" surprises.\n\n**Say this out loud:** \"Captive dependencies come from the shape of the constructor graph, not from a typo, so I lean on the provider's scope validation to catch a singleton pulling in a scoped service at startup, and inside a `BackgroundService` I always create an explicit scope per unit of work rather than inject scoped services or reach for the service locator.\"",
+    hint:
+      'Think about captive dependencies, what scope validation checks when the provider is built, how hosted services are registered, and why the service locator pattern is discouraged.',
   },
   {
     id: 'dotnet-ioptions-variants',
@@ -150,6 +162,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "This question checks whether \"the options pattern\" is understood as three different lifetimes solving three different problems, not one interchangeable API. The giveaway most candidates miss is that `IOptionsSnapshot<T>` being scoped is exactly as dangerous to inject into a singleton as any other scoped service — it is not just \"the version with reload support,\" and it is *not* the odd one out for being safe in a singleton; `IOptions<T>` and `IOptionsMonitor<T>` both are.\n\n**Say this out loud:** \"IOptions and IOptionsMonitor are both singletons, so both are safe anywhere, including other singletons — IOptions is bound once and never re-read, Monitor stays live via CurrentValue and OnChange. Snapshot is the scoped one, so it's the one that can't go into a singleton, even though it gives the most request-consistent copy.\"",
+    hint:
+      'Compare the three by their own lifetime and by when they read the bound values; include what injecting the scoped one into a singleton does and how change notifications reach you.',
   },
   {
     id: 'dotnet-dbcontext-thread-safety-tracking',
@@ -173,5 +187,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "This scenario bundles several EF Core senior-level facts into one realistic bug report on purpose: the exception text alone tells you the concurrency story, but the \"updates silently disappear\" symptom is the part that separates someone who just wraps the call in a lock from someone who understands the change tracker isn't meant to be shared like this in the first place.\n\n**Say this out loud:** \"DbContext and its change tracker are not thread-safe, so a BackgroundService should hand out a fresh, short-lived context per unit of work through IDbContextFactory or a scope, not share one instance across concurrent tasks for its whole lifetime.\"",
+    hint:
+      'Cover why `DbContext` is not thread-safe, what a long-lived change tracker does to data freshness, and how to get a short-lived context per unit of work.',
   },
 ];

@@ -13,6 +13,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "En el App Router, todo componente es un **Server Component** por defecto: se ejecuta solo en el servidor y no envía JavaScript, así que no puede usar estado, efectos, event handlers ni APIs del navegador. `'use client'` marca una **frontera**: ese módulo y todo lo que importa pasan a formar parte del bundle del cliente. Coloca la frontera lo más abajo posible (lo más cerca de las hojas). Marcar `app/layout.tsx` ni siquiera arreglaría este build: el router le pasa cada página a su layout como `children`, así que `page.tsx` sigue siendo un Server Component y su import de `LikeButton` sigue fallando; solo convertiría el propio layout (y todo lo que importa) en código cliente y le impediría exportar `metadata`. Los hooks con estado o efectos (`useState`, `useReducer`, `useEffect`, `useRef`, `useContext`) no están disponibles en los Server Components; solo se permiten algunos sin estado, como `use`, `useId` y `useMemo`.",
+    hint:
+      "Piensa en dónde colocar la frontera de cliente: `'use client'` mete ese módulo y todo lo que importa en el bundle del navegador.",
   },
   'nextjs-route-handler-basics': {
     prompt: 'En el App Router, ¿cómo expones `GET /api/users` para que devuelva JSON?',
@@ -24,6 +26,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "Los Route Handlers viven en un archivo `route.ts` dentro del directorio `app` y exportan una función por método HTTP (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`). Usan las APIs Web `Request`/`Response` (y los helpers `NextRequest`/`NextResponse`), no los `req`/`res` de Node. El export default `handler(req, res)` es la ruta de API del **Pages Router** en `pages/api`. Un segmento no puede contener a la vez `route.ts` y `page.tsx`. En Next.js 15, los handlers `GET` **no** se cachean por defecto; actívalo con `export const dynamic = 'force-static'`. El nombre de carpeta `api/` es una convención, no un requisito.",
+    hint:
+      'Recuerda la convención de archivos del App Router para endpoints HTTP y en qué se diferencia de los handlers de `pages/api` del Pages Router.',
   },
   'nextjs-client-boundary-rules': {
     prompt: "¿Qué afirmaciones sobre la frontera `'use client'` en el App Router son verdaderas? Selecciona todas las que apliquen.",
@@ -36,6 +40,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "Los Client Components igual se **prerenderizan a HTML en el servidor** y luego se hidratan, así que `'use client'` significa \"esto también se envía al navegador y se ejecuta ahí\", no \"solo en el navegador\". Todo lo que importa un módulo cliente ya es código cliente, así que los archivos anidados no necesitan la directiva. Las props que cruzan la frontera de servidor a cliente deben ser **serializables** por React: los datos planos, Dates, Maps, promesas y JSX están bien, pero las funciones comunes no. La excepción es una **Server Action** (`'use server'`), que cruza como una referencia. El patrón de composición (`<ClientShell><ServerList /></ClientShell>`) es la forma de mantener wrappers interactivos sin arrastrar hijos cargados de datos al bundle. Usa el paquete `server-only` para que un import accidental de código de servidor desde el cliente haga fallar el build.",
+    hint:
+      'Recuerda que los Client Components también se prerenderizan en el servidor, y revisa qué props puede serializar React al cruzar la frontera de servidor a cliente.',
   },
   'nextjs-dynamic-api-opts-out-of-static': {
     prompt:
@@ -48,12 +54,16 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "`cookies()`, `headers()`, `draftMode()`, `connection()` y la prop de página `searchParams` dependen de la petición entrante. Usar cualquiera de ellas (o `fetch` con `cache: 'no-store'`, o `export const dynamic = 'force-dynamic'`) hace que la ruta se renderice en cada petición. En Next.js 15 estas APIs son **async** (`await cookies()`; `params` y `searchParams` son promesas), y el acceso síncrono solo funciona mediante un shim de compatibilidad temporal que registra una advertencia. Para mantener estática la página, convierte la moneda en el cliente. Con Partial Prerendering (experimental en Next.js 15) puedes en cambio leer la cookie dentro de un componente pequeño envuelto en `<Suspense>`, que se convierte en un hueco dinámico dentro de un shell estático; sin PPR, `<Suspense>` solo hace streaming y toda la ruta se sigue renderizando en cada petición. Los componentes `async` por sí solos se pueden prerenderizar sin problema, y `generateStaticParams` solo hace falta para segmentos dinámicos como `[id]`.",
+    hint:
+      'Pregúntate si el valor que devuelve `cookies()` se puede conocer mientras corre `next build`.',
   },
   'nextjs-isr-stale-while-revalidate': {
     prompt:
       "Modela **ISR** (`export const revalidate = N`) como una función pura. La versión `1` de una página se genera en el instante `0`. Para cada instante de petición (en segundos, en orden ascendente), devuelve el número de versión que recibe esa petición.\n\nReglas (coinciden con el comportamiento stale-while-revalidate de Next.js):\n- Una petición **nunca se bloquea**: siempre recibe la versión que está en caché en ese momento.\n- Si la versión en caché tiene **estrictamente más** de `revalidate` segundos de antigüedad y no hay ninguna regeneración en curso, la petición dispara **una** regeneración en segundo plano que termina `regenSeconds` después.\n- Mientras hay una regeneración en curso, las demás peticiones reciben la versión anterior y no inician otra.\n- Una regeneración que ya terminó en el momento de una petición (`finishedAt <= t`) reemplaza la caché con la siguiente versión, cuya antigüedad se mide desde `finishedAt`.",
     explanation:
       "ISR es **stale-while-revalidate**, no un cron job. `revalidate = 60` no reconstruye la página cada minuto. Significa que la primera petición que llega **después** de que la página tiene más de 60 s de antigüedad sigue recibiendo la página obsoleta y dispara una regeneración en segundo plano. Solo las peticiones posteriores ven la nueva versión. Sin tráfico, no se regenera nada (el test de los 1000 segundos). Si la regeneración lanza un error, Next.js sigue sirviendo la última versión buena. Compara los modos: **SSG** genera una sola vez en `next build`; **ISR** es SSG más actualización en segundo plano (por tiempo con `revalidate`, o bajo demanda con `revalidatePath`/`revalidateTag`); **SSR** (renderizado dinámico) renderiza en cada petición; **CSR** obtiene los datos en el navegador después de la hidratación.",
+    hint:
+      'Simula una pequeña máquina de estados: la versión en caché, cuándo se generó y la regeneración pendiente con su hora de fin; aplica las regeneraciones terminadas antes de servir cada petición.',
   },
   'nextjs-caching-defaults-15': {
     prompt: '¿Qué afirmaciones sobre el caching y la revalidación en el App Router de **Next.js 15** son verdaderas? Selecciona todas las que apliquen.',
@@ -66,6 +76,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "Next.js 14 cacheaba `fetch` por defecto, lo que sorprendió a muchos equipos. Next.js 15 invirtió los valores por defecto: no hay Data Cache para `fetch` ni caché para los Route Handlers `GET`, y el Router Cache del cliente ya no reutiliza segmentos de página (`staleTime` 0 para páginas). La trampa es la afirmación sobre el prerenderizado en build: \"sin caché\" **no** significa \"fresco en cada petición\". Una ruta sin APIs de tiempo de petición se sigue prerenderizando de forma estática, así que los datos quedan fijados en tiempo de build. Agrega una Dynamic API, `cache: 'no-store'`, `connection()` o `dynamic = 'force-dynamic'` cuando de verdad necesites datos por petición. `revalidatePath`/`revalidateTag` son solo de servidor; el cliente llama a una Server Action que los llama (y `router.refresh()` solo vuelve a obtener el payload RSC de la ruta actual). `revalidate = 60` es ISR (stale-while-revalidate), no renderizado por petición. Los Cache Components de Next.js 16 (`'use cache'`, `cacheLife`, `cacheTag`) vuelven a hacer el caching explícitamente opt-in, así que en una entrevista menciona la versión que estás describiendo.\n\n**Dilo en voz alta:** \"En Next 15, un fetch sin opción de caché no se cachea, pero eso no vuelve dinámica la ruta. Si una ruta no tiene APIs de tiempo de petición, se sigue prerenderizando en tiempo de build, así que decido entre estático y dinámico por ruta e invalido con tags desde Server Actions.\"",
+    hint:
+      'Recuerda qué valores por defecto de caché invirtió Next.js 15 respecto a la 14, y no confundas "sin caché" con "renderizado en cada petición".',
   },
   'nextjs-server-action-authorization': {
     prompt:
@@ -78,6 +90,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "Toda función `'use server'` exportada se convierte en un endpoint accesible por red. La página solo decide si **renderiza un botón**; nada impide que alguien que no es admin (o un script) envíe el POST que invoca la action. Trata cada Server Action como una ruta de API pública: autentica (`await auth()`), autoriza (rol o propiedad de ese post en concreto), valida la entrada con un esquema (por ejemplo zod) y aplica rate limiting donde importe. Next.js sí mitiga el CSRF (las actions son solo POST y la cabecera `Origin` se compara con `Host`), y en Next.js 15 los action ids no se pueden adivinar y las actions sin usar se eliminan del build. Eso es defensa en profundidad, **no** control de acceso. El middleware tampoco es una verificación suficiente; haz la autorización cerca de los datos (en una capa de acceso a datos).\n\n**Dilo en voz alta:** \"Una Server Action es un endpoint POST público con una convención de llamada más cómoda, así que la autenticación, la autorización y la validación de la entrada van dentro de la action, no en el componente que renderiza el botón.\"",
+    hint:
+      "Pregúntate quién puede llegar realmente a una función `'use server'` por la red, y si ocultar un botón cuenta como control de acceso.",
   },
   'nextjs-when-not-to-use': {
     prompt:
@@ -93,5 +107,7 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       "El entrevistador quiere oír que eliges un framework a partir de los requisitos, no por costumbre. Las mejores respuestas atan cada \"no\" a un costo específico: un servidor que no necesitabas, un modelo de caching que el equipo tiene que aprender, lógica de negocio atrapada en el deploy de la UI o funcionalidades que se comportan distinto fuera de Vercel.\n\n**Dilo en voz alta:** \"Next.js justifica su complejidad cuando necesito renderizado en el servidor o SEO. Para un dashboard autenticado entregaría una SPA con Vite, y el trabajo real de backend va en un servicio aparte, con Next a lo sumo como BFF.\"",
+    hint:
+      'Ata cada "no" a un costo concreto: un servidor que no necesitas, el modelo de caché, lógica acoplada al deploy de la UI o diferencias de hosting fuera de Vercel; nombra una alternativa para cada caso.',
   },
 };

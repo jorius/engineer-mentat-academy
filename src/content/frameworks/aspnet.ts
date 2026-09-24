@@ -22,6 +22,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Middleware components are chained: each one gets the current `HttpContext` and a `next` delegate representing the rest of the pipeline, decides whether (and when) to call `next`, and can run logic both before and after that call. Because ASP.NET Core wires routing in at the very start of the pipeline once an endpoint is configured, this `app.Use` block already runs after the request has been matched to the `/` endpoint — so `next(context)` here leads straight to that endpoint executing, which is why "Before" prints, then "Hello" is written by the `/` handler, then "After" prints once control returns. The "runs only once, at application startup" option is wrong: the host-starting `app.Run()` at the bottom of `Program.cs` is unrelated to the terminal-middleware overload also named `Run`, and this `app.Use` delegate executes on every matching request, not once at startup. The option saying no code may run after `next` is backwards and invents a runtime check that does not exist — running code after `await next(context)` is the normal, supported way to observe the response on its way back out, and is exactly what makes logging/timing middleware possible; nothing throws for doing it. The option claiming `app.Use` only registers middleware that runs before routing is also wrong and invents a "separate registration pass" that ASP.NET Core has no concept of: middleware registered anywhere in the pipeline can still run logic after `next` returns, which is after the endpoint has already written its response — that is how response-inspecting middleware (compression, logging status codes, etc.) works, with no second pass involved.',
+    hint:
+      'Follow the two `Console.WriteLine` calls for a single request and ask what the `next` delegate stands for.',
   },
   {
     id: 'aspnet-controller-di-and-routing',
@@ -43,6 +45,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "ASP.NET Core's controller factory resolves constructor parameters from the DI container when it activates a controller for a request, exactly like any other DI-managed class — no manual `HttpContext.RequestServices` lookups are needed, and constructor injection is in fact the standard, recommended way to consume services in a controller, which is what makes the manual `RequestServices` lookup option wrong. `[Route(\"api/[controller]\")]` combined with attribute routing on the action produces `api/Orders/{id}` for this class, matching `GetById`'s `[HttpGet(\"{id}\")]`. The option claiming `[ApiController]` makes the route reachable overstates what it does: attribute routing and `[HttpGet]`/`[Route]` work on plain `ControllerBase` classes too; `[ApiController]` adds conveniences on top (automatic 400 responses for invalid model state, inferred binding sources, and requiring attribute routing), it does not gate whether the route is reachable. The \"always serialized as XML\" option is wrong because JSON, not XML, is the default (and normally the only) output formatter registered in ASP.NET Core; an XML formatter only participates in content negotiation if it is explicitly added with `AddXmlSerializerFormatters()`.",
+    hint:
+      "Recall how the controller factory activates a controller for each request, and how the `[controller]` token combines with the method's route template.",
   },
   {
     id: 'aspnet-use-vs-run-mismatch',
@@ -64,6 +68,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "`app.Use` middleware receives a `next` delegate and decides whether to call it; `app.Run` middleware does not receive one at all — its signature is just `(HttpContext) => Task`, so by definition it always produces a response and can never forward the request further. A `Map*` call like `app.MapGet` does not insert middleware into the pipeline at the point it is written — it only adds an entry to the endpoint data source. Once any endpoint is configured, ASP.NET Core implicitly wires `UseRouting` in at the very start of the pipeline and `UseEndpoints` in at the very end, wrapping every `app.Use`/`app.Run` middleware written in `Program.cs` in between. So `/hello` is already matched to an endpoint by the time this code runs — but for any request other than `/health`, the conditional `app.Use` block calls `next`, handing control to the unconditional `app.Run`, which sits before the implicit `UseEndpoints` and, being terminal, never calls `next` itself. `UseEndpoints` — and therefore the actual `/hello` handler — is never reached. Fix: remove the catch-all `app.Run` (a real fallback should use `app.MapFallback(...)`, which only runs when no endpoint matched), or call `UseRouting()`/`UseEndpoints()` explicitly and place the terminal `app.Run` after `UseEndpoints()`. The claim that `app.Run` and `app.MapGet` cannot be combined is false and invents a startup exception that does not exist — `Run` and `Map*` calls can be freely interleaved; only the ordering of actual middleware relative to the implicit `UseEndpoints` position matters. Blaming the `/health` block is false — the `if` check does correctly scope the early response to `/health` only. Moving `MapGet` to the top of `Program.cs` is false as a fix and is exactly the natural-but-wrong instinct this gotcha exists to catch: moving `MapGet` earlier changes nothing, because `Map*` calls do not participate in middleware ordering at all — they only register endpoints for the implicit routing/execution machinery to match and invoke later, and that machinery always wraps the entire set of `Program.cs` middleware regardless of where each `Map*` call sits.",
+    hint:
+      'Compare the delegate signatures of `app.Use` and `app.Run`, and recall where endpoint execution sits in the minimal hosting pipeline.',
   },
   {
     id: 'aspnet-minimal-api-frombody-inference',
@@ -85,6 +91,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "Minimal API parameter binding checks, per parameter, whether it matches a known source before falling back to the body: route values, the query string, explicit attributes, special framework types, and — importantly — whether the parameter's type is registered as a service in the DI container. `IOrderService` matches that last case, so `orders` is resolved from the request's service provider rather than parsed from JSON. `request` matches none of those sources (there is no route or query value named `request`, and `CreateOrderRequest` is not a registered service), so the framework treats it as the implicit body parameter and deserializes the JSON payload into it. Only one parameter can be sourced from the body this way — a second unattributed complex type with no other binding source produces a runtime binding error rather than being split across both. The \"both parameters are bound from the body\" option invents a per-parameter JSON-splitting rule ASP.NET Core does not have. The option requiring an explicit `[FromBody]` is wrong because the attribute is optional here precisely because binding source inference already resolves it correctly, and there is no startup-time exception for this case. The option binding `orders` from the body and `request` from DI invents position- and record-based inference rules that also do not exist — the binding source depends on where the value can actually come from (route, query, DI, body), never on parameter order or on being a `record`.",
+    hint:
+      'Recall the order in which minimal APIs check binding sources for each parameter, including whether its type is registered in DI, before falling back to the body.',
   },
   {
     id: 'aspnet-401-vs-403-policy',
@@ -106,6 +114,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Authentication and authorization are two distinct failure modes with two distinct responses. Because JWT bearer is the app\'s default scheme here with no interactive fallback, a missing or invalid credential produces a `401` "challenge", while a valid credential that fails the `CanEditOrders` policy produces a `403` "forbid" — the server knows exactly who is asking and is refusing on purpose, which is a materially different situation than "I don\'t know who this is." The "both get `401`" option collapses that distinction into a single status code, and the "A gets `403`, B gets `401`" option swaps it. The `500 Internal Server Error` option is wrong because `UseAuthentication` runs, and populates `HttpContext.User`, before `UseAuthorization` evaluates any `[Authorize]` attribute — there is no exception here, just two different, well-defined outcomes.',
+    hint:
+      'Separate an authentication failure from an authorization failure: a challenge and a forbid are different outcomes.',
   },
   {
     id: 'aspnet-middleware-pipeline-tradeoffs',
@@ -127,6 +137,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "Pipeline order is not a style preference in ASP.NET Core; several components have hard dependencies on what ran before them. `UseAuthorization` inspects `HttpContext.User`, which — for a policy that does not name explicit `AuthenticationSchemes` — only has an identity on it because `UseAuthentication` ran first and populated it from the request's credentials; swap the order for such a policy and every `[Authorize]` check evaluates against an anonymous principal, regardless of how valid the caller's token actually was. (A policy that does name specific schemes is a narrower exception: the authorization middleware's policy evaluator can trigger authentication for those schemes itself, but that is not the general rule.) Endpoint routing is wired the same way even though it is implicit: once any endpoint is configured, `WebApplication` inserts `UseRouting` at the very start of the pipeline and `UseEndpoints` at the very end, wrapping every `app.Use`/`app.Run` middleware written in `Program.cs` — `Map*`/`MapControllers` calls only add entries to the endpoint data source, they do not change where that middleware sits. So route matching happens before all user middleware, and the matched endpoint only actually executes after all of it, unless a terminal or short-circuiting middleware — the same mechanism as the short-circuiting option — intercepts the request first. `UseExceptionHandler` middleware sits in the pipeline like any other middleware, so if it is early enough, it wraps and can catch exceptions from everything downstream of it, including MVC; an MVC exception filter, by contrast, only observes exceptions raised during model binding, action filters, or the action method itself, so it cannot see an exception thrown by routing, authentication, a custom middleware, or even a result filter — which is exactly what makes the claim that exception filters see earlier middleware exceptions false and the `UseExceptionHandler` statement true.\n\n**Say this out loud:** \"`UseAuthentication` has to run before `UseAuthorization`, and the matched endpoint only actually executes at the very end of the pipeline, not wherever `Map*` happens to be written. A short-circuiting middleware anywhere before that point can swallow the request, and an exception filter only ever sees what happens inside MVC's own action-invocation code, never anything earlier in the pipeline.\"",
+    hint:
+      'Consider which component populates `HttpContext.User`, where the implicit routing and endpoint middleware are inserted, and how far an MVC exception filter reaches compared with `UseExceptionHandler`.',
   },
   {
     id: 'aspnet-minimal-api-vs-controllers-tradeoffs',
@@ -150,6 +162,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "This question is deliberately not looking for \"minimal APIs are faster\" as the whole answer — the interesting part is recognizing that the loss of `[ApiController]`'s automatic validation is a real cost, that a handler has to actually declare a concrete `TypedResults` return type (not just call `TypedResults.*` while still typed as `IResult`) to keep OpenAPI accuracy and testability, and that the CancellationToken point applies uniformly regardless of which hosting style wins.\n\n**Say this out loud:** \"Minimal APIs cost you the automatic model-state validation and filter pipeline controllers get from `[ApiController]`, so in a codebase that already leans on controllers I'd stay consistent. If I did use minimal APIs I'd declare concrete `TypedResults` return types for testability and accurate OpenAPI metadata, and either way I'd accept a `CancellationToken` so abandoned requests stop doing work instead of running to completion for nobody.\"",
+    hint:
+      'Weigh what `[ApiController]` gives you for free, how concrete `TypedResults` return types help OpenAPI and tests, and what a `CancellationToken` does when the client disconnects.',
   },
   {
     id: 'aspnet-jwt-bearer-policy-authorization',
@@ -173,5 +187,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "The trap in this scenario is stopping at `[Authorize(Roles = \"OrdersManager\")]` and missing that it silently drops the ownership branch of the rule entirely, because a declarative role check has no way to see the resource being modified — it runs, and finishes, before the action even loads the `Order`.\n\n**Say this out loud:** \"A role attribute can express the manager branch, but not ownership of this specific order, because it never sees the resource. So I'd add a resource-based requirement and handler, register it as a policy, and call `AuthorizeAsync` against the order once I've loaded it, instead of forcing everything into one attribute.\"",
+    hint:
+      'Cover what the bearer handler validates (signature, issuer, audience, lifetime), then why ownership needs the resource itself: think resource-based authorization via `IAuthorizationService`.',
   },
 ];

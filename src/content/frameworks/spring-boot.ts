@@ -25,6 +25,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       '`@SpringBootApplication` is itself meta-annotated with exactly these three: `@SpringBootConfiguration` (which is itself meta-annotated with `@Configuration`) so the class can also declare `@Bean` methods, `@EnableAutoConfiguration` so Spring Boot inspects the classpath (and any `@ConditionalOn...` guards) to configure beans like an embedded Tomcat or a `DataSource` without XML, and `@ComponentScan` rooted at the annotated class\'s package so `@Component`/`@Service`/`@Repository`/`@Controller` classes underneath it are discovered automatically. The "`@Controller`, `@Service` and `@Repository`" option confuses the stereotype annotations (which mark individual classes for scanning) with what `@SpringBootApplication` itself does — it does not retroactively stereotype every class in the project. The "only `@EnableAutoConfiguration`" option is wrong because `@Configuration`-via-`@SpringBootConfiguration` and `@ComponentScan` are already included; adding them again would be redundant, not required. The `@SpringBootTest` option confuses this with testing annotations, which are a separate, opt-in concern for test classes only — `@SpringBootTest` is never implied by `@SpringBootApplication`.',
+    hint:
+      'Look at the meta-annotations on `@SpringBootApplication`: think bean definitions, classpath-driven configuration and package scanning.',
   },
   {
     id: 'spring-boot-repository-interface-basics',
@@ -49,6 +51,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       'Spring Data JPA repository interfaces need no hand-written implementation: at startup, the Spring Data infrastructure finds every interface extending one of its base repository interfaces (`Repository`, `CrudRepository`, `JpaRepository`, and so on) inside the scanned packages and generates a proxy — backed by `SimpleJpaRepository` for the inherited methods — that is registered as a Spring bean under that interface type. Query methods with no body, like `findByNameContainingIgnoreCase`, are handled by parsing the method name into a JPQL query at startup (`Containing` becomes a `LIKE %...%`, `IgnoreCase` wraps both sides in a case-insensitive comparison) — that derivation is exactly what makes the method callable without `@Query`, which is why the option claiming derived queries throw `UnsupportedOperationException` has it backwards. No compiler or annotation processor generates a real `ProductRepositoryImpl` class at build time, which rules out the `ProductRepositoryImpl` `@Bean` option; this is a runtime proxy, not generated code. `Serializable` on the entity is unrelated to how the repository proxy is built, which rules out the `Serializable` option.',
+    hint:
+      'Think about what Spring Data generates at startup for interfaces that extend its base repository types, and how it treats query method names.',
   },
   {
     id: 'spring-boot-circular-dependency-boot26',
@@ -73,6 +77,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "Field/setter-injected circular dependencies used to work because Spring instantiates each singleton with its default constructor first, caches an early reference to that not-fully-populated instance, and only performs field/setter injection afterward — so `orderService` and `paymentService` can each receive a reference to the other's early instance. (Constructor-injected cycles are a different story and have never been resolvable this way, in any Spring version, because a constructor needs its arguments before the object exists at all.) Spring Boot 2.6 changed the default of `spring.main.allow-circular-references` to `false`, so the same field-injection cycle that quietly worked on 2.5 now fails fast with `BeanCurrentlyInCreationException` instead. Flipping the property back to `true` restores the old behavior but just re-hides a design smell; the recommended fix is to remove the cycle, most commonly with `@Lazy` on one of the two injected fields so that side is only resolved (through a proxy) the first time it's actually used, well after both beans finish construction. Switching both fields to constructor injection is the trap answer: it does not fix this cycle — it makes it strictly worse, since a genuine constructor-to-constructor cycle can never be resolved by Spring at all (the object cannot exist before its own constructor argument does), so it fails unconditionally instead of only when `allow-circular-references` is `false`. The `@Primary` option is fabricated — `@Primary` breaks ties between multiple *candidate* beans for one injection point and has nothing to do with cycles. The `@DependsOn` option is also wrong: `@DependsOn` only controls bean creation *order* between beans that don't otherwise reference each other; it does nothing to satisfy the direct field dependency each class still declares, so the same `BeanCurrentlyInCreationException` would still be thrown.",
+    hint:
+      'Recall how Spring resolves field-injection cycles with early references, and which default changed in Spring Boot 2.6.',
   },
   {
     id: 'spring-boot-valid-requestbody-response',
@@ -101,6 +107,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "The `@RequestBody`/`@Valid` and `@PathVariable`/`@RequestParam` statements describe the standard, well-defined behavior of `@RequestBody`/`@Valid` (including that `@Valid` only does anything once a Bean Validation provider such as Hibernate Validator, pulled in by `spring-boot-starter-validation`, is on the classpath) and `@PathVariable`/`@RequestParam`, and are correct as written. The `@Controller` plus `@ResponseBody` statement is also correct: `@RestController` is exactly `@Controller` + `@ResponseBody`, which is why handler methods return data instead of a view name. The claim that `ResponseEntity` is required for JSON serialization is false — `@RestController` applies `@ResponseBody` to every handler regardless of return type, so a plain `OrderResponse` is serialized to JSON with a default `200 OK` just fine; `ResponseEntity` is only needed when the method wants to control the status code, headers, or both explicitly (as `create` does here to return `201 Created`), not to make serialization possible. The claim that `@Valid` without constraints fails startup is false — `@Valid` with no constraints on the target type is a harmless no-op: validation runs, finds nothing to check, and the request proceeds; it causes neither a startup failure nor a runtime error.",
+    hint:
+      "Check each annotation's job: message conversion, Bean Validation, URL template versus query-string binding, and what `@RestController` adds over `@Controller`.",
   },
   {
     id: 'spring-boot-save-vs-merge',
@@ -125,6 +133,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "This is a well-known gotcha because, on older Hibernate versions, both paths eventually inserted a row, so the difference was easy to miss in a quick test; on current Hibernate 6.6+ it's no longer subtle at all, since the non-null-id path now fails outright instead of quietly duplicating the row under a new key. `isNew()` — the check `save` relies on internally — looks at `@Version` first when the entity has one, and only falls back to the id when it doesn't; `@GeneratedValue` never enters into it, it only controls how a *new* id gets its value once `persist` is chosen. The \"always performs an `INSERT`\" option is wrong — `save` is Spring Data's combined create-or-update entry point precisely so callers don't need a separate `update` method; it routes to `persist` or `merge` depending on the new/not-new check, not always to `INSERT`. The `readOnly` option is fabricated — `readOnly` only affects how the transaction is configured (e.g. a hint to skip dirty checking and, on some drivers, mark the connection read-only); it plays no part in the persist-vs-merge decision, and a read-only transaction does not silently turn writes into no-ops. The `IdentifierGenerationException` option is wrong — Hibernate does not reject a non-null id up front regardless of version; it uses the id's non-null value to decide the entity is 'not new' and proceeds down the `merge` path described in the `isNew()` answer, whose outcome does depend on the Hibernate version in use.",
+    hint:
+      'Look at how `SimpleJpaRepository` decides whether an entity is new, and what `persist` and `merge` each do with the id they are given.',
   },
   {
     id: 'spring-boot-transactional-self-invocation',
@@ -147,6 +157,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "This is the single most common `@Transactional` gotcha in real codebases, and it rarely announces itself as a proxy question — it shows up as \"why didn't this roll back\" days after the code was written and reviewed. The trap for candidates who know `@Transactional` exists but not how it's implemented is assuming annotations act on the method wherever it's called from, rather than only on calls that cross the proxy boundary.\n\n**Say this out loud:** \"`@Transactional` only fires on calls that go through the bean's proxy, so `this.saveReport()` bypasses it and each repository save commits on its own. I'd move `saveReport()` to a separate bean, or inject a self-reference, so the call goes back out through the proxy.\"",
+    hint:
+      'Think about how Spring applies `@Transactional` through a proxy, and what happens when a method calls another method on `this`.',
   },
   {
     id: 'spring-boot-controlleradvice-problemdetail',
@@ -171,6 +183,8 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "`ProblemDetail` standardizes what used to be an ad-hoc error DTO per application: it models RFC 7807/9457's fields directly, `setProperty` covers domain-specific extensions like `productId`, and Spring MVC has dedicated support for serializing it as `application/problem+json` and for deriving the response's HTTP status from `ProblemDetail.getStatus()` when the method returns a bare `ProblemDetail` rather than a `ResponseEntity` — which is exactly why the option demanding `ResponseEntity<ProblemDetail>` is wrong; wrapping it in `ResponseEntity` is only needed when extra headers must be set, not for the status or body to work. The option relying on `spring.mvc.problemdetails.enabled=true` overstates what that property actually does: it makes Spring Boot's *own* built-in exceptions (`NoHandlerFoundException`, `HttpRequestMethodNotSupportedException`, and the like) render as `ProblemDetail` through a default `ResponseEntityExceptionHandler`, but it has no idea `ProductNotFoundException` exists — a custom, domain-specific exception still needs exactly the handler shown here. The option limiting the advice to its own package is backwards: with no `basePackages`/`assignableTypes`/`annotations` narrowing, `@RestControllerAdvice` applies globally, to every controller in the application, not just to classes in its own package.\n\n**Say this out loud:** \"`ProblemDetail` is Spring's built-in RFC 9457 (formerly 7807) error shape, and returning it directly from an `@ExceptionHandler` is enough — Spring MVC reads the status off the object and serializes it as `application/problem+json` without a `ResponseEntity` wrapper.\"",
+    hint:
+      'Recall what RFC 9457 standardizes and how Spring MVC serializes a `ProblemDetail` returned from an `@ExceptionHandler`.',
   },
   {
     id: 'spring-boot-n-plus-one-lazy-loading',
@@ -194,5 +208,7 @@ export const questions: Question[] = [
     source: 'topic-list',
     explanation:
       "This scenario deliberately pairs two related but distinct senior-level facts: N+1 is a performance bug that happens to work, while `LazyInitializationException` is a correctness bug that fails loudly — and `open-in-view` sits in between, turning the second into a silent, expensive version of the first instead of actually fixing it.\n\n**Say this out loud:** \"The 201 queries are N+1 from the lazy `@OneToMany` touched per author in a loop, fixed with `JOIN FETCH` or `@EntityGraph`. `open-in-view` only hides `LazyInitializationException` by keeping the session open past the transaction, so I'd turn it off and fetch what I need inside the `@Transactional` method instead.\"",
+    hint:
+      'Cover why a lazy `@OneToMany` fires one query per author, the fetch options (join fetch, entity graphs, batch size, projections), and what open-in-view really does.',
   },
 ];

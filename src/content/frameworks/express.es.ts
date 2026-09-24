@@ -13,6 +13,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Express mantiene una sola pila ordenada de capas (middleware y rutas). Una petición recorre esa pila de arriba abajo y solo avanza cuando la capa actual llama a `next()`. El handler de `/health` envía una respuesta y nunca llama a `next()`, así que no se ejecuta nada de lo registrado después. El middleware transversal (logging, ids de petición, cabeceras de seguridad, parseo del body) va **antes** de las rutas; el handler de 404 y el manejador de errores van **después**.',
+    hint:
+      'Recorre la petición por la pila en el orden en que se registró todo, y pregúntate qué pasa con las capas siguientes cuando un handler ya envió su respuesta.',
   },
   'express-error-handler-arity': {
     prompt:
@@ -25,6 +27,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Express comprueba `fn.length === 4` para decidir si una capa es un manejador de errores. Con tres parámetros, esta función se trata como un middleware normal (así que `err` sería en realidad `req`) y se omite mientras se propaga un error. Declara `(err, req, res, next)` aunque nunca llames a `next`, y regístralo **después** de todas las rutas. En Express 5, la promesa rechazada de la ruta async se reenvía automáticamente a `next(err)`, así que, una vez corregida la firma, el manejador sí se ejecuta. En Express 4 la promesa rechazada nunca llegaría a ningún manejador de errores, así que corregir la aridad no bastaría.',
+    hint:
+      'Piensa en cómo distingue Express un middleware de errores de uno normal cuando lo único que tiene es el objeto función.',
   },
   'express-async-errors-v4-vs-v5': {
     prompt:
@@ -37,6 +41,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'El router de Express 4 llama al handler e ignora su valor de retorno, así que una promesa rechazada se le escapa por completo. Con el valor por defecto de Node (`--unhandled-rejections=throw`) el proceso termina y se cortan todas las conexiones en curso; solo si alguien registra un listener de `unhandledRejection` el proceso sobrevive, y entonces esta petición se queda colgada sin respuesta. Las soluciones habituales en Express 4 eran envolver cada handler en `try/catch` + `next(err)`, un wrapper `asyncHandler(fn)` que hace `.catch(next)`, o el parche `express-async-errors`. Express 5 comprueba si un handler devuelve una promesa y llama a `next(err)` cuando se rechaza, tanto en middleware como en handlers de ruta. Aun así, **no** captura los errores lanzados más tarde dentro de callbacks como `setTimeout` o un event emitter, porque no forman parte de la promesa devuelta.',
+    hint:
+      'Pregúntate qué hace cada versión del router con la promesa que devuelve un handler async, y qué hace Node con un rechazo que nadie maneja.',
   },
   'express-next-semantics': {
     prompt: '¿Qué afirmaciones sobre `next` en Express son verdaderas? Selecciona todas las que apliquen.',
@@ -49,6 +55,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "Express no lleva la cuenta de si ya respondiste: si haces `res.json()` y luego `next()`, una capa posterior puede intentar escribir de nuevo y obtienes `ERR_HTTP_HEADERS_SENT` (\"Cannot set headers after they are sent to the client\"). `next()` es una llamada a función normal, así que el resto de tu función sigue ejecutándose cuando retorna; escribe `return next()` cuando quieras decir \"detente aquí\". `next('router')` es el hermano de `next('route')`: sale por completo de la instancia actual de `Router`.",
+    hint:
+      'Contrasta cada afirmación con el hecho de que `next` es una llamada a función normal de JavaScript, y recuerda los argumentos de texto especiales que acepta.',
   },
   'express-route-order-param-shadowing': {
     prompt:
@@ -61,6 +69,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "Express no tiene un ranking de especificidad de rutas (a diferencia del router de radix tree de Fastify o del enrutamiento por archivos de Next.js, donde ganan los segmentos estáticos): prueba las capas en orden y ejecuta la primera coincidencia. Entonces `getUserById` responde (probablemente con un 404 o un error de conversión en la base de datos) y `getCurrentUser` queda inalcanzable. Soluciones: registra `/users/me` primero, o valida `id` dentro del handler. Express 5 usa path-to-regexp v8, que **eliminó** las restricciones con regex en línea como `/:id(\\\\d+)`, eliminó los parámetros opcionales con `?` en favor de llaves (`/users{/:id}`) y exige que los comodines tengan nombre (`/*splat`), así que el orden y la validación explícita importan todavía más después de actualizar.",
+    hint:
+      'Pregúntate si Express ordena las rutas por especificidad o si simplemente las prueba en un orden fijo.',
   },
   'express-error-handler-headers-sent': {
     prompt:
@@ -73,12 +83,16 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "Una vez que la línea de estado y las cabeceras están en el cable, ya no puedes cambiar el código de estado. Intentarlo produce `ERR_HTTP_HEADERS_SENT` dentro de tu manejador de errores. La documentación de Express prescribe exactamente esta comprobación: si `res.headersSent`, llama a `next(err)` y deja que el manejador integrado cierre el socket. Así el cliente ve una transferencia abortada en lugar de un archivo truncado que parece completo. Terminar la respuesta limpiamente con `res.end()` es la peor opción, porque convierte un fallo en una pérdida silenciosa de datos. (Esto depende de que Express 5 reenvíe el handler async rechazado al middleware de errores; en Express 4 haría falta un wrapper async para que el manejador llegue a ejecutarse.)\n\n**Dilo en voz alta:** \"Un manejador de errores tiene que comprobar `res.headersSent`; una vez que empezó el streaming, la única señal honesta que queda es abortar la conexión, así que delego en el manejador por defecto de Express.\"",
+    hint:
+      'Piensa en qué se puede cambiar todavía cuando la línea de estado y las cabeceras ya están en el cable, y qué propiedad de `res` te dice que eso ya pasó.',
   },
   'express-compose-middleware-fix': {
     prompt:
       "Este es un `compose` al estilo de Koa (el modelo detrás de las pilas de middleware que entienden promesas). Cada middleware recibe `(ctx, next)` y `next()` devuelve una promesa para **todo el resto de la cadena**. Tiene dos bugs:\n\n1. `await next()` no espera al middleware async posterior, así que la mitad \"de salida\" de la cebolla se ejecuta demasiado pronto.\n2. Llamar a `next()` dos veces desde el mismo middleware vuelve a ejecutar en silencio la cadena posterior; debe rechazar con `Error('next() called multiple times')`.\n\nCorrige **solo `compose`**. Los escenarios y `solution` que aparecen debajo son el arnés de pruebas. Los errores posteriores (síncronos o async) deben poder capturarse desde un middleware anterior en la cadena que envuelva su llamada así:\n\n```ts\ntry {\n  await next();\n} catch {}\n```",
     explanation:
       "El `next` que se pasa a cada middleware debe **devolver** `dispatch(i + 1)`. Si no, quien llama espera una promesa que se resuelve en cuanto termina la parte síncrona de `dispatch`, mientras el trabajo async posterior sigue pendiente. Devolver la promesa también es lo que permite que un rechazo posterior viaje de vuelta hasta el `try/catch` de quien llama; una promesa descartada, en cambio, se convierte en un unhandled rejection. La comprobación con `lastIndex` detecta la reentrada: `next()` desde el middleware `i` debe avanzar el índice más allá de `i` exactamente una vez. El `try/catch` alrededor de `fn(...)` convierte un throw síncrono en una promesa rechazada, así que quienes llaman ven un solo canal de errores.\n\nEl propio `next` de Express es de estilo callback y no devuelve nada, también en Express 5, así que `await next()` en Express no espera a los handlers posteriores y no hay post-procesamiento al estilo cebolla. Los errores async son otro mecanismo: Express 4 ignoraba la promesa que devolvía un handler, y el router de Express 5 le engancha un manejador de rechazo y llama a `next(err)`.\n\n**Dilo en voz alta:** \"La composición de middleware es una cebolla: `next()` tiene que devolver una promesa para toda la cadena posterior; si no, el post-procesamiento se ejecuta demasiado pronto y los errores posteriores se escapan como unhandled rejections.\"",
+    hint:
+      'Fíjate en qué le devuelve el callback `next` a quien lo llama, y lleva la cuenta del último índice despachado para detectar una llamada repetida.',
   },
   'express-production-hardening': {
     prompt:
@@ -94,5 +108,7 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       "Los entrevistadores buscan defensa en capas y conciencia operativa, no una lista de paquetes de npm. Los dos detalles que distinguen a un senior son `trust proxy` (sin él, el rate limiting y las cookies seguras fallan en silencio) y una secuencia de apagado coordinada con el orquestador (primero la readiness, luego drenar, luego forzar la salida antes del SIGKILL).\n\n**Dilo en voz alta:** \"Con SIGTERM pongo la readiness en fallo, dejo de aceptar conexiones con `server.close()`, dreno las peticiones en curso, cierro los pools y salgo antes de que termine el periodo de gracia. Detrás de un proxy configuro `trust proxy` para que el rate limiting use la IP real del cliente.\"",
+    hint:
+      'Cúbrelo por capas: cabeceras de seguridad, conciencia del proxy para rate limiting y cookies, límites de body y timeouts, salida de errores en producción y una secuencia de SIGTERM coordinada con las readiness probes.',
   },
 };

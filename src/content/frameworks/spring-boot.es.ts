@@ -13,6 +13,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       '`@SpringBootApplication` está meta-anotada exactamente con estas tres: `@SpringBootConfiguration` (que a su vez está meta-anotada con `@Configuration`), para que la clase también pueda declarar métodos `@Bean`; `@EnableAutoConfiguration`, para que Spring Boot inspeccione el classpath (y cualquier condición `@ConditionalOn...`) y configure beans como un Tomcat embebido o un `DataSource` sin XML; y `@ComponentScan` con raíz en el paquete de la clase anotada, para que las clases `@Component`/`@Service`/`@Repository`/`@Controller` debajo de ese paquete se descubran automáticamente. La opción de "`@Controller`, `@Service` y `@Repository`" confunde las anotaciones de estereotipo (que marcan clases individuales para el escaneo) con lo que hace `@SpringBootApplication` en sí — no convierte retroactivamente a cada clase del proyecto en las tres cosas. La opción de "solo `@EnableAutoConfiguration`" es incorrecta porque `@Configuration`, vía `@SpringBootConfiguration`, y `@ComponentScan` ya están incluidas; agregarlas de nuevo sería redundante, no necesario. La opción de `@SpringBootTest` confunde esto con anotaciones de testing, que son un asunto aparte, opcional, y solo para clases de prueba — `@SpringBootTest` nunca está implícita en `@SpringBootApplication`.',
+    hint:
+      'Mira las meta-anotaciones de `@SpringBootApplication`: piensa en definiciones de beans, configuración guiada por el classpath y escaneo de paquetes.',
   },
   'spring-boot-repository-interface-basics': {
     prompt:
@@ -25,6 +27,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       'Las interfaces de repositorio de Spring Data JPA no necesitan una implementación escrita a mano: al arrancar, la infraestructura de Spring Data encuentra cada interfaz que extiende alguna de sus interfaces base (`Repository`, `CrudRepository`, `JpaRepository`, etcétera) dentro de los paquetes escaneados y genera un proxy — respaldado por `SimpleJpaRepository` para los métodos heredados — que se registra como un bean de Spring bajo ese tipo de interfaz. Los métodos de consulta sin cuerpo, como `findByNameContainingIgnoreCase`, se resuelven analizando el nombre del método para construir una consulta JPQL en el arranque (`Containing` se vuelve un `LIKE %...%`, `IgnoreCase` envuelve ambos lados en una comparación sin distinguir mayúsculas) — esa derivación es justo lo que hace que el método funcione sin `@Query`, por lo que la opción que dice que las consultas derivadas lanzan `UnsupportedOperationException` lo tiene al revés. Ningún compilador ni procesador de anotaciones genera una clase real `ProductRepositoryImpl` en tiempo de compilación, lo cual descarta la opción del `@Bean` con `ProductRepositoryImpl`; esto es un proxy en tiempo de ejecución, no código generado. Que la entidad implemente `Serializable` no tiene relación con cómo se construye el proxy del repositorio, lo cual descarta la opción de `Serializable`.',
+    hint:
+      'Piensa en qué genera Spring Data al arrancar para las interfaces que extienden sus tipos base de repositorio, y en cómo trata los nombres de los métodos de consulta.',
   },
   'spring-boot-circular-dependency-boot26': {
     prompt:
@@ -37,6 +41,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "Las dependencias circulares inyectadas por campo/setter solían funcionar porque Spring instancia cada singleton con su constructor por defecto primero, guarda en caché una referencia temprana a esa instancia todavía no completamente poblada, y recién después realiza la inyección de campos/setters — así que `orderService` y `paymentService` pueden recibir cada uno una referencia a la instancia temprana del otro. (Los ciclos con inyección por constructor son otra historia y nunca han sido resolubles de esta manera, en ninguna versión de Spring, porque un constructor necesita sus argumentos antes de que el objeto exista siquiera). Spring Boot 2.6 cambió el valor por defecto de `spring.main.allow-circular-references` a `false`, así que el mismo ciclo por inyección de campo que funcionaba en silencio en 2.5 ahora falla de inmediato con `BeanCurrentlyInCreationException`. Volver a poner la propiedad en `true` restaura el comportamiento anterior, pero solo vuelve a ocultar un mal olor de diseño; la solución recomendada es eliminar el ciclo, lo más común con `@Lazy` en uno de los dos campos inyectados, para que ese lado solo se resuelva (a través de un proxy) la primera vez que realmente se use, bien después de que ambos beans terminen de construirse. Cambiar ambos campos a inyección por constructor es la respuesta trampa: no arregla este ciclo — lo empeora, porque un ciclo genuino de constructor a constructor nunca puede ser resuelto por Spring (el objeto no puede existir antes que el argumento de su propio constructor), así que falla de forma incondicional en lugar de solo cuando `allow-circular-references` es `false`. La opción de `@Primary` está inventada — `@Primary` resuelve empates entre varios beans *candidatos* para un solo punto de inyección y no tiene relación con los ciclos. La opción de `@DependsOn` también es incorrecta: `@DependsOn` solo controla el *orden* de creación entre beans que no se referencian directamente entre sí; no hace nada para satisfacer la dependencia de campo directa que cada clase sigue declarando, así que el mismo `BeanCurrentlyInCreationException` igual se lanzaría.",
+    hint:
+      'Recuerda cómo resuelve Spring los ciclos de inyección por campo con referencias tempranas, y qué valor por defecto cambió en Spring Boot 2.6.',
   },
   'spring-boot-valid-requestbody-response': {
     prompt:
@@ -50,6 +56,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "Las afirmaciones sobre `@RequestBody`/`@Valid` y sobre `@PathVariable`/`@RequestParam` describen el comportamiento estándar y bien definido de `@RequestBody`/`@Valid` (incluyendo que `@Valid` no hace nada hasta que un proveedor de Bean Validation, como Hibernate Validator vía `spring-boot-starter-validation`, esté en el classpath) y `@PathVariable`/`@RequestParam`, y son correctas tal como están escritas. La afirmación de `@Controller` más `@ResponseBody` también es correcta: `@RestController` es exactamente `@Controller` + `@ResponseBody`, por eso los métodos manejadores devuelven datos en lugar de un nombre de vista. La afirmación de que `ResponseEntity` es necesario para serializar a JSON es falsa — `@RestController` aplica `@ResponseBody` a cada manejador sin importar el tipo de retorno, así que un `OrderResponse` simple se serializa a JSON con un `200 OK` por defecto sin problema; `ResponseEntity` solo hace falta cuando el método quiere controlar el código de estado, los encabezados, o ambos, de forma explícita (como hace `create` aquí para devolver `201 Created`), no para que la serialización sea posible. La afirmación de que `@Valid` sin restricciones impide el arranque es falsa — `@Valid` sin restricciones en el tipo destino no hace nada: la validación se ejecuta, no encuentra nada que revisar, y la petición sigue adelante; no provoca ni un fallo de arranque ni un error en tiempo de ejecución.",
+    hint:
+      'Revisa el trabajo de cada anotación: conversión de mensajes, Bean Validation, binding de la plantilla de URL frente al query string, y qué agrega `@RestController` sobre `@Controller`.',
   },
   'spring-boot-save-vs-merge': {
     prompt:
@@ -62,6 +70,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "Este es un problema bien conocido porque, en versiones antiguas de Hibernate, ambos caminos terminaban insertando una fila, así que la diferencia era fácil de pasar por alto en una prueba rápida; en Hibernate 6.6+ ya no es nada sutil, porque el camino del id no nulo ahora falla directamente en lugar de duplicar en silencio la fila bajo una nueva clave. `isNew()` — la comprobación en la que se apoya `save` internamente — mira primero `@Version` cuando la entidad lo tiene, y solo recurre al id cuando no lo tiene; `@GeneratedValue` nunca entra en esa decisión, solo controla cómo obtiene su valor un id *nuevo* una vez que se elige `persist`. La opción de \"siempre hace un `INSERT`\" es incorrecta — `save` es el punto de entrada combinado de Spring Data para crear-o-actualizar precisamente para que los llamadores no necesiten un método `update` aparte; enruta a `persist` o `merge` según la comprobación de nuevo/no-nuevo, no siempre a `INSERT`. La opción de `readOnly` está inventada — `readOnly` solo afecta cómo se configura la transacción (por ejemplo, una pista para omitir el dirty checking y, en algunos drivers, marcar la conexión como de solo lectura); no participa en la decisión de persist-vs-merge, y una transacción de solo lectura no convierte en silencio las escrituras en no-ops. La opción de `IdentifierGenerationException` es incorrecta — Hibernate no rechaza un id no nulo de entrada sin importar la versión; usa el valor no nulo del id para decidir que la entidad 'no es nueva' y sigue el camino de `merge` descrito en la respuesta de `isNew()`, cuyo resultado sí depende de la versión de Hibernate en uso.",
+    hint:
+      'Fíjate en cómo decide `SimpleJpaRepository` si una entidad es nueva, y qué hacen `persist` y `merge` con el id que reciben.',
   },
   'spring-boot-transactional-self-invocation': {
     prompt:
@@ -76,6 +86,8 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       "Este es el problema con `@Transactional` más común en código real, y casi nunca se anuncia como una pregunta sobre proxies — aparece como \"¿por qué no se revirtió esto?\" días después de que el código se escribió y se revisó. La trampa para quienes saben que `@Transactional` existe pero no cómo se implementa es asumir que las anotaciones actúan sobre el método sin importar desde dónde se llame, en lugar de actuar solo sobre las llamadas que cruzan el límite del proxy.\n\n**Dilo en voz alta:** \"`@Transactional` solo se dispara en llamadas que pasan por el proxy del bean, así que `this.saveReport()` lo evita y cada escritura del repositorio se confirma por su cuenta. Movería `saveReport()` a otro bean, o inyectaría una autorreferencia, para que la llamada vuelva a salir por el proxy.\"",
+    hint:
+      'Piensa en cómo aplica Spring `@Transactional` a través de un proxy, y en qué pasa cuando un método llama a otro método sobre `this`.',
   },
   'spring-boot-controlleradvice-problemdetail': {
     prompt:
@@ -88,6 +100,8 @@ export const translations: Record<string, QuestionTranslation> = {
     },
     explanation:
       "`ProblemDetail` estandariza lo que antes era un DTO de error improvisado por aplicación: modela directamente los campos de RFC 7807/9457, `setProperty` cubre extensiones específicas del dominio como `productId`, y Spring MVC tiene soporte dedicado tanto para serializarlo como `application/problem+json` como para derivar de `ProblemDetail.getStatus()` el estado HTTP de la respuesta cuando el método devuelve un `ProblemDetail` sin envolver en lugar de un `ResponseEntity` — justo por eso la opción que exige `ResponseEntity<ProblemDetail>` es incorrecta; envolverlo en `ResponseEntity` solo hace falta cuando hay que fijar encabezados adicionales, no para que funcionen el estado o el cuerpo. La opción que confía en `spring.mvc.problemdetails.enabled=true` exagera lo que realmente hace esa propiedad: hace que las excepciones *propias* de Spring Boot (`NoHandlerFoundException`, `HttpRequestMethodNotSupportedException`, y similares) se rendericen como `ProblemDetail` mediante un `ResponseEntityExceptionHandler` por defecto, pero no tiene idea de que `ProductNotFoundException` existe — una excepción propia del dominio sigue necesitando exactamente el manejador que se muestra aquí. La opción que limita el advice a su propio paquete está al revés: sin `basePackages`/`assignableTypes`/`annotations` que la acoten, `@RestControllerAdvice` se aplica globalmente, a todos los controladores de la aplicación, no solo a las clases de su propio paquete.\n\n**Dilo en voz alta:** \"`ProblemDetail` es la forma de error RFC 9457 (antes 7807) integrada en Spring, y devolverla directamente desde un `@ExceptionHandler` alcanza — Spring MVC lee el estado del propio objeto y lo serializa como `application/problem+json` sin necesitar un envoltorio `ResponseEntity`.\"",
+    hint:
+      'Recuerda qué estandariza el RFC 9457 y cómo serializa Spring MVC un `ProblemDetail` devuelto desde un `@ExceptionHandler`.',
   },
   'spring-boot-n-plus-one-lazy-loading': {
     prompt:
@@ -103,5 +117,7 @@ export const translations: Record<string, QuestionTranslation> = {
     ],
     explanation:
       "Este escenario combina a propósito dos hechos relacionados pero distintos de nivel senior: el N+1 es un error de rendimiento que igual funciona, mientras que `LazyInitializationException` es un error funcional que falla de forma ruidosa — y `open-in-view` queda en el medio, convirtiendo el segundo en una versión silenciosa y costosa del primero en lugar de arreglarlo de verdad.\n\n**Dilo en voz alta:** \"Las 201 consultas son N+1 por el `@OneToMany` con carga perezosa que se toca por autor dentro de un bucle, y se arregla con `JOIN FETCH` o `@EntityGraph`. `open-in-view` solo oculta `LazyInitializationException` manteniendo la sesión abierta más allá de la transacción, así que lo desactivaría y cargaría lo que necesito dentro del método `@Transactional`.\"",
+    hint:
+      'Explica por qué un `@OneToMany` lazy dispara una consulta por autor, las opciones de carga (join fetch, entity graphs, batch size, proyecciones) y qué hace realmente open-in-view.',
   },
 };
