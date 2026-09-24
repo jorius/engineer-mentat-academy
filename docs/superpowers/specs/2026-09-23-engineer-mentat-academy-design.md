@@ -3,13 +3,14 @@
 **Date:** 2026-09-23
 **Status:** Approved for planning
 **Owner:** Jose Rios
-**Deadline:** usable for practice by Friday 2026-09-25 (EPAM senior interview)
+**Deadline:** usable for practice by Friday 2026-09-25 (a senior JavaScript/full-stack interview)
 
 ## 1. Goal and scope
 
 A public, static single-page app at `https://jorius.github.io/engineer-mentat-academy/`
 that drills technical interview questions at junior, mid and senior level across the
-full EPAM topic list. It is self-graded in v1, with a clean seam for AI grading later.
+full topic list for a senior JavaScript/full-stack interview. It is self-graded in v1,
+with a clean seam for AI grading later.
 
 In scope for v1:
 
@@ -67,8 +68,8 @@ Every question is a TypeScript object validated by a zod schema. Common fields:
 | `level` | `'junior' \| 'mid' \| 'senior'` | |
 | `kind` | see below | discriminant |
 | `prompt` | string | Markdown, may include fenced code |
-| `tags` | string[] | cross-cutting: `aws`, `performance`, `epam-25`, ... |
-| `source` | `'epam-pdf' \| 'notion' \| 'topic-list'` | provenance |
+| `tags` | string[] | cross-cutting: `aws`, `performance`, `core-25`, ... |
+| `source` | `'core-list' \| 'notion' \| 'topic-list'` | provenance |
 | `explanation` | string | Markdown shown after grading, always present |
 
 Kinds are a discriminated union:
@@ -183,11 +184,12 @@ system beyond a small set of primitives (Button, Card, Badge, Progress).
   5. asserts every `single`/`multi` answer references existing option ids.
   A failing question fails CI, so the bank can never ship a broken exercise.
 - Authoring on 2026-09-24: one subagent per domain receives the schema, the taxonomy,
-  the relevant Notion pages, and the EPAM 25 list. Target is about 20 questions per
-  subject where the topic list is deep (javascript, typescript, react, nodejs, sql, aws)
-  and 8 to 12 elsewhere, roughly 250 total, mixed levels and kinds.
-- Tier 1: the 25 EPAM questions each become a senior `open` question plus at least one
-  `predict`, `code` or `fix` companion, tagged `epam-25`.
+  the relevant Notion pages, and the classic 25 senior JavaScript questions. Target is
+  about 20 questions per subject where the topic list is deep (javascript, typescript,
+  react, nodejs, sql, aws) and 8 to 12 elsewhere, roughly 250 total, mixed levels and
+  kinds.
+- Tier 1: the classic 25 senior JavaScript questions each become a senior `open`
+  question plus at least one `predict`, `code` or `fix` companion, tagged `core-25`.
 - Every senior question must have a "what a senior says out loud" line in the
   explanation, following the Notion deep-dive style.
 

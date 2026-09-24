@@ -779,7 +779,7 @@ export type Level = (typeof LEVELS)[number];
 export const KINDS = ['single', 'multi', 'predict', 'code', 'fix', 'sql', 'open'] as const;
 export type Kind = (typeof KINDS)[number];
 
-export const SOURCES = ['epam-pdf', 'notion', 'topic-list'] as const;
+export const SOURCES = ['core-list', 'notion', 'topic-list'] as const;
 export type Source = (typeof SOURCES)[number];
 
 export const CODE_LANGUAGES = ['javascript', 'typescript'] as const;
@@ -2423,7 +2423,7 @@ export function solution(orders: Order[]): boolean {
     explanation: 'Senior signal: choosing the combinator by failure semantics, then adding timeouts so the slowest dependency bounds latency.',
   },
   {
-    id: 'javascript-equality-coercion-epam',
+    id: 'javascript-equality-coercion-core',
     domain: 'languages',
     subject: 'javascript',
     topic: 'coercion-and-equality',
@@ -2437,12 +2437,12 @@ console.log(null === undefined);
 console.log([] + {});
 console.log(NaN === NaN);`,
     answer: 'true\ntrue\nfalse\n[object Object]\nfalse',
-    tags: ['coercion', 'epam-25'],
-    source: 'epam-pdf',
+    tags: ['coercion', 'core-25'],
+    source: 'core-list',
     explanation: '`==` coerces (`""` becomes 0; `null`/`undefined` are loosely equal only to each other). `[] + {}` stringifies both sides. `NaN` is never equal to anything; use `Number.isNaN` or `Object.is`.',
   },
   {
-    id: 'javascript-hoisting-tdz-epam',
+    id: 'javascript-hoisting-tdz-core',
     domain: 'languages',
     subject: 'javascript',
     topic: 'hoisting-and-scope',
@@ -2456,8 +2456,8 @@ console.log(NaN === NaN);`,
       { id: 'd', text: 'Throws `TypeError`' },
     ],
     answer: 'b',
-    tags: ['hoisting', 'tdz', 'epam-25'],
-    source: 'epam-pdf',
+    tags: ['hoisting', 'tdz', 'core-25'],
+    source: 'core-list',
     explanation: '`let` is hoisted but uninitialized until its declaration runs, so reading it throws. `var` would print `undefined`; the function declaration is fully hoisted but never reached here.',
   },
 ];
@@ -4938,10 +4938,10 @@ Rules the content test enforces (npm test will fail otherwise):
   requires an ORDER BY.
 - every question has an `explanation`; senior ones include a line starting with
   "**Say this out loud:**" giving the phrasing an interviewer wants to hear.
-- tag with `epam-25` when derived from the EPAM list below.
+- tag with `core-25` when derived from the classic 25 senior JavaScript questions below.
 
 Reference material: <paste the Notion deep-dive sections for this domain and the
-relevant EPAM items>.
+relevant items from the classic 25 senior JavaScript questions>.
 
 When done, run `npx vitest run src/content/content.test.ts` and fix every failure
 before reporting. Report the count per subject and per kind.
@@ -4966,10 +4966,10 @@ Domain assignments and targets:
 Run: `npx vitest run && npm run lint && npm run build`
 Expected: green. Fix any duplicate ids across files (two subagents may pick the same slug) by renaming the later one.
 
-- [ ] **Step 3: Review the EPAM coverage**
+- [ ] **Step 3: Review the classic-25 coverage**
 
-Run: `grep -o "epam-25" src/content/*/*.ts | wc -l`
-Expected: at least 25. Cross-check against the 25 PDF items (async handling, == vs ===, closures, null vs undefined, event loop, let/const/var, prototypal inheritance, this, hoisting, method vs function, promises, sync vs async, event delegation, Array.map, functional programming, arrow vs regular functions, destructuring, spread, memoization, static vs instance methods, data binding, expression vs statement, immutability, strict mode, Set). Each must have at least one question; add any missing ones by hand.
+Run: `grep -o "core-25" src/content/*/*.ts | wc -l`
+Expected: at least 25. Cross-check against the classic 25 questions (async handling, == vs ===, closures, null vs undefined, event loop, let/const/var, prototypal inheritance, this, hoisting, method vs function, promises, sync vs async, event delegation, Array.map, functional programming, arrow vs regular functions, destructuring, spread, memoization, static vs instance methods, data binding, expression vs statement, immutability, strict mode, Set). Each must have at least one question; add any missing ones by hand.
 
 - [ ] **Step 4: Commit per domain**
 
