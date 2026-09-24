@@ -6,7 +6,7 @@ engineering practices, from junior fundamentals to senior trade-offs, in English
 Write real code against hidden tests, predict what a snippet prints, query a SQLite database,
 or talk through a design and score yourself against a rubric. Nothing leaves your machine.
 
-![The workbench: question on the left, code editor, hidden tests and console on the right](docs/screenshots/workbench.png)
+![The workbench: a fix-the-code question with the editor, the hidden tests and the console](docs/screenshots/workbench.png)
 
 ## Why it exists
 
@@ -46,7 +46,7 @@ a glyph and one content file per language.
 - **Review** collects what you missed or marked.
 - **Browse** walks the catalogue with mastery per subject and a Drill button on every topic.
 
-![The drill setup card: pick domain, subject, topic, levels and kinds, see how many questions match](docs/screenshots/drill-setup.png)
+![Browse: a subject page with level, kind and only filters, and a Drill button per topic](docs/screenshots/browse.png)
 
 On every question: up to three attempts (configurable), a hint, Show answer when you give up,
 Skip when you want to move on, Mark for review, and private notes. Code exercises have a Run
@@ -55,6 +55,8 @@ shown in a stable shuffled order so the answer's position never helps.
 
 Keyboard: `Ctrl+Enter` submits, `Ctrl+Shift+Enter` runs, `N` next, `H` hint, `M` mark, `Esc`
 closes the notes.
+
+![Home: the nine domains with your progress, and shortcuts to drill, mock and review](docs/screenshots/home.png)
 
 ## Make it yours
 
