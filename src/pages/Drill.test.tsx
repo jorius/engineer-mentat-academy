@@ -1,7 +1,7 @@
 // packages
 import { StrictMode } from 'react';
 import { describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 
@@ -197,7 +197,7 @@ describe('Saved drill', () => {
     expect(currentQuestionId()).toBe(IDS[1]);
   });
 
-  it('shows the completion screen when every question is done, and Restart starts over', async () => {
+  it('shows the completion screen when every question is done, and a confirmed Restart starts over', async () => {
     const user = userEvent.setup();
     const { drills, drill } = seededDrills();
     renderAt(`/drill/${drill.id}`, { drills, progress: progressAt(Object.fromEntries(IDS.map((id) => [id, LATER]))) });
@@ -206,6 +206,15 @@ describe('Saved drill', () => {
     expect(screen.getByRole('link', { name: 'My drills' })).toHaveAttribute('href', '/drill');
     expect(screen.getByRole('link', { name: 'Review misses' })).toHaveAttribute('href', '/review');
     await user.click(screen.getByRole('button', { name: 'Restart' }));
+    const dialog = screen.getByRole('dialog', { name: 'Restart this drill?' });
+    expect(dialog).toHaveAccessibleDescription('The drill starts over from the first question. Answers already recorded stay in your progress.');
+    expect(drills.get(drill.id)?.startedAt).toBe(STARTED);
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(drills.get(drill.id)?.startedAt).toBe(STARTED);
+    expect(screen.getByRole('heading', { level: 1, name: 'Drill complete' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Restart' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Restart' }));
     expect(drills.get(drill.id)?.startedAt).not.toBe(STARTED);
     expect(screen.getByText('1 / 3')).toBeInTheDocument();
     expect(currentQuestionId()).toBe(IDS[0]);
@@ -400,24 +409,48 @@ describe('My drills', () => {
     expect(within(row(0)).getAllByText(TYPESCRIPT)).toHaveLength(1);
   });
 
-  it('restarts a drill from its row', async () => {
+  it('restarts a drill from its row once confirmed', async () => {
     const user = userEvent.setup();
     const drills = storeWith([older]);
     renderAt('/drill', { drills, progress: progressAt({ [IDS[0] ?? '']: LATER }) });
     await user.click(within(row(0)).getByRole('button', { name: 'Restart' }));
+    const dialog = screen.getByRole('dialog', { name: 'Restart this drill?' });
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    expect(drills.get('older')?.startedAt).toBe(STARTED);
+    await user.click(within(dialog).getByRole('button', { name: 'Restart' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(drills.get('older')?.startedAt).not.toBe(STARTED);
     expect(within(row(0)).getByRole('progressbar', { name: '0 / 3' })).toBeInTheDocument();
     expect(within(row(0)).queryByRole('button', { name: 'Restart' })).not.toBeInTheDocument();
   });
 
-  it('deletes a drill at once', async () => {
+  it('deletes a drill only once confirmed, naming it in the dialog', async () => {
     const user = userEvent.setup();
-    const drills = storeWith([older, newer]);
+    const drills = storeWith([older, { ...newer, name: 'Warm-up' }]);
     renderAt('/drill', { drills });
     await user.click(within(row(1)).getByRole('button', { name: 'Delete' }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete this drill?' });
+    expect(dialog).toHaveAccessibleDescription(`"${TYPESCRIPT}" is removed from My drills. Your answers stay in your progress.`);
+    expect(drills.get('older')).toBeDefined();
+    expect(rows()).toHaveLength(2);
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(drills.get('older')).toBeUndefined();
     expect(rows()).toHaveLength(1);
     expect(screen.queryByText(TYPESCRIPT)).not.toBeInTheDocument();
+  });
+
+  it('keeps the drill when the delete is cancelled with Esc, and names a renamed drill by its name', async () => {
+    const user = userEvent.setup();
+    const drills = storeWith([{ ...older, name: 'Warm-up' }]);
+    renderAt('/drill', { drills });
+    await user.click(within(row(0)).getByRole('button', { name: 'Delete' }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete this drill?' });
+    expect(dialog).toHaveAccessibleDescription('"Warm-up" is removed from My drills. Your answers stay in your progress.');
+    fireEvent(dialog, new Event('cancel', { cancelable: true }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(drills.get('older')).toBeDefined();
+    expect(rows()).toHaveLength(1);
   });
 
   it('says where drills will show up when there are none', () => {
@@ -437,6 +470,8 @@ describe('My drills', () => {
     expect(buttons.map((button) => button.textContent)).toEqual(['Restart', 'Rename', 'Delete']);
 
     await user.click(within(row(0)).getByRole('button', { name: 'Restart' }));
+    expect(drills.get('older')?.startedAt).toBe(STARTED);
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Restart' }));
     expect(drills.get('older')?.startedAt).not.toBe(STARTED);
     expect(within(row(0)).getByRole('link', { name: 'Resume' })).toHaveAttribute('href', '/drill/older');
     expect(within(row(0)).getByRole('progressbar', { name: '0 / 3' })).toBeInTheDocument();

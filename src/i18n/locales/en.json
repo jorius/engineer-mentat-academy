@@ -22,6 +22,18 @@
     "decrease": "Decrease {{label}}",
     "increase": "Increase {{label}}"
   },
+  "confirm": {
+    "deleteDrillTitle": "Delete this drill?",
+    "deleteDrillBody": "\"{{name}}\" is removed from My drills. Your answers stay in your progress.",
+    "restartDrillTitle": "Restart this drill?",
+    "restartDrillBody": "The drill starts over from the first question. Answers already recorded stay in your progress.",
+    "importTitle": "Replace your progress?",
+    "importBody": "The file replaces every record stored in this browser.",
+    "clearTitle": "Clear all progress?",
+    "clearBody": "Attempts, scores, marks, notes and saved drills are deleted. Preferences stay.",
+    "resetTitle": "Reset everything?",
+    "resetBody": "Progress, saved drills, preferences, theme and language go back to their defaults."
+  },
   "nav": {
     "brand": "Mentat Academy",
     "home": "Home",

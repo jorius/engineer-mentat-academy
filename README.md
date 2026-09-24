@@ -19,7 +19,8 @@ Live: https://jorius.github.io/engineer-mentat-academy/
   include only unseen, marked or missed questions. Every drill you start is saved and picks
   up at the next unanswered question; "My drills", under the setup card, lists them with
   their progress so you can resume, rename, restart or delete them, and Home links to the
-  latest unfinished one. Skip moves a question to the end of the drill.
+  latest unfinished one. Skip moves a question to the end of the drill. Delete and Restart
+  ask for confirmation first.
 - **Mock**: random, mixed-level session with a results page. Choose the number of
   questions, timed or untimed, and the domains, levels and kinds to draw from. Skip moves
   on without answering and the results list the question as skipped.
@@ -43,7 +44,7 @@ with both variants (GitHub, Solarized, VS Code, Material, Gruvbox, Xcode, Tokyo 
 the app's light or dark mode, while dark-only (Dracula, Monokai, Nord…) and light-only
 (BBEdit, Eclipse, Quiet Light…) families always use their one variant. The preview under the
 editor settings is editable. The Danger zone at the bottom clears progress or resets
-everything after you type `RESET`.
+everything after you confirm and type `RESET` in the dialog.
 
 ## Question kinds
 
@@ -84,8 +85,9 @@ against the Messages API with a key the user pastes in Settings; nothing else ch
 ## Progress
 
 Stored in `localStorage` under `ema:progress:v1`; saved drills live under `ema:drills:v1`
-and preferences under `ema:prefs:v1`. Export and import progress from Settings; both
-Danger-zone actions also delete the saved drills. Nothing leaves the browser.
+and preferences under `ema:prefs:v1`. Export and import progress from Settings; an import
+asks before it replaces the stored progress. Both Danger-zone actions also delete the saved
+drills. Nothing leaves the browser.
 
 ## Standards
 

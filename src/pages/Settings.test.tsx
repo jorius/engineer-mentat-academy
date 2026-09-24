@@ -28,6 +28,14 @@ import i18n, { LANGUAGE_KEY } from '../i18n';
 
 const originalUrlStatics = { createObjectURL: URL.createObjectURL, revokeObjectURL: URL.revokeObjectURL };
 
+/** Opens a Danger-zone action, types RESET inside its dialog and confirms it. */
+async function confirmDanger(user: ReturnType<typeof userEvent.setup>, name: RegExp): Promise<void> {
+  await user.click(screen.getByRole('button', { name }));
+  const dialog = screen.getByRole('dialog');
+  await user.type(within(dialog).getByRole('textbox'), 'RESET');
+  await user.click(within(dialog).getByRole('button', { name }));
+}
+
 function renderSettings(options?: { progressStore?: ProgressStore; preferencesStore?: PreferencesStore; drillsStore?: DrillsStore }): void {
   render(
     <MemoryRouter>
@@ -62,20 +70,46 @@ describe('Settings', () => {
     await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith('blob:progress'));
   });
 
-  it('imports a progress file', async () => {
+  const progressFile = (): File =>
+    new File([JSON.stringify({ q1: { attempts: 1, lastScore: 1, lastAt: '', flagged: false, notes: '' } })], 'progress.json', { type: 'application/json' });
+
+  it('imports a progress file only once the replacement is confirmed', async () => {
     const user = userEvent.setup();
     const progressStore = createProgressStore(null);
+    progressStore.record('q9', 1);
     renderSettings({ progressStore });
-    const file = new File([JSON.stringify({ q1: { attempts: 1, lastScore: 1, lastAt: '', flagged: false, notes: '' } })], 'progress.json', { type: 'application/json' });
-    await user.upload(screen.getByLabelText(/import progress/i), file);
+    const input = screen.getByLabelText<HTMLInputElement>(/import progress/i, { selector: 'input' });
+    await user.upload(input, progressFile());
+    const dialog = await screen.findByRole('dialog', { name: 'Replace your progress?' });
+    expect(dialog).toHaveAccessibleDescription('The file replaces every record stored in this browser.');
+    expect(input.value).toBe('');
+    expect(progressStore.get('q9')).toBeDefined();
+    expect(progressStore.get('q1')).toBeUndefined();
+    await user.click(within(dialog).getByRole('button', { name: 'Import progress' }));
     expect(await screen.findByText(/imported 1/i)).toBeInTheDocument();
     expect(progressStore.get('q1')?.attempts).toBe(1);
+    expect(progressStore.get('q9')).toBeUndefined();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('reports an invalid import', async () => {
+  it('keeps progress untouched when the import is cancelled', async () => {
+    const user = userEvent.setup();
+    const progressStore = createProgressStore(null);
+    progressStore.record('q9', 1);
+    renderSettings({ progressStore });
+    await user.upload(screen.getByLabelText(/import progress/i, { selector: 'input' }), progressFile());
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(progressStore.get('q9')).toBeDefined();
+    expect(progressStore.get('q1')).toBeUndefined();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('reports an invalid import after it is confirmed', async () => {
     const user = userEvent.setup();
     renderSettings();
-    await user.upload(screen.getByLabelText(/import progress/i), new File(['[1]'], 'bad.json', { type: 'application/json' }));
+    await user.upload(screen.getByLabelText(/import progress/i, { selector: 'input' }), new File(['[1]'], 'bad.json', { type: 'application/json' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Import progress' }));
     expect(await screen.findByText(/not a progress map/i)).toBeInTheDocument();
   });
 
@@ -177,16 +211,27 @@ describe('Settings', () => {
     expect(document.documentElement.dataset.accent).toBe('violet');
   });
 
-  it('keeps the danger zone buttons disabled until RESET is typed', async () => {
+  it.each([
+    [/clear progress/i, 'Clear all progress?', 'Attempts, scores, marks, notes and saved drills are deleted. Preferences stay.'],
+    [/reset everything/i, 'Reset everything?', 'Progress, saved drills, preferences, theme and language go back to their defaults.'],
+  ])('keeps %s blocked inside its dialog until RESET is typed', async (name, title, body) => {
     const user = userEvent.setup();
-    renderSettings();
-    const clearButton = screen.getByRole('button', { name: /clear progress/i });
-    const resetButton = screen.getByRole('button', { name: /reset everything/i });
-    expect(clearButton).toBeDisabled();
-    expect(resetButton).toBeDisabled();
-    await user.type(screen.getByLabelText(/type reset to confirm/i), 'RESET');
-    expect(clearButton).toBeEnabled();
-    expect(resetButton).toBeEnabled();
+    const progressStore = createProgressStore(null);
+    progressStore.record('q1', 1);
+    renderSettings({ progressStore });
+    expect(screen.queryByLabelText(/type reset to confirm/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name }));
+    const dialog = screen.getByRole('dialog', { name: title });
+    expect(dialog).toHaveAccessibleDescription(body);
+    const confirm = within(dialog).getByRole('button', { name });
+    expect(confirm).toBeDisabled();
+    await user.type(within(dialog).getByLabelText(/type reset to confirm/i), 'RESE');
+    expect(confirm).toBeDisabled();
+    await user.type(within(dialog).getByLabelText(/type reset to confirm/i), 'T');
+    expect(confirm).toBeEnabled();
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(progressStore.get('q1')).toBeDefined();
   });
 
   it('clears progress but keeps preferences when confirmed', async () => {
@@ -196,12 +241,11 @@ describe('Settings', () => {
     const preferencesStore = createPreferencesStore(null);
     preferencesStore.set({ tabSize: 4 });
     renderSettings({ progressStore, preferencesStore });
-    await user.type(screen.getByLabelText(/type reset to confirm/i), 'RESET');
-    await user.click(screen.getByRole('button', { name: /clear progress/i }));
+    await confirmDanger(user, /clear progress/i);
     expect(progressStore.all()).toEqual({});
     expect(preferencesStore.get().tabSize).toBe(4);
     expect(await screen.findByRole('status')).toHaveTextContent(/progress cleared/i);
-    expect(screen.getByLabelText(/type reset to confirm/i)).toHaveValue('');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('resets everything: preferences, theme and language storage keys, and shows the done message', async () => {
@@ -213,8 +257,7 @@ describe('Settings', () => {
     const preferencesStore = createPreferencesStore(null);
     preferencesStore.set({ tabSize: 4 });
     renderSettings({ progressStore, preferencesStore });
-    await user.type(screen.getByLabelText(/type reset to confirm/i), 'RESET');
-    await user.click(screen.getByRole('button', { name: /reset everything/i }));
+    await confirmDanger(user, /reset everything/i);
     expect(progressStore.all()).toEqual({});
     expect(preferencesStore.get()).toEqual(DEFAULT_PREFERENCES);
     // The theme and language keys are removed synchronously inside the reset, but React's
@@ -224,7 +267,7 @@ describe('Settings', () => {
     await waitFor(() => expect(localStorage.getItem(LANGUAGE_KEY)).toBe('en'));
     await waitFor(() => expect(localStorage.getItem('ema:theme')).toBe('dark'));
     expect(await screen.findByRole('status')).toHaveTextContent(/everything was reset/i);
-    expect(screen.getByLabelText(/type reset to confirm/i)).toHaveValue('');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it.each([/clear progress/i, /reset everything/i])('clears saved drills on %s', async (name) => {
@@ -232,8 +275,7 @@ describe('Settings', () => {
     const drillsStore = createDrillsStore(null);
     drillsStore.create({ query: 'unseen=1', questionIds: ['q1', 'q2'] });
     renderSettings({ drillsStore });
-    await user.type(screen.getByLabelText(/type reset to confirm/i), 'RESET');
-    await user.click(screen.getByRole('button', { name }));
+    await confirmDanger(user, name);
     expect(drillsStore.all()).toEqual([]);
   });
 
@@ -241,8 +283,7 @@ describe('Settings', () => {
     const user = userEvent.setup();
     const changeLanguage = vi.spyOn(i18n, 'changeLanguage');
     renderSettings();
-    await user.type(screen.getByLabelText(/type reset to confirm/i), 'RESET');
-    await user.click(screen.getByRole('button', { name: /reset everything/i }));
+    await confirmDanger(user, /reset everything/i);
     expect(changeLanguage).toHaveBeenCalledWith();
   });
 
@@ -251,8 +292,10 @@ describe('Settings', () => {
     await i18n.changeLanguage('es');
     localStorage.setItem(LANGUAGE_KEY, 'es');
     renderSettings();
-    await user.type(screen.getByLabelText(/escribe reset para confirmar/i), 'RESET');
     await user.click(screen.getByRole('button', { name: /restablecer todo/i }));
+    const dialog = screen.getByRole('dialog', { name: '¿Restablecer todo?' });
+    await user.type(within(dialog).getByLabelText(/escribe reset para confirmar/i), 'RESET');
+    await user.click(within(dialog).getByRole('button', { name: /restablecer todo/i }));
     await waitFor(() => expect(i18n.resolvedLanguage).toBe('en'));
     expect(await screen.findByRole('status')).toHaveTextContent(/everything was reset/i);
   });

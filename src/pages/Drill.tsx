@@ -25,6 +25,7 @@ import { useLocale } from '../hooks/useLocale';
 import { QuestionView } from '../components/question/QuestionView';
 import { Button } from '../components/primitives/Button';
 import { Card } from '../components/primitives/Card';
+import { ConfirmDialog } from '../components/primitives/ConfirmDialog';
 import { Glyph } from '../components/primitives/Glyph';
 import { ProgressBar } from '../components/primitives/ProgressBar';
 import { ChipGroup } from '../components/filters/ChipGroup';
@@ -38,6 +39,8 @@ import { describeDrill, doneInDrill, drillStatus } from '../utils/drillProgress'
 
 const SELECT_CLASS = 'rounded-md border border-zinc-300 px-2 py-1 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900';
 const PRIMARY_LINK_CLASS = 'rounded-md bg-accent-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-accent-600';
+
+type RowAction = 'delete' | 'restart';
 
 function DrillSetup(): JSX.Element {
   const { t } = useTranslation();
@@ -151,7 +154,7 @@ function DrillSetup(): JSX.Element {
   );
 }
 
-function DrillRow({ drill }: { drill: SavedDrill }): JSX.Element {
+function DrillRow({ drill, onAsk }: { drill: SavedDrill; onAsk: (action: RowAction) => void }): JSX.Element {
   const { t } = useTranslation();
   const locale = useLocale();
   const { byId } = useQuestionBank();
@@ -162,7 +165,7 @@ function DrillRow({ drill }: { drill: SavedDrill }): JSX.Element {
   const status = drillStatus(drill, progress, (id) => byId.has(id));
   const scope = describeDrill(drill.query, t, locale);
   const progressText = t('drill.progressLabel', { done: status.done, total: status.total });
-  const restart = (): void => store.restart(drill.id);
+  const restart = (): void => onAsk('restart');
   const save = (): void => {
     const name = (draft ?? '').trim();
     store.rename(drill.id, name === '' ? undefined : name);
@@ -215,7 +218,7 @@ function DrillRow({ drill }: { drill: SavedDrill }): JSX.Element {
           {status.done > 0 && !status.finished ? (
             <Button variant="ghost" onClick={restart}>{t('drill.restart')}</Button>
           ) : null}
-          <Button variant="ghost" onClick={(): void => store.remove(drill.id)}>{t('drill.delete')}</Button>
+          <Button variant="ghost" onClick={(): void => onAsk('delete')}>{t('drill.delete')}</Button>
         </div>
       </Card>
     </li>
@@ -224,8 +227,21 @@ function DrillRow({ drill }: { drill: SavedDrill }): JSX.Element {
 
 function MyDrills(): JSX.Element {
   const { t } = useTranslation();
-  const { drills } = useDrills();
+  const locale = useLocale();
+  const { drills, store } = useDrills();
   const headingId = useId();
+  // The row action waiting for confirmation, if any.
+  const [pending, setPending] = useState<{ action: RowAction; drill: SavedDrill } | null>(null);
+
+  const confirm = (): void => {
+    if (pending?.action === 'delete') {
+      store.remove(pending.drill.id);
+    } else if (pending?.action === 'restart') {
+      store.restart(pending.drill.id);
+    }
+    setPending(null);
+  };
+  const name = pending === null ? '' : (pending.drill.name ?? describeDrill(pending.drill.query, t, locale));
   return (
     <section aria-labelledby={headingId} className="space-y-3">
       <h2 id={headingId} className="text-lg font-medium">{t('drill.myDrills')}</h2>
@@ -234,10 +250,19 @@ function MyDrills(): JSX.Element {
       ) : (
         <ul className="space-y-3">
           {drills.map((drill) => (
-            <DrillRow key={drill.id} drill={drill} />
+            <DrillRow key={drill.id} drill={drill} onAsk={(action): void => setPending({ action, drill })} />
           ))}
         </ul>
       )}
+      <ConfirmDialog
+        open={pending !== null}
+        title={pending?.action === 'delete' ? t('confirm.deleteDrillTitle') : t('confirm.restartDrillTitle')}
+        body={pending?.action === 'delete' ? t('confirm.deleteDrillBody', { name }) : t('confirm.restartDrillBody')}
+        confirmLabel={pending?.action === 'delete' ? t('drill.delete') : t('drill.restart')}
+        danger
+        onConfirm={confirm}
+        onCancel={(): void => setPending(null)}
+      />
     </section>
   );
 }
@@ -308,9 +333,12 @@ function SavedDrillRun({ drill }: { drill: SavedDrill }): JSX.Element {
   const currentId = shownId !== undefined && ids.includes(shownId) ? shownId : ids[status.nextIndex];
   const current = currentId === undefined ? undefined : byId.get(currentId);
 
+  const [confirmingRestart, setConfirmingRestart] = useState(false);
+
   const advance = (): void => setShownId(openId(store.get(drill.id) ?? drill));
   const restart = (): void => {
     store.restart(drill.id);
+    setConfirmingRestart(false);
     advance();
   };
 
@@ -324,10 +352,19 @@ function SavedDrillRun({ drill }: { drill: SavedDrill }): JSX.Element {
         <p>{t('drill.completeBody', { count: status.total })}</p>
         <div className="flex flex-wrap gap-2">
           <Link to="/review"><Button>{t('drill.reviewMisses')}</Button></Link>
-          <Button variant="ghost" onClick={restart}>{t('drill.restart')}</Button>
+          <Button variant="ghost" onClick={(): void => setConfirmingRestart(true)}>{t('drill.restart')}</Button>
           <Link to="/drill"><Button variant="ghost">{t('drill.myDrills')}</Button></Link>
           <Link to="/browse"><Button variant="ghost">{t('drill.browse')}</Button></Link>
         </div>
+        <ConfirmDialog
+          open={confirmingRestart}
+          title={t('confirm.restartDrillTitle')}
+          body={t('confirm.restartDrillBody')}
+          confirmLabel={t('drill.restart')}
+          danger
+          onConfirm={restart}
+          onCancel={(): void => setConfirmingRestart(false)}
+        />
       </div>
     );
   }

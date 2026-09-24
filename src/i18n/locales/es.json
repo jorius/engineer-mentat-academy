@@ -22,6 +22,18 @@
     "decrease": "Disminuir {{label}}",
     "increase": "Aumentar {{label}}"
   },
+  "confirm": {
+    "deleteDrillTitle": "¿Eliminar esta práctica?",
+    "deleteDrillBody": "\"{{name}}\" se quita de Mis prácticas. Tus respuestas siguen en tu progreso.",
+    "restartDrillTitle": "¿Reiniciar esta práctica?",
+    "restartDrillBody": "La práctica vuelve a empezar desde la primera pregunta. Las respuestas ya registradas siguen en tu progreso.",
+    "importTitle": "¿Reemplazar tu progreso?",
+    "importBody": "El archivo reemplaza todos los registros guardados en este navegador.",
+    "clearTitle": "¿Borrar todo el progreso?",
+    "clearBody": "Se eliminan intentos, puntajes, marcas, notas y prácticas guardadas. Las preferencias se conservan.",
+    "resetTitle": "¿Restablecer todo?",
+    "resetBody": "El progreso, las prácticas guardadas, las preferencias, el tema y el idioma vuelven a sus valores por defecto."
+  },
   "nav": {
     "brand": "Mentat Academy",
     "home": "Inicio",

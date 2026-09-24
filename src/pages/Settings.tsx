@@ -20,6 +20,7 @@ import type { Accent, EditorFont, EditorTheme, MaxAttempts, TabSize } from '../e
 // components
 import { Button } from '../components/primitives/Button';
 import { Card } from '../components/primitives/Card';
+import { ConfirmDialog } from '../components/primitives/ConfirmDialog';
 import { CodeEditor } from '../components/common/CodeEditor';
 
 // i18n
@@ -50,6 +51,15 @@ const THEME_GROUPS: readonly { labelKey: string; families: readonly ThemeFamily[
 // Status lines keep the translation key, not the translated text, so they follow a language
 // change that resolves after the message was set (the full reset switches language).
 type StatusMessage = { key: string; count?: number } | { text: string };
+
+// The destructive action waiting for confirmation; an import keeps the chosen file's text.
+type Pending = { kind: 'import'; text: string } | { kind: 'clear' } | { kind: 'reset' };
+
+const CONFIRM_COPY: Record<Pending['kind'], { title: string; body: string; confirm: string }> = {
+  import: { title: 'confirm.importTitle', body: 'confirm.importBody', confirm: 'settings.importProgress' },
+  clear: { title: 'confirm.clearTitle', body: 'confirm.clearBody', confirm: 'settings.clearProgress' },
+  reset: { title: 'confirm.resetTitle', body: 'confirm.resetBody', confirm: 'settings.resetEverything' },
+};
 
 // A TypeScript sample that exercises most token kinds, so a theme or font can be judged at a glance.
 const PREVIEW_CODE = [
@@ -89,7 +99,7 @@ export function Settings(): JSX.Element {
   const theme = useTheme();
   const [message, setMessage] = useState<StatusMessage | null>(null);
   const [previewCode, setPreviewCode] = useState<string>(PREVIEW_CODE);
-  const [confirmText, setConfirmText] = useState<string>('');
+  const [pending, setPending] = useState<Pending | null>(null);
   const themeHintId = useId();
 
   const exportProgress = (): void => {
@@ -102,19 +112,29 @@ export function Settings(): JSX.Element {
     setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
-  const importProgress = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
-    const file = event.target.files?.[0];
+  // Reads the chosen file and asks before it replaces anything; the input is cleared so the same
+  // file can be chosen again.
+  const chooseImport = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const input = event.target;
+    const file = input.files?.[0];
     if (file === undefined) {
       return;
     }
     try {
-      const text = await file.text();
+      setPending({ kind: 'import', text: await file.text() });
+    } catch {
+      setMessage({ key: 'settings.importFailed' });
+    } finally {
+      input.value = '';
+    }
+  };
+
+  const importProgress = (text: string): void => {
+    try {
       store.importJson(text);
       setMessage({ key: 'settings.imported', count: Object.keys(store.all()).length });
     } catch (error) {
       setMessage(error instanceof Error ? { text: error.message } : { key: 'settings.importFailed' });
-    } finally {
-      event.target.value = '';
     }
   };
 
@@ -122,7 +142,6 @@ export function Settings(): JSX.Element {
     store.reset();
     drillsStore.reset();
     setMessage({ key: 'settings.cleared' });
-    setConfirmText('');
   };
 
   const resetEverything = (): void => {
@@ -138,8 +157,19 @@ export function Settings(): JSX.Element {
     // No argument: the detector runs again and falls back to the browser language.
     void i18n.changeLanguage();
     setMessage({ key: 'settings.resetDone' });
-    setConfirmText('');
   };
+
+  const confirmPending = (): void => {
+    if (pending?.kind === 'import') {
+      importProgress(pending.text);
+    } else if (pending?.kind === 'clear') {
+      clearProgress();
+    } else if (pending?.kind === 'reset') {
+      resetEverything();
+    }
+    setPending(null);
+  };
+  const copy = pending === null ? null : CONFIRM_COPY[pending.kind];
 
   return (
     <div className="space-y-4">
@@ -151,7 +181,7 @@ export function Settings(): JSX.Element {
           <Button onClick={exportProgress}>{t('settings.exportJson')}</Button>
           <label className="cursor-pointer rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium dark:border-zinc-700">
             {t('settings.importProgress')}
-            <input type="file" accept="application/json" className="sr-only" aria-label={t('settings.importProgress')} onChange={(e): void => void importProgress(e)} />
+            <input type="file" accept="application/json" className="sr-only" aria-label={t('settings.importProgress')} onChange={(e): void => void chooseImport(e)} />
           </label>
         </div>
       </Card>
@@ -293,22 +323,24 @@ export function Settings(): JSX.Element {
       <Card className="space-y-3 border-red-300 dark:border-red-900">
         <h2 className="font-medium">{t('settings.dangerHeading')}</h2>
         <p className="text-sm text-zinc-500">{t('settings.dangerNote')}</p>
-        <input
-          type="text"
-          aria-label={t('settings.typeToConfirm')}
-          placeholder="RESET"
-          value={confirmText}
-          onChange={(e): void => setConfirmText(e.target.value)}
-          className="w-40 rounded-md border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
         <div className="flex flex-wrap gap-2">
-          <Button variant="danger" disabled={confirmText.trim() !== 'RESET'} onClick={clearProgress}>{t('settings.clearProgress')}</Button>
-          <Button variant="danger" disabled={confirmText.trim() !== 'RESET'} onClick={resetEverything}>{t('settings.resetEverything')}</Button>
+          <Button variant="danger" onClick={(): void => setPending({ kind: 'clear' })}>{t('settings.clearProgress')}</Button>
+          <Button variant="danger" onClick={(): void => setPending({ kind: 'reset' })}>{t('settings.resetEverything')}</Button>
         </div>
         {message !== null && (
           <p className="text-sm" role="status">{'text' in message ? message.text : t(message.key, { count: message.count })}</p>
         )}
       </Card>
+      <ConfirmDialog
+        open={copy !== null}
+        title={copy === null ? '' : t(copy.title)}
+        body={copy === null ? '' : t(copy.body)}
+        confirmLabel={copy === null ? '' : t(copy.confirm)}
+        danger
+        typeToConfirm={pending?.kind === 'clear' || pending?.kind === 'reset' ? 'RESET' : undefined}
+        onConfirm={confirmPending}
+        onCancel={(): void => setPending(null)}
+      />
     </div>
   );
 }
