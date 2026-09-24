@@ -48,6 +48,8 @@ a glyph and one content file per language.
 
 ![Mock setup: number of questions, timed or untimed, and the domains, levels and kinds to draw from](docs/screenshots/mock.png)
 
+![A timed mock in progress: the countdown, the question and the same workbench actions](docs/screenshots/mock-session.png)
+
 ![Browse: a subject page with level, kind and only filters, and a Drill button per topic](docs/screenshots/browse.png)
 
 On every question: up to three attempts (configurable), a hint, Show answer when you give up,
