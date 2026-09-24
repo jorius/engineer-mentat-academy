@@ -1,6 +1,6 @@
 // packages
-import { useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { JSX } from 'react';
 
@@ -13,11 +13,12 @@ import { shuffle } from '../engine/session';
 import { LEVELS } from '../engine/question';
 import type { Kind, Level, Question } from '../engine/question';
 import { kindLabel, levelLabel } from '../engine/labels';
+import type { SavedDrill } from '../engine/drills';
 
 // hooks
 import { useQuestionBank } from '../hooks/useQuestionBank';
 import { useProgress } from '../hooks/useProgress';
-import { useDrillQueue } from '../hooks/useDrillQueue';
+import { useDrills } from '../hooks/useDrills';
 import { useLocale } from '../hooks/useLocale';
 
 // components
@@ -32,6 +33,7 @@ import { OnlyChips } from '../components/filters/OnlyChips';
 import { drillQuery, inScope, matchesOnly, narrowing, parseDrillFilter } from '../utils/drillFilter';
 import type { DrillFilter, Only } from '../utils/drillFilter';
 import { facets } from '../utils/filterFacets';
+import { doneInDrill, drillStatus } from '../utils/drillProgress';
 
 const SELECT_CLASS = 'rounded-md border border-zinc-300 px-2 py-1 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900';
 
@@ -146,46 +148,122 @@ function DrillSetup(): JSX.Element {
   );
 }
 
-function DrillQueue({ questions, filter }: { questions: Question[]; filter: DrillFilter }): JSX.Element {
+function NoMatch(): JSX.Element {
   const { t } = useTranslation();
+  return (
+    <div className="space-y-3">
+      <h1 className="text-2xl font-semibold">{t('drill.title')}</h1>
+      <p>{t('drill.noMatch')}</p>
+      <Link to="/browse" className="underline">{t('drill.pickSubject')}</Link>
+    </div>
+  );
+}
+
+function MissingDrill(): JSX.Element {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-3">
+      <h1 className="text-2xl font-semibold">{t('drill.title')}</h1>
+      <p>{t('drill.missing')}</p>
+      <Link to="/drill" className="underline">{t('drill.myDrills')}</Link>
+    </div>
+  );
+}
+
+/** Turns a `/drill?…` filter into a saved drill and replaces the URL with the drill's own. */
+function DrillCreator({ questions, filter, query }: { questions: Question[]; filter: DrillFilter; query: string }): JSX.Element | null {
   const { progress } = useProgress();
-  // The queue is chosen once, when this component mounts for the current filter (see the `key` on
-  // the caller below); answering a question updates `progress`, but must not reshuffle or reset it.
-  const [queue] = useState(() =>
+  const { store } = useDrills();
+  const navigate = useNavigate();
+  // The order is chosen once, when this component mounts for the current filter (see the `key` on the
+  // caller below), and frozen into the saved drill.
+  const [questionIds] = useState(() =>
     shuffle(
       questions.filter(
         (q) => (!filter.unseen || matchesOnly(progress[q.id], 'unseen')) && (filter.only === undefined || matchesOnly(progress[q.id], filter.only)),
       ),
-    ),
+    ).map((q) => q.id),
   );
-  const drill = useDrillQueue(queue);
+  // StrictMode runs mount effects twice; the ref keeps that to a single drill.
+  const created = useRef(false);
 
-  if (queue.length === 0) {
-    return (
-      <div className="space-y-3">
-        <h1 className="text-2xl font-semibold">{t('drill.title')}</h1>
-        <p>{t('drill.noMatch')}</p>
-        <Link to="/browse" className="underline">{t('drill.pickSubject')}</Link>
-      </div>
-    );
+  useEffect(() => {
+    if (created.current || questionIds.length === 0) {
+      return;
+    }
+    created.current = true;
+    const drill = store.create({ query, questionIds });
+    void navigate(`/drill/${drill.id}`, { replace: true });
+  }, [questionIds, query, store, navigate]);
+
+  return questionIds.length === 0 ? <NoMatch /> : null;
+}
+
+function SavedDrillRun({ drill }: { drill: SavedDrill }): JSX.Element {
+  const { t } = useTranslation();
+  const { byId } = useQuestionBank();
+  const { store: progressStore, progress } = useProgress();
+  const { store } = useDrills();
+  const exists = (id: string): boolean => byId.has(id);
+  const status = drillStatus(drill, progress, exists);
+  const openId = (target: SavedDrill): string | undefined => target.questionIds.filter(exists)[drillStatus(target, progressStore.all(), exists).nextIndex];
+  // Answering records progress at once, which moves `nextIndex`; the answered question stays on screen
+  // with its feedback until Next, Skip or Restart picks the next open one.
+  const [shownId, setShownId] = useState<string | undefined>(() => openId(drill));
+  const ids = drill.questionIds.filter(exists);
+  const currentId = shownId !== undefined && ids.includes(shownId) ? shownId : ids[status.nextIndex];
+  const current = currentId === undefined ? undefined : byId.get(currentId);
+
+  const advance = (): void => setShownId(openId(store.get(drill.id) ?? drill));
+  const restart = (): void => {
+    store.restart(drill.id);
+    advance();
+  };
+
+  if (status.total === 0) {
+    return <MissingDrill />;
   }
-  if (drill.done || drill.current === undefined) {
+  if (current === undefined) {
     return (
       <div className="space-y-3">
         <h1 className="text-2xl font-semibold">{t('drill.completeTitle')}</h1>
-        <p>{t('drill.completeBody', { count: drill.total })}</p>
-        <div className="flex gap-2">
+        <p>{t('drill.completeBody', { count: status.total })}</p>
+        <div className="flex flex-wrap gap-2">
           <Link to="/review"><Button>{t('drill.reviewMisses')}</Button></Link>
+          <Button variant="ghost" onClick={restart}>{t('drill.restart')}</Button>
+          <Link to="/drill"><Button variant="ghost">{t('drill.myDrills')}</Button></Link>
           <Link to="/browse"><Button variant="ghost">{t('drill.browse')}</Button></Link>
         </div>
       </div>
     );
   }
+  // The position counts the other done questions, so it holds steady while the current one is answered.
+  const index = status.done - (doneInDrill(drill, progress[current.id]) ? 1 : 0);
+  const skip = (): void => {
+    store.skip(drill.id, current.id);
+    advance();
+  };
   return (
     <div className="space-y-4">
-      <QuestionView key={drill.current.id} question={drill.current} onNext={drill.next} position={{ index: drill.index, total: drill.total }} />
+      <QuestionView
+        key={current.id}
+        question={current}
+        onNext={advance}
+        onSkip={status.total - status.done > 1 ? skip : undefined}
+        position={{ index, total: status.total }}
+      />
     </div>
   );
+}
+
+export function SavedDrillPage(): JSX.Element {
+  const { drillId = '' } = useParams();
+  const { store } = useDrills();
+  const drill = store.get(drillId);
+  if (drill === undefined) {
+    return <MissingDrill />;
+  }
+  return <SavedDrillRun key={drill.id} drill={drill} />;
 }
 
 export function Drill(): JSX.Element {
@@ -193,8 +271,9 @@ export function Drill(): JSX.Element {
   const { list: bank } = useQuestionBank();
   const filter = useMemo(() => parseDrillFilter(params), [params]);
   const matched = useMemo(() => filterQuestions(bank, filter), [bank, filter]);
-  if (params.toString() === '') {
+  const query = params.toString();
+  if (query === '') {
     return <DrillSetup />;
   }
-  return <DrillQueue key={params.toString()} questions={matched} filter={filter} />;
+  return <DrillCreator key={query} questions={matched} filter={filter} query={query} />;
 }

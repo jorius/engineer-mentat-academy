@@ -5,13 +5,19 @@ import { domainName, findDomain, findSubject, findTopic, subjectName, topicName 
 import { kindLabel, levelLabel } from '../engine/labels';
 import type { Translate } from '../engine/labels';
 import type { SavedDrill } from '../engine/drills';
-import type { ProgressMap } from '../engine/progress';
+import type { ProgressMap, QuestionProgress } from '../engine/progress';
 import { KINDS, LEVELS } from '../engine/question';
 
 // utils
 import { parseDrillFilter } from './drillFilter';
 
 export type DrillStatus = { done: number; total: number; nextIndex: number; finished: boolean };
+
+/** Whether a question counts as done in a drill: recorded at or after the drill's `startedAt`. */
+export function doneInDrill(drill: SavedDrill, entry: QuestionProgress | undefined): boolean {
+  const lastAt = entry?.lastAt ?? '';
+  return lastAt !== '' && lastAt >= drill.startedAt;
+}
 
 /**
  * Where a drill stands, derived from progress: a question is done when it was last recorded at or
@@ -20,10 +26,7 @@ export type DrillStatus = { done: number; total: number; nextIndex: number; fini
  */
 export function drillStatus(drill: SavedDrill, progress: ProgressMap, exists: (id: string) => boolean = (): boolean => true): DrillStatus {
   const ids = drill.questionIds.filter(exists);
-  const isDone = ids.map((id) => {
-    const lastAt = progress[id]?.lastAt ?? '';
-    return lastAt !== '' && lastAt >= drill.startedAt;
-  });
+  const isDone = ids.map((id) => doneInDrill(drill, progress[id]));
   const done = isDone.filter(Boolean).length;
   const firstOpen = isDone.indexOf(false);
   const nextIndex = firstOpen === -1 ? ids.length : firstOpen;

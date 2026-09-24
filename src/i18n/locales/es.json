@@ -75,7 +75,10 @@
     "start": "Empezar práctica",
     "allSubjects": "Todos los temas",
     "allLevels": "todos los niveles",
-    "allKinds": "todos los tipos"
+    "allKinds": "todos los tipos",
+    "missing": "Esta práctica ya no existe.",
+    "restart": "Reiniciar",
+    "myDrills": "Mis prácticas"
   },
   "mock": {
     "title": "Entrevista simulada",

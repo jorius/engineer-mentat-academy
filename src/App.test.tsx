@@ -1,5 +1,5 @@
 // packages
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
@@ -34,6 +34,11 @@ function renderAt(path: string): void {
 }
 
 describe('routes', () => {
+  // The default DrillsProvider and ProgressProvider persist to localStorage; start every test clean.
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it('renders the navigation and the home page', () => {
     renderAt('/');
     expect(screen.getByRole('link', { name: 'Browse' })).toBeInTheDocument();

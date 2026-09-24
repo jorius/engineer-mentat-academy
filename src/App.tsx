@@ -19,7 +19,7 @@ import { Home } from './pages/Home';
 import { Browse } from './pages/Browse';
 import { BrowseDomain } from './pages/BrowseDomain';
 import { BrowseSubject } from './pages/BrowseSubject';
-import { Drill } from './pages/Drill';
+import { Drill, SavedDrillPage } from './pages/Drill';
 import { Mock } from './pages/Mock';
 import { Review } from './pages/Review';
 import { QuestionPage } from './pages/QuestionPage';
@@ -35,6 +35,7 @@ export const routes = [
       { path: 'browse/:domain', element: <BrowseDomain /> },
       { path: 'browse/:domain/:subject', element: <BrowseSubject /> },
       { path: 'drill', element: <Drill /> },
+      { path: 'drill/:drillId', element: <SavedDrillPage /> },
       { path: 'mock', element: <Mock /> },
       { path: 'review', element: <Review /> },
       { path: 'q/:id', element: <QuestionPage /> },

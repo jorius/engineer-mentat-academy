@@ -75,7 +75,10 @@
     "start": "Start drill",
     "allSubjects": "All subjects",
     "allLevels": "all levels",
-    "allKinds": "all kinds"
+    "allKinds": "all kinds",
+    "missing": "This drill no longer exists.",
+    "restart": "Restart",
+    "myDrills": "My drills"
   },
   "mock": {
     "title": "Mock interview",
