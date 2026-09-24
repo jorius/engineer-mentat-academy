@@ -41,6 +41,22 @@ TypeScript strict, explicit return types, labeled import groups, no barrel files
 - [ ] README: Modes → Drill paragraph mentions saved drills and resume.
 - [ ] Commit: `Add the saved drills list and a Home continue link`.
 
+### Task 4: Theme families that follow the app theme
+
+**Files:** `src/engine/editorThemes.ts` (+ test), `src/engine/preferences.ts` (+ test), `src/pages/Settings.tsx` (+ test), `package.json`/`package-lock.json` (remove the seven `@uiw/codemirror-theme-*` packages with `npm uninstall`), locales.
+
+- [ ] Implement `docs/superpowers/specs/2026-09-23-editor-themes-and-fonts-design.md` §1 exactly (families, resolution rule, migration, optgroups, hint). Import themes only from `@uiw/codemirror-themes-all` (named imports).
+- [ ] Tests per spec §4 (themes part).
+- [ ] Commit: `Use editor theme families that follow the app theme`.
+
+### Task 5: More fonts and a richer preview
+
+**Files:** `src/engine/preferences.ts` (+ test), `src/components/common/CodeEditor.tsx`, `src/main.tsx`, `src/index.css`, `src/hooks/usePreferences.ts` (CSS variable), `src/pages/Settings.tsx` (+ test), locales.
+
+- [ ] Implement spec §2 (fonts, stacks, fontsource CSS imports, font names rendered in their own face, `--editor-font` variable used by the editor and Markdown code) and §3 (the preview snippet).
+- [ ] Tests per spec §4 (fonts part) and a snapshot-free assertion that the preview contains `interface`, `async` and a regex literal.
+- [ ] Commit: `Add twelve monospace fonts and a richer editor preview`.
+
 ## Self-review notes
 - Task 1 defines `describeDrill` and may already need `drill.allSubjects/allLevels/allKinds`; Task 3 must reuse them, not redefine.
 - `Home` "Drill unseen" keeps pointing at `/drill?unseen=1`; it creates a drill each click by design.
